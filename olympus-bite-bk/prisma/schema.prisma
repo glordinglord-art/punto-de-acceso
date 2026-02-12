@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  trainer
+  client
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum MuscleGroup {
+  chest
+  back
+  shoulders
+  biceps
+  triceps
+  legs
+  glutes
+  abs
+  cardio
+  full_body
+  quads
+  hamstrings
+  calves
+  forearms
+  traps
+  core
+  abductors
+  adductors
+  hybrid
+}
+
+// DayOfWeek se mantiene para compatibilidad pero las rutinas ahora usan dayNumber
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(client)
+  trainerId String?  @map("trainer_id")
+  avatarUrl String?  @map("avatar_url")
+  phone     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  trainer  User?  @relation("TrainerClients", fields: [trainerId], references: [id])
+  clients  User[] @relation("TrainerClients")
+
+  meals    Meal[]
+  routinesAsClient  Routine[] @relation("ClientRoutines")
+  routinesAsTrainer Routine[] @relation("TrainerRoutines")
+  workoutLogs       WorkoutLog[]
+
+  codesGenerated  InvitationCode[] @relation("TrainerCodes")
+  usedCode        InvitationCode?  @relation("UsedByUser")
+
+  @@map("users")
+}
+
+model InvitationCode {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  trainerId    String   @map("trainer_id")
+  isUsed       Boolean  @default(false) @map("is_used")
+  usedByUserId String?  @unique @map("used_by_user_id")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  trainer  User  @relation("TrainerCodes", fields: [trainerId], references: [id])
+  usedBy   User? @relation("UsedByUser", fields: [usedByUserId], references: [id])
+
+  @@map("invitation_codes")
+}
+
+model Meal {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  name             String
+  description      String
+  imageUrl         String?  @map("image_url")
+  mealType         MealType @map("meal_type")
+  // Información nutricional (aplanada)
+  calories         Float    @default(0)
+  protein          Float    @default(0)
+  carbs            Float    @default(0)
+  fat              Float    @default(0)
+  fiber            Float    @default(0)
+  sugar            Float    @default(0)
+  foods            String[] @default([])
+  recommendation   String?
+  goalRating       String?  @map("goal_rating")
+  isRecommendation Boolean  @default(false) @map("is_recommendation")
+  recommendedBy    String?  @map("recommended_by")
+  date             DateTime @default(now())
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("meals")
+}
+
+model Routine {
+  id              String    @id @default(uuid())
+  name            String                          // "RUTINA SEMANA 1 - 4"
+  description     String    @default("")
+  trainerId       String    @map("trainer_id")
+  clientId        String    @map("client_id")
+  weekCount       Int       @default(4) @map("week_count")  // Número de semanas (default 4)
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  trainer     User          @relation("TrainerRoutines", fields: [trainerId], references: [id])
+  client      User          @relation("ClientRoutines", fields: [clientId], references: [id])
+  routineDays RoutineDay[]
+
+  @@map("routines")
+}
+
+// Cada día dentro de una rutina (Día 1 Cuádriceps, Día 2 Espalda, etc.)
+model RoutineDay {
+  id          String    @id @default(uuid())
+  routineId   String    @map("routine_id")
+  dayNumber   Int       @map("day_number")      // 1, 2, 3, 4, 5...
+  focusArea   String    @map("focus_area")       // "Cuádriceps", "Espalda y Hombros", etc.
+  isRestDay   Boolean   @default(false) @map("is_rest_day")  // Día 4: Descanso total
+  restDayNote String?   @map("rest_day_note")    // "DÍA CLAVE. El crecimiento ocurre aquí"
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  routine   Routine     @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercises Exercise[]
+
+  @@unique([routineId, dayNumber])
+  @@map("routine_days")
+}
+
+model Exercise {
+  id            String      @id @default(uuid())
+  routineDayId  String      @map("routine_day_id")
+  name          String
+  muscleGroup   MuscleGroup @map("muscle_group")
+  sets          Int
+  reps          String                            // "8-12", "10-15", "Fallo técnico"
+  restSeconds   Int         @default(60) @map("rest_seconds")
+  observations  String?                           // "180'' descanso", "Por pierna", "En polea"
+  videoUrl      String?     @map("video_url")
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relaciones
+  routineDay  RoutineDay   @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
+  workoutLogs WorkoutLog[]
+
+  @@map("exercises")
+}
+
+// Registro semanal: el cliente trackea peso, reps y observaciones por ejercicio por semana
+model WorkoutLog {
+  id           String   @id @default(uuid())
+  exerciseId   String   @map("exercise_id")
+  userId       String   @map("user_id")        // El cliente
+  weekNumber   Int      @map("week_number")     // 1, 2, 3, 4
+  weight       Float?                           // Peso usado (kg)
+  repsDone     String?  @map("reps_done")       // Reps logradas
+  observations String?                          // Notas del cliente
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([exerciseId, userId, weekNumber])
+  @@map("workout_logs")
+}
