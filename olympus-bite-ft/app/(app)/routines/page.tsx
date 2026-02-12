@@ -153,14 +153,14 @@ function TrainerRoutinesPage() {
     }
   };
 
-  const handleLogSave = async (exerciseId: string, weekNumber: number, weight: number, repsDone: string) => {
+  const handleLogSave = async (exerciseId: string, weekNumber: number, weight: number | null, repsDone: string | null) => {
     if (!user || !selectedRoutine) return;
     try {
       await routinesService.logWorkout(selectedRoutine.id, selectedRoutine.clientId, {
         exerciseId,
         weekNumber,
-        weight,
-        repsDone,
+        weight: weight ?? undefined,
+        repsDone: repsDone ?? undefined,
       });
       // Reload logs
       const res = await routinesService.getWorkoutLogs(selectedRoutine.id, selectedRoutine.clientId);
