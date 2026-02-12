@@ -4,7 +4,6 @@ import { RegisterWithCodeUseCase } from '../../../application/use-cases/register
 import { GenerateInvitationCodeUseCase } from '../../../application/use-cases/generate-invitation-code.use-case';
 import { LoginDto } from '../../../application/dtos/login.dto';
 import { RegisterDto } from '../../../application/dtos/register.dto';
-import { UserResponseDto } from '../../../../users/application/dtos/user-response.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -24,8 +23,10 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto) {
-    const user = await this.registerWithCodeUseCase.execute(dto);
-    return { success: true, data: UserResponseDto.fromEntity(user) };
+    await this.registerWithCodeUseCase.execute(dto);
+    // Auto-login after register
+    const result = await this.loginUseCase.execute(dto.email, dto.password);
+    return { success: true, data: result };
   }
 
   @Post('invitation-codes/:trainerId')

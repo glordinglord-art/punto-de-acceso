@@ -31,7 +31,7 @@ export function RegisterForm() {
         invitationCode,
         phone: phone || undefined,
       });
-      login(response.data as any);
+      login(response.data);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Error al registrarse');
