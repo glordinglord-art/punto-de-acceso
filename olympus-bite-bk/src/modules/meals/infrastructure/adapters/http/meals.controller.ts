@@ -11,11 +11,19 @@ import {
 } from '@nestjs/common';
 import { CreateMealUseCase } from '../../../application/use-cases/create-meal.use-case';
 import { AnalyzeFoodPhotoUseCase } from '../../../application/use-cases/analyze-food-photo.use-case';
+import {
+  ChatDietRecommendationUseCase,
+  ChatDietRecommendationDto,
+} from '../../../application/use-cases/chat-diet-recommendation.use-case';
 import { GetMealsByUserUseCase } from '../../../application/use-cases/get-meals-by-user.use-case';
 import { RecommendMealUseCase } from '../../../application/use-cases/recommend-meal.use-case';
 import { DeleteMealUseCase } from '../../../application/use-cases/delete-meal.use-case';
 import { GetTrainerClientsMealsUseCase } from '../../../application/use-cases/get-trainer-clients-meals.use-case';
-import { CreateMealDto, AnalyzeFoodPhotoDto, RecommendMealDto } from '../../../application/dtos/meal.dto';
+import {
+  CreateMealDto,
+  AnalyzeFoodPhotoDto,
+  RecommendMealDto,
+} from '../../../application/dtos/meal.dto';
 import { MealResponseDto } from '../../../application/dtos/meal-response.dto';
 
 @Controller('meals')
@@ -25,6 +33,7 @@ export class MealsController {
     private readonly analyzeFoodPhotoUseCase: AnalyzeFoodPhotoUseCase,
     private readonly getMealsByUserUseCase: GetMealsByUserUseCase,
     private readonly recommendMealUseCase: RecommendMealUseCase,
+    private readonly chatDietRecommendationUseCase: ChatDietRecommendationUseCase,
     private readonly deleteMealUseCase: DeleteMealUseCase,
     private readonly getTrainerClientsMealsUseCase: GetTrainerClientsMealsUseCase,
   ) {}
@@ -42,7 +51,7 @@ export class MealsController {
   @Post('analyze/photo')
   @HttpCode(HttpStatus.OK)
   async analyzePhoto(@Body() dto: AnalyzeFoodPhotoDto) {
-    const result = await this.analyzeFoodPhotoUseCase.execute(dto.imageBase64, dto.goal);
+    const result = await this.analyzeFoodPhotoUseCase.execute(dto);
     return { success: true, data: result };
   }
 
@@ -101,6 +110,17 @@ export class MealsController {
       success: true,
       data: meals.map(MealResponseDto.fromEntity),
     };
+  }
+
+  @Post('chat-recommendation/:userId')
+  @HttpCode(HttpStatus.OK)
+  async chatRecommendation(
+    @Param('userId') userId: string,
+    @Body() dto: ChatDietRecommendationDto,
+  ) {
+    const recommendation =
+      await this.chatDietRecommendationUseCase.execute(dto);
+    return { success: true, data: { text: recommendation } };
   }
 
   @Delete(':mealId')

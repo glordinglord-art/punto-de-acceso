@@ -4,7 +4,10 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { USER_REPOSITORY, UserRepositoryPort } from '../../../users/domain/ports/user.repository.port';
+import {
+  USER_REPOSITORY,
+  UserRepositoryPort,
+} from '../../../users/domain/ports/user.repository.port';
 import {
   INVITATION_CODE_REPOSITORY,
   InvitationCodeRepositoryPort,
@@ -29,12 +32,18 @@ export class RegisterWithCodeUseCase {
 
     // Si NO es el código admin, validar contra la DB
     let trainerId: string | undefined;
-    let invitation: import('../../domain/entities/invitation-code.entity').InvitationCode | null = null;
+    let invitation:
+      | import('../../domain/entities/invitation-code.entity').InvitationCode
+      | null = null;
 
     if (!isAdminCode) {
-      invitation = await this.invitationCodeRepository.findByCode(dto.invitationCode);
+      invitation = await this.invitationCodeRepository.findByCode(
+        dto.invitationCode,
+      );
       if (!invitation || !invitation.isValid()) {
-        throw new BadRequestException('Código de invitación inválido o expirado');
+        throw new BadRequestException(
+          'Código de invitación inválido o expirado',
+        );
       }
       trainerId = invitation.trainerId;
     }

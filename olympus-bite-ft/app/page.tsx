@@ -7,11 +7,13 @@ export default function Home() {
       <div className="max-w-lg text-center">
         {/* Logo */}
         <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-neutral-900 shadow-2xl shadow-neutral-900/20 dark:bg-white">
-          <span className="text-4xl font-black text-white dark:text-neutral-900">O</span>
+          <span className="text-4xl font-black text-white dark:text-neutral-900">
+            O
+          </span>
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-5xl">
-          Olympus<span className="text-neutral-400">Bite</span>
+          Punto de <span className="text-neutral-400">Inflexión</span>
         </h1>
 
         <p className="mt-4 text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
@@ -39,10 +41,10 @@ export default function Home() {
         {/* Feature pills */}
         <div className="mt-16 flex flex-wrap items-center justify-center gap-2">
           {[
-            '📸 Escanea comidas',
-            '🔥 Cuenta calorías',
-            '💪 Rutinas personalizadas',
-            '📊 Panel de control',
+            "📸 Escanea comidas",
+            "🔥 Cuenta calorías",
+            "💪 Rutinas personalizadas",
+            "📊 Panel de control",
           ].map((feature) => (
             <span
               key={feature}
@@ -56,7 +58,7 @@ export default function Home() {
 
       {/* Footer */}
       <p className="mt-20 text-xs text-neutral-300 dark:text-neutral-700">
-        © 2026 Olympus Bite. Nutrición & Entrenamiento.
+        © 2026 Punto de Inflexión. Nutrición & Entrenamiento.
       </p>
     </div>
   );

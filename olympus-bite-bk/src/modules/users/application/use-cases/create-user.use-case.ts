@@ -1,5 +1,8 @@
 import { Inject, Injectable, ConflictException } from '@nestjs/common';
-import { USER_REPOSITORY, UserRepositoryPort } from '../../domain/ports/user.repository.port';
+import {
+  USER_REPOSITORY,
+  UserRepositoryPort,
+} from '../../domain/ports/user.repository.port';
 import { User } from '../../domain/entities/user.entity';
 import { CreateUserDto } from '../dtos/user.dto';
 import { UserRole } from '../../domain/enums/user-role.enum';

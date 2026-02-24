@@ -1,5 +1,8 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { USER_REPOSITORY, UserRepositoryPort } from '../../../users/domain/ports/user.repository.port';
+import {
+  USER_REPOSITORY,
+  UserRepositoryPort,
+} from '../../../users/domain/ports/user.repository.port';
 import * as crypto from 'crypto';
 
 export interface LoginResult {
@@ -9,6 +12,14 @@ export interface LoginResult {
     email: string;
     name: string;
     role: string;
+    dietaryGoal?: string | null;
+    weight?: number | null;
+    height?: number | null;
+    onboardingCompleted: boolean;
+    experienceLevel?: string | null;
+    equipmentAccess?: string | null;
+    medicalConditions?: string | null;
+    dietaryPreferences?: string | null;
   };
 }
 
@@ -44,7 +55,9 @@ export class LoginUseCase {
       email: user.email,
       role: user.role,
     };
-    const accessToken = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+    const accessToken = Buffer.from(JSON.stringify(tokenPayload)).toString(
+      'base64',
+    );
 
     return {
       accessToken,
@@ -53,6 +66,14 @@ export class LoginUseCase {
         email: user.email,
         name: user.name,
         role: user.role,
+        dietaryGoal: user.dietaryGoal,
+        weight: user.weight,
+        height: user.height,
+        onboardingCompleted: user.onboardingCompleted,
+        experienceLevel: user.experienceLevel,
+        equipmentAccess: user.equipmentAccess,
+        medicalConditions: user.medicalConditions,
+        dietaryPreferences: user.dietaryPreferences,
       },
     };
   }

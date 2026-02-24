@@ -1,5 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { USER_REPOSITORY, UserRepositoryPort } from '../../domain/ports/user.repository.port';
+import {
+  USER_REPOSITORY,
+  UserRepositoryPort,
+} from '../../domain/ports/user.repository.port';
 import { User } from '../../domain/entities/user.entity';
 import { UpdateUserDto } from '../dtos/user.dto';
 
@@ -20,6 +23,13 @@ export class UpdateProfileUseCase {
       name: dto.name,
       phone: dto.phone,
       avatarUrl: dto.avatarUrl,
+      dietaryGoal: dto.dietaryGoal,
+      experienceLevel: dto.experienceLevel,
+      equipmentAccess: dto.equipmentAccess,
+      medicalConditions: dto.medicalConditions,
+      dietaryPreferences: dto.dietaryPreferences,
+      weight: dto.weight,
+      height: dto.height,
     });
 
     return this.userRepository.update(user);

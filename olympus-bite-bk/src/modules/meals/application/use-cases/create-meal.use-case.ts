@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MEAL_REPOSITORY, MealRepositoryPort } from '../../domain/ports/meal.repository.port';
+import {
+  MEAL_REPOSITORY,
+  MealRepositoryPort,
+} from '../../domain/ports/meal.repository.port';
 import { Meal, MealType } from '../../domain/entities/meal.entity';
 import { NutritionalInfo } from '../../domain/value-objects/nutritional-info.vo';
 import { CreateMealDto } from '../dtos/meal.dto';
@@ -35,9 +38,11 @@ export class CreateMealUseCase {
         fiber: dto.fiber ?? 0,
         sugar: dto.sugar ?? 0,
       });
-    } else if (dto.imageBase64) {
+    } else if (dto.imagesBase64 && dto.imagesBase64.length > 0) {
       // Analizar imagen con IA (mock por ahora)
-      const analysis = await this.foodRecognition.analyzeImage(dto.imageBase64);
+      const analysis = await this.foodRecognition.analyzeImages(
+        dto.imagesBase64,
+      );
       nutritionalInfo = analysis.nutritionalInfo;
       foods = analysis.foods;
       description = analysis.description;
@@ -51,9 +56,9 @@ export class CreateMealUseCase {
     }
 
     // Subir imagen a Supabase Storage si existe
-    if (dto.imageBase64) {
+    if (dto.imagesBase64 && dto.imagesBase64.length > 0) {
       const uploadedUrl = await this.storageService.uploadImage(
-        dto.imageBase64,
+        dto.imagesBase64[0],
         `meal-${userId}`,
       );
       if (uploadedUrl) {
@@ -71,6 +76,7 @@ export class CreateMealUseCase {
       recommendation: dto.recommendation,
       goalRating: dto.goalRating,
       imageUrl,
+      date: dto.date ? new Date(dto.date) : undefined,
     });
 
     return this.mealRepository.save(meal);

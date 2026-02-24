@@ -1,5 +1,14 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+  IsNumber,
+} from 'class-validator';
 import { UserRole } from '../../domain/enums/user-role.enum';
+
+import { Transform } from 'class-transformer';
 
 export class CreateUserDto {
   @IsString()
@@ -28,9 +37,54 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
-  phone?: string;
+  @Transform(({ value }) => (value === '' ? null : value))
+  phone?: string | null;
 
   @IsString()
   @IsOptional()
-  avatarUrl?: string;
+  @Transform(({ value }) => (value === '' ? null : value))
+  avatarUrl?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  dietaryGoal?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  experienceLevel?: string | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : Number(value)))
+  targetCalories?: number | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  equipmentAccess?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  medicalConditions?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  dietaryPreferences?: string | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : Number(value)))
+  weight?: number | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : Number(value)))
+  height?: number | null;
+
+  // Since height/weight might be number and they're not always strings
+  // we could just leave them as not validated strictly in this PR or use IsNumber
 }

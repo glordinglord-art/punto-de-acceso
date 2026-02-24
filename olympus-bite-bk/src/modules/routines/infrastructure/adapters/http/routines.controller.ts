@@ -14,7 +14,14 @@ import { UpdateRoutineUseCase } from '../../../application/use-cases/update-rout
 import { DeleteRoutineUseCase } from '../../../application/use-cases/delete-routine.use-case';
 import { GetRoutinesByClientUseCase } from '../../../application/use-cases/get-routines-by-client.use-case';
 import { LogWorkoutUseCase } from '../../../application/use-cases/log-workout.use-case';
-import { CreateRoutineDto, LogWorkoutDto } from '../../../application/dtos/routine.dto';
+import {
+  EvaluateRoutineUseCase,
+  EvaluateRoutineDto,
+} from '../../../application/use-cases/evaluate-routine.use-case';
+import {
+  CreateRoutineDto,
+  LogWorkoutDto,
+} from '../../../application/dtos/routine.dto';
 import { RoutineResponseDto } from '../../../application/dtos/routine-response.dto';
 
 @Controller('routines')
@@ -25,6 +32,7 @@ export class RoutinesController {
     private readonly deleteRoutineUseCase: DeleteRoutineUseCase,
     private readonly getRoutinesByClientUseCase: GetRoutinesByClientUseCase,
     private readonly logWorkoutUseCase: LogWorkoutUseCase,
+    private readonly evaluateRoutineUseCase: EvaluateRoutineUseCase,
   ) {}
 
   @Post(':trainerId')
@@ -48,7 +56,8 @@ export class RoutinesController {
 
   @Get('trainer/:trainerId')
   async getByTrainer(@Param('trainerId') trainerId: string) {
-    const routines = await this.getRoutinesByClientUseCase.getByTrainer(trainerId);
+    const routines =
+      await this.getRoutinesByClientUseCase.getByTrainer(trainerId);
     return {
       success: true,
       data: routines.map(RoutineResponseDto.fromEntity),
@@ -71,6 +80,15 @@ export class RoutinesController {
     return { success: true, data: null };
   }
 
+  @Put(':routineId/favorable')
+  async evaluateFavorable(
+    @Param('routineId') routineId: string,
+    @Body() dto: EvaluateRoutineDto,
+  ) {
+    const routine = await this.evaluateRoutineUseCase.execute(routineId, dto);
+    return { success: true, data: RoutineResponseDto.fromEntity(routine) };
+  }
+
   // ─── Workout Logs (Registro) ─────────────────────────────
 
   @Post(':routineId/log/:userId')
@@ -81,6 +99,21 @@ export class RoutinesController {
   ) {
     const log = await this.logWorkoutUseCase.execute(dto, userId);
     return { success: true, data: log };
+  }
+
+  @Delete(':routineId/log/:userId/:exerciseId/:weekNumber')
+  @HttpCode(HttpStatus.OK)
+  async unlogWorkout(
+    @Param('userId') userId: string,
+    @Param('exerciseId') exerciseId: string,
+    @Param('weekNumber') weekNumber: string,
+  ) {
+    await this.logWorkoutUseCase.unlog(
+      exerciseId,
+      userId,
+      parseInt(weekNumber, 10),
+    );
+    return { success: true, data: null };
   }
 
   @Get(':routineId/logs/:userId')

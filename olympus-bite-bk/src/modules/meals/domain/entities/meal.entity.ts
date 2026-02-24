@@ -20,6 +20,7 @@ export interface CreateMealProps {
   goalRating?: string;
   isRecommendation?: boolean;
   recommendedBy?: string;
+  date?: Date;
 }
 
 export class Meal extends BaseEntity {
@@ -49,6 +50,6 @@ export class Meal extends BaseEntity {
     this.goalRating = props.goalRating ?? null;
     this.isRecommendation = props.isRecommendation ?? false;
     this.recommendedBy = props.recommendedBy ?? null;
-    this.date = new Date();
+    this.date = props.date ?? new Date();
   }
 }

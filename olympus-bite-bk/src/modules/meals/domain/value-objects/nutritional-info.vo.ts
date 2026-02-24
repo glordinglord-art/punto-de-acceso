@@ -1,10 +1,10 @@
 export class NutritionalInfo {
   calories: number;
-  protein: number;     // gramos
-  carbs: number;       // gramos
-  fat: number;         // gramos
-  fiber: number;       // gramos
-  sugar: number;       // gramos
+  protein: number; // gramos
+  carbs: number; // gramos
+  fat: number; // gramos
+  fiber: number; // gramos
+  sugar: number; // gramos
 
   constructor(props: {
     calories: number;

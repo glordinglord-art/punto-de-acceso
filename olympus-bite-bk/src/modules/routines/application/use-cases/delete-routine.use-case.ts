@@ -1,5 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ROUTINE_REPOSITORY, RoutineRepositoryPort } from '../../domain/ports/routine.repository.port';
+import {
+  ROUTINE_REPOSITORY,
+  RoutineRepositoryPort,
+} from '../../domain/ports/routine.repository.port';
 
 @Injectable()
 export class DeleteRoutineUseCase {

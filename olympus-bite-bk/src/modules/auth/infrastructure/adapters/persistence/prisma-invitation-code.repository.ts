@@ -31,12 +31,16 @@ export class PrismaInvitationCodeRepository implements InvitationCodeRepositoryP
   }
 
   async findByCode(code: string): Promise<InvitationCode | null> {
-    const raw = await this.prisma.invitationCode.findUnique({ where: { code } });
+    const raw = await this.prisma.invitationCode.findUnique({
+      where: { code },
+    });
     return raw ? this.toDomain(raw) : null;
   }
 
   async findByTrainerId(trainerId: string): Promise<InvitationCode[]> {
-    const rows = await this.prisma.invitationCode.findMany({ where: { trainerId } });
+    const rows = await this.prisma.invitationCode.findMany({
+      where: { trainerId },
+    });
     return rows.map((r) => this.toDomain(r));
   }
 

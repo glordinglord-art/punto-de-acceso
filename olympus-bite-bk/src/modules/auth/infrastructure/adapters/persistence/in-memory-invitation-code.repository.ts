@@ -15,9 +15,7 @@ export class InMemoryInvitationCodeRepository implements InvitationCodeRepositor
   }
 
   async findByCode(code: string): Promise<InvitationCode | null> {
-    return (
-      Array.from(this.codes.values()).find((c) => c.code === code) ?? null
-    );
+    return Array.from(this.codes.values()).find((c) => c.code === code) ?? null;
   }
 
   async findByTrainerId(trainerId: string): Promise<InvitationCode[]> {

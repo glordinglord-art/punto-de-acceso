@@ -23,10 +23,7 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app')
-      ) {
+      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
       callback(null, false);
@@ -48,6 +45,8 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`🏛️  Olympus Bite API running on http://localhost:${port}/api/v1`);
+  console.log(
+    `🏛️  Olympus Bite API running on http://localhost:${port}/api/v1`,
+  );
 }
 bootstrap();

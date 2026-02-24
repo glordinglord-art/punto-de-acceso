@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Olympus Bite — Nutrición & Entrenamiento",
-  description: "La plataforma de tu entrenador personal para controlar tu alimentación y rutinas de gym",
+  title: "Punto de Inflexión — Nutrición & Entrenamiento",
+  description:
+    "La plataforma de tu entrenador personal para controlar tu alimentación y rutinas de gym",
 };
 
 export default function RootLayout({

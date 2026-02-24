@@ -8,7 +8,11 @@ export class GetDashboardStatsUseCase {
 
   async execute(trainerId: string): Promise<DashboardStatsDto> {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
     const dayOfWeek = now.getDay();
@@ -127,18 +131,30 @@ export class GetDashboardStatsUseCase {
     // Promedio calorías hoy
     const avgCaloriesToday =
       mealsToday.length > 0
-        ? Math.round(mealsToday.reduce((s, m) => s + m.calories, 0) / mealsToday.length)
+        ? Math.round(
+            mealsToday.reduce((s, m) => s + m.calories, 0) / mealsToday.length,
+          )
         : 0;
 
     // Promedio macros hoy
     const macroAverages =
       mealsToday.length > 0
         ? {
-            protein: Math.round(mealsToday.reduce((s, m) => s + m.protein, 0) / mealsToday.length),
-            carbs: Math.round(mealsToday.reduce((s, m) => s + m.carbs, 0) / mealsToday.length),
-            fat: Math.round(mealsToday.reduce((s, m) => s + m.fat, 0) / mealsToday.length),
-            fiber: Math.round(mealsToday.reduce((s, m) => s + m.fiber, 0) / mealsToday.length),
-            sugar: Math.round(mealsToday.reduce((s, m) => s + m.sugar, 0) / mealsToday.length),
+            protein: Math.round(
+              mealsToday.reduce((s, m) => s + m.protein, 0) / mealsToday.length,
+            ),
+            carbs: Math.round(
+              mealsToday.reduce((s, m) => s + m.carbs, 0) / mealsToday.length,
+            ),
+            fat: Math.round(
+              mealsToday.reduce((s, m) => s + m.fat, 0) / mealsToday.length,
+            ),
+            fiber: Math.round(
+              mealsToday.reduce((s, m) => s + m.fiber, 0) / mealsToday.length,
+            ),
+            sugar: Math.round(
+              mealsToday.reduce((s, m) => s + m.sugar, 0) / mealsToday.length,
+            ),
           }
         : { protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 };
 
@@ -175,10 +191,12 @@ export class GetDashboardStatsUseCase {
     mealsLast30.forEach((m) => {
       typeCounts[m.mealType] = (typeCounts[m.mealType] || 0) + 1;
     });
-    const mealTypeDistribution = Object.entries(typeCounts).map(([type, count]) => ({
-      type: typeLabels[type] || type,
-      count,
-    }));
+    const mealTypeDistribution = Object.entries(typeCounts).map(
+      ([type, count]) => ({
+        type: typeLabels[type] || type,
+        count,
+      }),
+    );
 
     // Top foods: agrupar en memoria
     const foodCounts: Record<string, number> = {};

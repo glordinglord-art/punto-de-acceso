@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MEAL_REPOSITORY, MealRepositoryPort } from '../../domain/ports/meal.repository.port';
+import {
+  MEAL_REPOSITORY,
+  MealRepositoryPort,
+} from '../../domain/ports/meal.repository.port';
 import { Meal } from '../../domain/entities/meal.entity';
 
 @Injectable()
@@ -18,6 +21,10 @@ export class GetMealsByUserUseCase {
     startDate: Date,
     endDate: Date,
   ): Promise<Meal[]> {
-    return this.mealRepository.findByUserIdAndDateRange(userId, startDate, endDate);
+    return this.mealRepository.findByUserIdAndDateRange(
+      userId,
+      startDate,
+      endDate,
+    );
   }
 }

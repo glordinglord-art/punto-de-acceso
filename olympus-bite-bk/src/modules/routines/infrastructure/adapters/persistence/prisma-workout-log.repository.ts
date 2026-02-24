@@ -25,7 +25,10 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
     return log;
   }
 
-  async findByExerciseAndUser(exerciseId: string, userId: string): Promise<WorkoutLog[]> {
+  async findByExerciseAndUser(
+    exerciseId: string,
+    userId: string,
+  ): Promise<WorkoutLog[]> {
     const rows = await this.prisma.workoutLog.findMany({
       where: { exerciseId, userId },
       orderBy: { weekNumber: 'asc' },
@@ -33,7 +36,10 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
     return rows.map((r) => this.toDomain(r));
   }
 
-  async findByRoutineAndUser(routineId: string, userId: string): Promise<WorkoutLog[]> {
+  async findByRoutineAndUser(
+    routineId: string,
+    userId: string,
+  ): Promise<WorkoutLog[]> {
     const rows = await this.prisma.workoutLog.findMany({
       where: {
         userId,
@@ -73,5 +79,11 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
       },
     });
     return this.toDomain(raw);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.workoutLog.delete({
+      where: { id },
+    });
   }
 }

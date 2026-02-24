@@ -17,7 +17,16 @@ export interface AuthResponse {
     id: string;
     email: string;
     name: string;
-    role: 'admin' | 'trainer' | 'client';
+    role: "admin" | "trainer" | "client";
+    dietaryGoal?: string | null;
+    weight?: number | null;
+    height?: number | null;
+    targetCalories?: number | null;
+    onboardingCompleted?: boolean;
+    experienceLevel?: string | null;
+    equipmentAccess?: string | null;
+    medicalConditions?: string | null;
+    dietaryPreferences?: string | null;
   };
 }
 

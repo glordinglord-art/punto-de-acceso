@@ -1,4 +1,11 @@
-import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExerciseDto {
@@ -12,7 +19,7 @@ export class ExerciseDto {
   sets!: number;
 
   @IsString()
-  reps!: string;  // "8-12", "Fallo técnico"
+  reps!: string; // "8-12", "Fallo técnico"
 
   @IsNumber()
   @IsOptional()
@@ -20,7 +27,7 @@ export class ExerciseDto {
 
   @IsString()
   @IsOptional()
-  observations?: string;  // "180'' descanso", "Por pierna"
+  observations?: string; // "180'' descanso", "Por pierna"
 
   @IsString()
   @IsOptional()
@@ -32,7 +39,7 @@ export class RoutineDayDto {
   dayNumber!: number;
 
   @IsString()
-  focusArea!: string;  // "Cuádriceps", "Espalda y Hombros"
+  focusArea!: string; // "Cuádriceps", "Espalda y Hombros"
 
   @IsBoolean()
   @IsOptional()
@@ -40,7 +47,7 @@ export class RoutineDayDto {
 
   @IsString()
   @IsOptional()
-  restDayNote?: string;  // "DÍA CLAVE. El crecimiento ocurre aquí"
+  restDayNote?: string; // "DÍA CLAVE. El crecimiento ocurre aquí"
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -62,7 +69,7 @@ export class CreateRoutineDto {
 
   @IsNumber()
   @IsOptional()
-  weekCount?: number;  // default 4
+  weekCount?: number; // default 4
 
   @IsArray()
   @ValidateNested({ each: true })

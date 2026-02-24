@@ -1,23 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { Header } from '@/shared/components/layout/Header';
-import { Button } from '@/shared/components/ui/Button';
-import { RoutineCard } from '@/features/routines/components/RoutineCard';
-import { RoutineDayDetail } from '@/features/routines/components/RoutineDayDetail';
-import { WeeklyTracker } from '@/features/routines/components/WeeklyTracker';
-import { RoutineBuilder } from '@/features/routines/components/RoutineBuilder';
-import { RoutineCalendar } from '@/features/routines/components/RoutineCalendar';
-import { ClientRoutinesView } from '@/features/routines/components/ClientRoutinesView';
-import { routinesService } from '@/features/routines/services/routines.service';
-import { clientsService } from '@/features/clients/services/clients.service';
-import type { Routine, WorkoutLog } from '@/features/routines/types/routines.types';
-import type { User } from '@/shared/types/common.types';
-import { cn } from '@/shared/lib/utils';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { Header } from "@/shared/components/layout/Header";
+import { Button } from "@/shared/components/ui/Button";
+import { RoutineCard } from "@/features/routines/components/RoutineCard";
+import { RoutineDayDetail } from "@/features/routines/components/RoutineDayDetail";
+import { WeeklyTracker } from "@/features/routines/components/WeeklyTracker";
+import { RoutineBuilder } from "@/features/routines/components/RoutineBuilder";
+import { RoutineCalendar } from "@/features/routines/components/RoutineCalendar";
+import { ClientRoutinesView } from "@/features/routines/components/ClientRoutinesView";
+import { routinesService } from "@/features/routines/services/routines.service";
+import { clientsService } from "@/features/clients/services/clients.service";
+import type {
+  Routine,
+  WorkoutLog,
+} from "@/features/routines/types/routines.types";
+import type { User } from "@/shared/types/common.types";
+import { cn } from "@/shared/lib/utils";
 
-type ViewMode = 'overview' | 'detail' | 'tracking' | 'create' | 'edit';
-type OverviewTab = 'cards' | 'calendar';
+type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit";
+type OverviewTab = "cards" | "calendar";
 
 export default function RoutinesPage() {
   const { user, isTrainer } = useAuth();
@@ -31,13 +34,13 @@ export default function RoutinesPage() {
 
 function TrainerRoutinesPage() {
   const { user } = useAuth();
-  const [view, setView] = useState<ViewMode>('overview');
+  const [view, setView] = useState<ViewMode>("overview");
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [clients, setClients] = useState<User[]>([]);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [overviewTab, setOverviewTab] = useState<OverviewTab>('calendar');
+  const [overviewTab, setOverviewTab] = useState<OverviewTab>("calendar");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -64,11 +67,14 @@ function TrainerRoutinesPage() {
 
   const handleRoutineClick = async (routine: Routine) => {
     setSelectedRoutine(routine);
-    setView('detail');
+    setView("detail");
     // Load workout logs for this routine
     if (user) {
       try {
-        const res = await routinesService.getWorkoutLogs(routine.id, routine.clientId);
+        const res = await routinesService.getWorkoutLogs(
+          routine.id,
+          routine.clientId,
+        );
         setLogs(res.data ?? []);
       } catch {
         setLogs([]);
@@ -100,9 +106,9 @@ function TrainerRoutinesPage() {
     try {
       await routinesService.create(user.id, data);
       await loadData();
-      setView('overview');
+      setView("overview");
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error creando rutina');
+      alert(err instanceof Error ? err.message : "Error creando rutina");
     }
   };
 
@@ -130,10 +136,10 @@ function TrainerRoutinesPage() {
     try {
       await routinesService.update(selectedRoutine.id, data);
       await loadData();
-      setView('overview');
+      setView("overview");
       setSelectedRoutine(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error actualizando rutina');
+      alert(err instanceof Error ? err.message : "Error actualizando rutina");
     }
   };
 
@@ -144,37 +150,64 @@ function TrainerRoutinesPage() {
       await routinesService.remove(selectedRoutine.id);
       await loadData();
       setShowDeleteModal(false);
-      setView('overview');
+      setView("overview");
       setSelectedRoutine(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error eliminando rutina');
+      alert(err instanceof Error ? err.message : "Error eliminando rutina");
     } finally {
       setDeleting(false);
     }
   };
 
-  const handleLogSave = async (exerciseId: string, weekNumber: number, weight: number | null, repsDone: string | null) => {
+  const handleEvaluateRoutine = async (isFavorable: boolean) => {
+    if (!selectedRoutine) return;
+    try {
+      await routinesService.evaluateFavorable(selectedRoutine.id, isFavorable);
+      setSelectedRoutine({ ...selectedRoutine, isFavorable });
+      setRoutines(
+        routines.map((r) =>
+          r.id === selectedRoutine.id ? { ...r, isFavorable } : r,
+        ),
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error evaluando rutina");
+    }
+  };
+
+  const handleLogSave = async (
+    exerciseId: string,
+    weekNumber: number,
+    weight: number | null,
+    repsDone: string | null,
+  ) => {
     if (!user || !selectedRoutine) return;
     try {
-      await routinesService.logWorkout(selectedRoutine.id, selectedRoutine.clientId, {
-        exerciseId,
-        weekNumber,
-        weight: weight ?? undefined,
-        repsDone: repsDone ?? undefined,
-      });
+      await routinesService.logWorkout(
+        selectedRoutine.id,
+        selectedRoutine.clientId,
+        {
+          exerciseId,
+          weekNumber,
+          weight: weight ?? undefined,
+          repsDone: repsDone ?? undefined,
+        },
+      );
       // Reload logs
-      const res = await routinesService.getWorkoutLogs(selectedRoutine.id, selectedRoutine.clientId);
+      const res = await routinesService.getWorkoutLogs(
+        selectedRoutine.id,
+        selectedRoutine.clientId,
+      );
       setLogs(res.data ?? []);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error guardando registro');
+      alert(err instanceof Error ? err.message : "Error guardando registro");
     }
   };
 
   const handleBack = () => {
-    if (view === 'tracking') {
-      setView('detail');
+    if (view === "tracking") {
+      setView("detail");
     } else {
-      setView('overview');
+      setView("overview");
       setSelectedRoutine(null);
       setLogs([]);
     }
@@ -183,17 +216,19 @@ function TrainerRoutinesPage() {
   // Resolve client name for a routine
   const getClientName = (clientId: string) => {
     const c = clients.find((cl) => cl.id === clientId);
-    return c?.name ?? 'Cliente';
+    return c?.name ?? "Cliente";
   };
 
   const clientNames = useMemo(() => {
     const map: Record<string, string> = {};
-    clients.forEach((c) => { map[c.id] = c.name; });
+    clients.forEach((c) => {
+      map[c.id] = c.name;
+    });
     return map;
   }, [clients]);
 
   /* ─── Create view ─────────────────────────── */
-  if (view === 'create') {
+  if (view === "create") {
     return (
       <>
         <Header
@@ -203,14 +238,14 @@ function TrainerRoutinesPage() {
         <RoutineBuilder
           clients={clients}
           onSubmit={handleCreateRoutine}
-          onCancel={() => setView('overview')}
+          onCancel={() => setView("overview")}
         />
       </>
     );
   }
 
   /* ─── Edit view ───────────────────────────── */
-  if (view === 'edit' && selectedRoutine) {
+  if (view === "edit" && selectedRoutine) {
     return (
       <>
         <Header
@@ -220,7 +255,7 @@ function TrainerRoutinesPage() {
         <RoutineBuilder
           clients={clients}
           onSubmit={handleUpdateRoutine}
-          onCancel={() => setView('detail')}
+          onCancel={() => setView("detail")}
           initialData={selectedRoutine}
         />
       </>
@@ -228,14 +263,16 @@ function TrainerRoutinesPage() {
   }
 
   /* ─── Overview ────────────────────────────── */
-  if (view === 'overview') {
+  if (view === "overview") {
     return (
       <>
         <Header
           title="Rutinas"
-          subtitle={loading ? 'Cargando...' : `${routines.length} rutinas creadas`}
+          subtitle={
+            loading ? "Cargando..." : `${routines.length} rutinas creadas`
+          }
           action={
-            <Button size="md" onClick={() => setView('create')}>
+            <Button size="md" onClick={() => setView("create")}>
               + Nueva rutina
             </Button>
           }
@@ -245,18 +282,18 @@ function TrainerRoutinesPage() {
         {!loading && routines.length > 0 && (
           <div className="mb-5 flex items-center gap-1 rounded-xl bg-neutral-100 p-1 w-fit dark:bg-neutral-800">
             {[
-              { key: 'calendar' as OverviewTab, label: '📅 Calendario' },
-              { key: 'cards' as OverviewTab, label: '🗂️ Tarjetas' },
+              { key: "calendar" as OverviewTab, label: "📅 Calendario" },
+              { key: "cards" as OverviewTab, label: "🗂️ Tarjetas" },
             ].map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setOverviewTab(tab.key)}
                 className={cn(
-                  'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
+                  "rounded-lg px-4 py-1.5 text-sm font-medium transition-all",
                   overviewTab === tab.key
-                    ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white'
-                    : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
+                    ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white"
+                    : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200",
                 )}
               >
                 {tab.label}
@@ -268,7 +305,10 @@ function TrainerRoutinesPage() {
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2">
             {[1, 2].map((i) => (
-              <div key={i} className="h-40 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800" />
+              <div
+                key={i}
+                className="h-40 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+              />
             ))}
           </div>
         ) : routines.length === 0 ? (
@@ -282,12 +322,16 @@ function TrainerRoutinesPage() {
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
               Crea la primera rutina personalizada para uno de tus clientes.
             </p>
-            <Button onClick={() => setView('create')} className="mt-6">
+            <Button onClick={() => setView("create")} className="mt-6">
               + Crear primera rutina
             </Button>
           </div>
-        ) : overviewTab === 'calendar' ? (
-          <RoutineCalendar routines={routines} clientNames={clientNames} trainerId={user?.id} />
+        ) : overviewTab === "calendar" ? (
+          <RoutineCalendar
+            routines={routines}
+            clientNames={clientNames}
+            trainerId={user?.id}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {routines.map((routine) => (
@@ -310,7 +354,7 @@ function TrainerRoutinesPage() {
   }
 
   /* ─── Detail ──────────────────────────────── */
-  if (view === 'detail' && selectedRoutine) {
+  if (view === "detail" && selectedRoutine) {
     return (
       <>
         <Header
@@ -321,7 +365,7 @@ function TrainerRoutinesPage() {
               <Button variant="ghost" size="md" onClick={handleBack}>
                 ← Volver
               </Button>
-              <Button size="md" onClick={() => setView('tracking')}>
+              <Button size="md" onClick={() => setView("tracking")}>
                 📊 Seguimiento
               </Button>
             </div>
@@ -334,13 +378,8 @@ function TrainerRoutinesPage() {
           </p>
         )}
 
-        {/* Edit / Delete action bar */}
-        <div className="flex items-center gap-2 mb-6">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setView('edit')}
-          >
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <Button size="sm" variant="ghost" onClick={() => setView("edit")}>
             ✏️ Editar rutina
           </Button>
           <Button
@@ -350,6 +389,33 @@ function TrainerRoutinesPage() {
           >
             🗑️ Eliminar
           </Button>
+
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+              Evaluación:
+            </span>
+            <select
+              title="Evaluar rutina"
+              value={
+                selectedRoutine.isFavorable === true
+                  ? "yes"
+                  : selectedRoutine.isFavorable === false
+                    ? "no"
+                    : ""
+              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val !== "") {
+                  handleEvaluateRoutine(val === "yes");
+                }
+              }}
+              className="text-sm rounded-lg border border-neutral-300 px-3 py-1.5 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+            >
+              <option value="">Pendiente...</option>
+              <option value="yes">👍 Favorable</option>
+              <option value="no">👎 Desfavorable</option>
+            </select>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -369,7 +435,9 @@ function TrainerRoutinesPage() {
                 ¿Eliminar rutina?
               </h3>
               <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                Se eliminará <strong>&quot;{selectedRoutine.name}&quot;</strong> con todos sus días y ejercicios. Esta acción no se puede deshacer.
+                Se eliminará <strong>&quot;{selectedRoutine.name}&quot;</strong>{" "}
+                con todos sus días y ejercicios. Esta acción no se puede
+                deshacer.
               </p>
               <div className="mt-6 flex justify-end gap-3">
                 <Button
@@ -397,7 +465,7 @@ function TrainerRoutinesPage() {
   }
 
   /* ─── Tracking ────────────────────────────── */
-  if (view === 'tracking' && selectedRoutine) {
+  if (view === "tracking" && selectedRoutine) {
     return (
       <>
         <Header

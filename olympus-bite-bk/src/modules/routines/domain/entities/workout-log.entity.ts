@@ -28,7 +28,11 @@ export class WorkoutLog extends BaseEntity {
     this.observations = props.observations ?? null;
   }
 
-  updateLog(data: { weight?: number; repsDone?: string; observations?: string }): void {
+  updateLog(data: {
+    weight?: number;
+    repsDone?: string;
+    observations?: string;
+  }): void {
     if (data.weight !== undefined) this.weight = data.weight;
     if (data.repsDone !== undefined) this.repsDone = data.repsDone;
     if (data.observations !== undefined) this.observations = data.observations;

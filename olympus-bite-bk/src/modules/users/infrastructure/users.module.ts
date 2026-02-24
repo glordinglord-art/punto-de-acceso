@@ -6,6 +6,7 @@ import { GetUserUseCase } from '../application/use-cases/get-user.use-case';
 import { GetUsersByTrainerUseCase } from '../application/use-cases/get-users-by-trainer.use-case';
 import { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
+import { CompleteOnboardingUseCase } from '../application/use-cases/complete-onboarding.use-case';
 import { USER_REPOSITORY } from '../domain/ports/user.repository.port';
 
 @Module({
@@ -20,6 +21,7 @@ import { USER_REPOSITORY } from '../domain/ports/user.repository.port';
     GetUsersByTrainerUseCase,
     UpdateProfileUseCase,
     ChangePasswordUseCase,
+    CompleteOnboardingUseCase,
   ],
   exports: [USER_REPOSITORY, GetUserUseCase],
 })

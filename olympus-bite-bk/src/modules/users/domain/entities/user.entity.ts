@@ -9,6 +9,17 @@ export interface CreateUserProps {
   trainerId?: string;
   avatarUrl?: string;
   phone?: string;
+  dietaryGoal?: string;
+  weight?: number;
+  height?: number;
+  targetCalories?: number;
+  onboardingCompleted?: boolean;
+
+  // Advanced Profile
+  experienceLevel?: string;
+  equipmentAccess?: string;
+  medicalConditions?: string;
+  dietaryPreferences?: string;
 }
 
 export class User extends BaseEntity {
@@ -19,6 +30,18 @@ export class User extends BaseEntity {
   trainerId: string | null;
   avatarUrl: string | null;
   phone: string | null;
+  dietaryGoal: string | null;
+  weight: number | null;
+  height: number | null;
+  targetCalories: number | null;
+  onboardingCompleted: boolean;
+
+  // Advanced Profile
+  experienceLevel: string | null;
+  equipmentAccess: string | null;
+  medicalConditions: string | null;
+  dietaryPreferences: string | null;
+
   isActive: boolean;
 
   constructor(props: CreateUserProps, id?: string) {
@@ -30,6 +53,17 @@ export class User extends BaseEntity {
     this.trainerId = props.trainerId ?? null;
     this.avatarUrl = props.avatarUrl ?? null;
     this.phone = props.phone ?? null;
+    this.dietaryGoal = props.dietaryGoal ?? null;
+    this.weight = props.weight ?? null;
+    this.height = props.height ?? null;
+    this.targetCalories = props.targetCalories ?? null;
+    this.onboardingCompleted = props.onboardingCompleted ?? false;
+
+    this.experienceLevel = props.experienceLevel ?? null;
+    this.equipmentAccess = props.equipmentAccess ?? null;
+    this.medicalConditions = props.medicalConditions ?? null;
+    this.dietaryPreferences = props.dietaryPreferences ?? null;
+
     this.isActive = true;
   }
 
@@ -50,10 +84,65 @@ export class User extends BaseEntity {
     this.markUpdated();
   }
 
-  updateProfile(data: Partial<Pick<User, 'name' | 'avatarUrl' | 'phone'>>): void {
-    if (data.name) this.name = data.name;
-    if (data.avatarUrl !== undefined) this.avatarUrl = data.avatarUrl;
-    if (data.phone !== undefined) this.phone = data.phone;
+  updateProfile(
+    data: Partial<{
+      name: string;
+      avatarUrl: string | null;
+      phone: string | null;
+      dietaryGoal: string | null;
+      weight: number | null;
+      height: number | null;
+      targetCalories: number | null;
+      experienceLevel: string | null;
+      equipmentAccess: string | null;
+      medicalConditions: string | null;
+      dietaryPreferences: string | null;
+    }>,
+  ): void {
+    if (data.name) this.name = data.name as string;
+    if (data.avatarUrl !== undefined)
+      this.avatarUrl = data.avatarUrl as string | null;
+    if (data.phone !== undefined) this.phone = data.phone as string | null;
+    if (data.dietaryGoal !== undefined)
+      this.dietaryGoal = data.dietaryGoal as string | null;
+    if (data.weight !== undefined) this.weight = data.weight as number | null;
+    if (data.height !== undefined) this.height = data.height as number | null;
+    if (data.targetCalories !== undefined)
+      this.targetCalories = data.targetCalories as number | null;
+    if (data.experienceLevel !== undefined)
+      this.experienceLevel = data.experienceLevel as string | null;
+    if (data.equipmentAccess !== undefined)
+      this.equipmentAccess = data.equipmentAccess as string | null;
+    if (data.medicalConditions !== undefined)
+      this.medicalConditions = data.medicalConditions as string | null;
+    if (data.dietaryPreferences !== undefined)
+      this.dietaryPreferences = data.dietaryPreferences as string | null;
+    this.markUpdated();
+  }
+
+  completeOnboarding(data: {
+    weight: number;
+    height: number;
+    dietaryGoal: string;
+    experienceLevel?: string;
+    equipmentAccess?: string;
+    medicalConditions?: string;
+    dietaryPreferences?: string;
+  }): void {
+    this.weight = data.weight;
+    this.height = data.height;
+    this.dietaryGoal = data.dietaryGoal;
+
+    if (data.experienceLevel !== undefined)
+      this.experienceLevel = data.experienceLevel;
+    if (data.equipmentAccess !== undefined)
+      this.equipmentAccess = data.equipmentAccess;
+    if (data.medicalConditions !== undefined)
+      this.medicalConditions = data.medicalConditions;
+    if (data.dietaryPreferences !== undefined)
+      this.dietaryPreferences = data.dietaryPreferences;
+
+    this.onboardingCompleted = true;
     this.markUpdated();
   }
 

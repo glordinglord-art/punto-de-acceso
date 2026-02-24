@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { LoginUseCase } from '../../../application/use-cases/login.use-case';
 import { RegisterWithCodeUseCase } from '../../../application/use-cases/register-with-code.use-case';
 import { GenerateInvitationCodeUseCase } from '../../../application/use-cases/generate-invitation-code.use-case';
@@ -33,12 +41,16 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async generateCode(@Param('trainerId') trainerId: string) {
     const code = await this.generateInvitationCodeUseCase.execute(trainerId);
-    return { success: true, data: { code: code.code, expiresAt: code.expiresAt } };
+    return {
+      success: true,
+      data: { code: code.code, expiresAt: code.expiresAt },
+    };
   }
 
   @Get('invitation-codes/:trainerId')
   async getCodesByTrainer(@Param('trainerId') trainerId: string) {
-    const codes = await this.generateInvitationCodeUseCase.getByTrainer(trainerId);
+    const codes =
+      await this.generateInvitationCodeUseCase.getByTrainer(trainerId);
     return {
       success: true,
       data: codes.map((c) => ({

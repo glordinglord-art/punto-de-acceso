@@ -12,7 +12,8 @@ export class AnalyzeFoodPhotoUseCase {
     private readonly foodRecognition: FoodRecognitionPort,
   ) {}
 
-  async execute(imageBase64: string, goal?: string): Promise<FoodAnalysisResult> {
-    return this.foodRecognition.analyzeImage(imageBase64, goal);
+  async execute(dto: any): Promise<FoodAnalysisResult> {
+    const { imagesBase64, ...context } = dto;
+    return this.foodRecognition.analyzeImages(imagesBase64, context);
   }
 }

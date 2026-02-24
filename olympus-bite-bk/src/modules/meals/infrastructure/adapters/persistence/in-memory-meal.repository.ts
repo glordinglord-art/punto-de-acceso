@@ -27,10 +27,7 @@ export class InMemoryMealRepository implements MealRepositoryPort {
   ): Promise<Meal[]> {
     return Array.from(this.meals.values())
       .filter(
-        (m) =>
-          m.userId === userId &&
-          m.date >= startDate &&
-          m.date <= endDate,
+        (m) => m.userId === userId && m.date >= startDate && m.date <= endDate,
       )
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }

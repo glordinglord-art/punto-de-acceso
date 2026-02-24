@@ -1,22 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { Sidebar } from '@/shared/components/layout/Sidebar';
-import { MobileNav } from '@/shared/components/layout/MobileNav';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { Sidebar } from "@/shared/components/layout/Sidebar";
+import { MobileNav } from "@/shared/components/layout/MobileNav";
+import { OnboardingSurveyModal } from "@/features/clients/components/OnboardingSurveyModal";
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
@@ -39,6 +36,8 @@ export default function AppLayout({
         </div>
       </main>
       <MobileNav />
+      {/* Modal para clientes nuevos */}
+      <OnboardingSurveyModal />
     </div>
   );
 }

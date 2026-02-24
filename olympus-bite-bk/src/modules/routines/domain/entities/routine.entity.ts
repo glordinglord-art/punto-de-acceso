@@ -17,6 +17,7 @@ export interface CreateRoutineProps {
   trainerId: string;
   clientId: string;
   weekCount?: number;
+  isFavorable?: boolean;
   days: RoutineDay[];
 }
 
@@ -26,6 +27,7 @@ export class Routine extends BaseEntity {
   trainerId: string;
   clientId: string;
   weekCount: number;
+  isFavorable: boolean | null;
   days: RoutineDay[];
   isActive: boolean;
 
@@ -36,6 +38,7 @@ export class Routine extends BaseEntity {
     this.trainerId = props.trainerId;
     this.clientId = props.clientId;
     this.weekCount = props.weekCount ?? 4;
+    this.isFavorable = props.isFavorable ?? null;
     this.days = props.days;
     this.isActive = true;
   }
@@ -52,6 +55,11 @@ export class Routine extends BaseEntity {
 
   deactivate(): void {
     this.isActive = false;
+    this.markUpdated();
+  }
+
+  evaluateFavorable(isFavorable: boolean): void {
+    this.isFavorable = isFavorable;
     this.markUpdated();
   }
 }

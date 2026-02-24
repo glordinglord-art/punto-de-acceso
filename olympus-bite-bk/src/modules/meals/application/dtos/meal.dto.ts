@@ -1,4 +1,10 @@
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { MealType } from '../../domain/entities/meal.entity';
 
 export class CreateMealDto {
@@ -12,9 +18,10 @@ export class CreateMealDto {
   @IsEnum(MealType)
   mealType!: MealType;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  imageBase64?: string;
+  imagesBase64?: string[];
 
   @IsString({ each: true })
   @IsOptional()
@@ -52,15 +59,48 @@ export class CreateMealDto {
   @IsString()
   @IsOptional()
   goalRating?: string;
+
+  @IsString()
+  @IsOptional()
+  date?: string;
 }
 
 export class AnalyzeFoodPhotoDto {
-  @IsString()
-  imageBase64!: string;
+  @IsArray()
+  @IsString({ each: true })
+  imagesBase64!: string[];
 
   @IsString()
   @IsOptional()
   goal?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsNumber()
+  @IsOptional()
+  weight?: number;
+
+  @IsNumber()
+  @IsOptional()
+  height?: number;
+
+  @IsString()
+  @IsOptional()
+  experienceLevel?: string;
+
+  @IsString()
+  @IsOptional()
+  equipmentAccess?: string;
+
+  @IsString()
+  @IsOptional()
+  medicalConditions?: string;
+
+  @IsString()
+  @IsOptional()
+  dietaryPreferences?: string;
 }
 
 export class RecommendMealDto {

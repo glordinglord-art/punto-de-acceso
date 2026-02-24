@@ -1,5 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ROUTINE_REPOSITORY, RoutineRepositoryPort } from '../../domain/ports/routine.repository.port';
+import {
+  ROUTINE_REPOSITORY,
+  RoutineRepositoryPort,
+} from '../../domain/ports/routine.repository.port';
 import { Routine } from '../../domain/entities/routine.entity';
 import { RoutineDay } from '../../domain/entities/routine-day.entity';
 import { Exercise, MuscleGroup } from '../../domain/entities/exercise.entity';
@@ -23,7 +26,8 @@ export class UpdateRoutineUseCase {
         (e, index) =>
           new Exercise({
             name: e.name,
-            muscleGroup: (e.muscleGroup as MuscleGroup) || MuscleGroup.FULL_BODY,
+            muscleGroup:
+              (e.muscleGroup as MuscleGroup) || MuscleGroup.FULL_BODY,
             sets: e.sets,
             reps: e.reps,
             restSeconds: e.restSeconds,

@@ -3,7 +3,10 @@ import { PrismaService } from '../../../../../shared/infrastructure/prisma/prism
 import { RoutineRepositoryPort } from '../../../domain/ports/routine.repository.port';
 import { Routine } from '../../../domain/entities/routine.entity';
 import { RoutineDay } from '../../../domain/entities/routine-day.entity';
-import { Exercise, MuscleGroup } from '../../../domain/entities/exercise.entity';
+import {
+  Exercise,
+  MuscleGroup,
+} from '../../../domain/entities/exercise.entity';
 import type {
   Routine as PrismaRoutine,
   RoutineDay as PrismaRoutineDay,
@@ -68,6 +71,7 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
         trainerId: raw.trainerId,
         clientId: raw.clientId,
         weekCount: raw.weekCount,
+        isFavorable: raw.isFavorable ?? undefined,
         days,
       },
       raw.id,
@@ -87,7 +91,9 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
   }
 
   async findAll(): Promise<Routine[]> {
-    const rows = await this.prisma.routine.findMany({ include: this.includeAll });
+    const rows = await this.prisma.routine.findMany({
+      include: this.includeAll,
+    });
     return rows.map((r) => this.toDomain(r));
   }
 
@@ -116,6 +122,7 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
         trainerId: entity.trainerId,
         clientId: entity.clientId,
         weekCount: entity.weekCount,
+        isFavorable: entity.isFavorable,
         isActive: entity.isActive,
         routineDays: {
           create: entity.days.map((day) => ({
@@ -157,6 +164,7 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
         name: entity.name,
         description: entity.description,
         weekCount: entity.weekCount,
+        isFavorable: entity.isFavorable,
         isActive: entity.isActive,
         routineDays: {
           create: entity.days.map((day) => ({

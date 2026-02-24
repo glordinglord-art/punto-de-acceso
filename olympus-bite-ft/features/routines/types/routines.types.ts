@@ -36,6 +36,7 @@ export interface Routine {
   trainerId: string;
   clientId: string;
   weekCount: number;
+  isFavorable?: boolean | null;
   isActive: boolean;
   days: RoutineDay[];
   createdAt: string;

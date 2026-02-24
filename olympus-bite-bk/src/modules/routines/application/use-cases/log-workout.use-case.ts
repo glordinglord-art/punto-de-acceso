@@ -1,15 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ROUTINE_REPOSITORY, RoutineRepositoryPort } from '../../domain/ports/routine.repository.port';
+import {
+  ROUTINE_REPOSITORY,
+  RoutineRepositoryPort,
+} from '../../domain/ports/routine.repository.port';
 import { WorkoutLog } from '../../domain/entities/workout-log.entity';
 import { LogWorkoutDto } from '../dtos/routine.dto';
 
 export const WORKOUT_LOG_REPOSITORY = Symbol('WORKOUT_LOG_REPOSITORY');
 
 export interface WorkoutLogRepositoryPort {
-  findByExerciseAndUser(exerciseId: string, userId: string): Promise<WorkoutLog[]>;
-  findByRoutineAndUser(routineId: string, userId: string): Promise<WorkoutLog[]>;
+  findByExerciseAndUser(
+    exerciseId: string,
+    userId: string,
+  ): Promise<WorkoutLog[]>;
+  findByRoutineAndUser(
+    routineId: string,
+    userId: string,
+  ): Promise<WorkoutLog[]>;
   save(log: WorkoutLog): Promise<WorkoutLog>;
   update(log: WorkoutLog): Promise<WorkoutLog>;
+  delete(id: string): Promise<void>;
 }
 
 @Injectable()
@@ -25,7 +35,9 @@ export class LogWorkoutUseCase {
       userId,
     );
 
-    const existingForWeek = existing.find((l) => l.weekNumber === dto.weekNumber);
+    const existingForWeek = existing.find(
+      (l) => l.weekNumber === dto.weekNumber,
+    );
 
     if (existingForWeek) {
       existingForWeek.updateLog({
@@ -50,5 +62,20 @@ export class LogWorkoutUseCase {
 
   async getByRoutine(routineId: string, userId: string): Promise<WorkoutLog[]> {
     return this.workoutLogRepository.findByRoutineAndUser(routineId, userId);
+  }
+
+  async unlog(
+    exerciseId: string,
+    userId: string,
+    weekNumber: number,
+  ): Promise<void> {
+    const existing = await this.workoutLogRepository.findByExerciseAndUser(
+      exerciseId,
+      userId,
+    );
+    const existingForWeek = existing.find((l) => l.weekNumber === weekNumber);
+    if (existingForWeek) {
+      await this.workoutLogRepository.delete(existingForWeek.id);
+    }
   }
 }

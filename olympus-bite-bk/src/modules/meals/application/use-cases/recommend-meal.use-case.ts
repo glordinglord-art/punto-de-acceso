@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MEAL_REPOSITORY, MealRepositoryPort } from '../../domain/ports/meal.repository.port';
+import {
+  MEAL_REPOSITORY,
+  MealRepositoryPort,
+} from '../../domain/ports/meal.repository.port';
 import { Meal, MealType } from '../../domain/entities/meal.entity';
 import { NutritionalInfo } from '../../domain/value-objects/nutritional-info.vo';
 import { RecommendMealDto } from '../dtos/meal.dto';

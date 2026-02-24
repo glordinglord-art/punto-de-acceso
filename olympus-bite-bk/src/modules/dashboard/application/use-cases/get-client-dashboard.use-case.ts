@@ -70,7 +70,11 @@ export class GetClientDashboardUseCase {
 
   async execute(clientId: string): Promise<ClientDashboardDto> {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
     const dayOfWeek = now.getDay();
@@ -231,7 +235,8 @@ export class GetClientDashboardUseCase {
         description: activeRoutine.description,
         weekCount: activeRoutine.weekCount,
         totalDays: activeRoutine.routineDays.length,
-        trainingDays: activeRoutine.routineDays.filter((d) => !d.isRestDay).length,
+        trainingDays: activeRoutine.routineDays.filter((d) => !d.isRestDay)
+          .length,
         exerciseCount,
         completedLogs,
         totalLogs,

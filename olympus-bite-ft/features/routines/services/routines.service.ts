@@ -1,6 +1,6 @@
-import { api } from '@/shared/lib/api';
-import type { ApiResponse } from '@/shared/types/common.types';
-import type { Routine, WorkoutLog } from '../types/routines.types';
+import { api } from "@/shared/lib/api";
+import type { ApiResponse } from "@/shared/types/common.types";
+import type { Routine, WorkoutLog } from "../types/routines.types";
 
 export interface LogWorkoutPayload {
   exerciseId: string;
@@ -23,12 +23,30 @@ export const routinesService = {
   update: (routineId: string, data: unknown) =>
     api.put<ApiResponse<Routine>>(`/routines/${routineId}`, data),
 
+  evaluateFavorable: (routineId: string, isFavorable: boolean) =>
+    api.put<ApiResponse<Routine>>(`/routines/${routineId}/favorable`, {
+      isFavorable,
+    }),
+
   remove: (routineId: string) =>
     api.delete<ApiResponse<null>>(`/routines/${routineId}`),
 
   logWorkout: (routineId: string, userId: string, data: LogWorkoutPayload) =>
-    api.post<ApiResponse<WorkoutLog>>(`/routines/${routineId}/log/${userId}`, data),
+    api.post<ApiResponse<WorkoutLog>>(
+      `/routines/${routineId}/log/${userId}`,
+      data,
+    ),
 
   getWorkoutLogs: (routineId: string, userId: string) =>
     api.get<ApiResponse<WorkoutLog[]>>(`/routines/${routineId}/logs/${userId}`),
+
+  unlogWorkout: (
+    routineId: string,
+    userId: string,
+    exerciseId: string,
+    weekNumber: number,
+  ) =>
+    api.delete<ApiResponse<null>>(
+      `/routines/${routineId}/log/${userId}/${exerciseId}/${weekNumber}`,
+    ),
 };

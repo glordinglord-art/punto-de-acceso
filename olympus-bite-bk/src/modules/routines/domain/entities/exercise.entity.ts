@@ -26,9 +26,9 @@ export class Exercise extends BaseEntity {
   name: string;
   muscleGroup: MuscleGroup;
   sets: number;
-  reps: string;           // "8-12", "10-15", "Fallo técnico"
+  reps: string; // "8-12", "10-15", "Fallo técnico"
   restSeconds: number;
-  observations: string | null;  // "180'' descanso", "Por pierna", "En polea"
+  observations: string | null; // "180'' descanso", "Por pierna", "En polea"
   videoUrl: string | null;
   order: number;
 

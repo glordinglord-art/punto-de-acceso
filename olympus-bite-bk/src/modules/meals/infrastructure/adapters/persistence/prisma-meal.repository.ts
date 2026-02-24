@@ -141,6 +141,7 @@ export class PrismaMealRepository implements MealRepositoryPort {
         goalRating: entity.goalRating,
         isRecommendation: entity.isRecommendation,
         recommendedBy: entity.recommendedBy,
+        date: entity.date,
       },
     });
     return this.toDomain(raw);

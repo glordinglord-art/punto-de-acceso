@@ -8,16 +8,27 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'trainer' | 'client';
+  role: "admin" | "trainer" | "client";
   avatarUrl: string | null;
   phone: string | null;
+  dietaryGoal?: string | null;
+  weight?: number | null;
+  height?: number | null;
+  targetCalories?: number | null;
+  onboardingCompleted?: boolean;
+
+  experienceLevel?: string | null;
+  equipmentAccess?: string | null;
+  medicalConditions?: string | null;
+  dietaryPreferences?: string | null;
+
   isActive: boolean;
   createdAt: string;
 }
 
 /** El entrenador registra con code 9966 → role=trainer. trainer IS the admin. */
 export function isAdmin(role: string): boolean {
-  return role === 'admin' || role === 'trainer';
+  return role === "admin" || role === "trainer";
 }
 
 export interface NutritionalInfo {

@@ -13,9 +13,16 @@ import { GetUserUseCase } from '../../../application/use-cases/get-user.use-case
 import { GetUsersByTrainerUseCase } from '../../../application/use-cases/get-users-by-trainer.use-case';
 import { UpdateProfileUseCase } from '../../../application/use-cases/update-profile.use-case';
 import { ChangePasswordUseCase } from '../../../application/use-cases/change-password.use-case';
-import { CreateUserDto, UpdateUserDto } from '../../../application/dtos/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+} from '../../../application/dtos/user.dto';
 import { ChangePasswordDto } from '../../../application/use-cases/change-password.use-case';
 import { UserResponseDto } from '../../../application/dtos/user-response.dto';
+import {
+  CompleteOnboardingUseCase,
+  CompleteOnboardingDto,
+} from '../../../application/use-cases/complete-onboarding.use-case';
 
 @Controller('users')
 export class UsersController {
@@ -25,6 +32,7 @@ export class UsersController {
     private readonly getUsersByTrainerUseCase: GetUsersByTrainerUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
+    private readonly completeOnboardingUseCase: CompleteOnboardingUseCase,
   ) {}
 
   @Get(':id')
@@ -56,8 +64,20 @@ export class UsersController {
   }
 
   @Put(':id/password')
-  async changePassword(@Param('id') id: string, @Body() dto: ChangePasswordDto) {
+  async changePassword(
+    @Param('id') id: string,
+    @Body() dto: ChangePasswordDto,
+  ) {
     const user = await this.changePasswordUseCase.execute(id, dto);
+    return { success: true, data: UserResponseDto.fromEntity(user) };
+  }
+
+  @Put(':id/onboarding')
+  async completeOnboarding(
+    @Param('id') id: string,
+    @Body() dto: CompleteOnboardingDto,
+  ) {
+    const user = await this.completeOnboardingUseCase.execute(id, dto);
     return { success: true, data: UserResponseDto.fromEntity(user) };
   }
 }

@@ -27,6 +27,7 @@ export class RoutineResponseDto {
   trainerId!: string;
   clientId!: string;
   weekCount!: number;
+  isFavorable!: boolean | null;
   isActive!: boolean;
   days!: RoutineDayResponse[];
   createdAt!: Date;
@@ -39,6 +40,7 @@ export class RoutineResponseDto {
     dto.trainerId = routine.trainerId;
     dto.clientId = routine.clientId;
     dto.weekCount = routine.weekCount;
+    dto.isFavorable = routine.isFavorable;
     dto.isActive = routine.isActive;
     dto.days = routine.days
       .sort((a, b) => a.dayNumber - b.dayNumber)

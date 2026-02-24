@@ -11,14 +11,19 @@ export class SupabaseStorageService implements OnModuleInit {
     const key = process.env.SUPABASE_KEY;
 
     if (!url || !key) {
-      console.warn('⚠️ SUPABASE_URL or SUPABASE_KEY not set — image upload disabled');
+      console.warn(
+        '⚠️ SUPABASE_URL or SUPABASE_KEY not set — image upload disabled',
+      );
       return;
     }
 
     this.supabase = createClient(url, key);
   }
 
-  async uploadImage(base64Data: string, fileName: string): Promise<string | null> {
+  async uploadImage(
+    base64Data: string,
+    fileName: string,
+  ): Promise<string | null> {
     if (!this.supabase) return null;
 
     try {
@@ -32,7 +37,8 @@ export class SupabaseStorageService implements OnModuleInit {
       // Detect mime type from prefix or default to jpeg
       let mimeType = 'image/jpeg';
       if (base64Data.startsWith('data:image/png')) mimeType = 'image/png';
-      else if (base64Data.startsWith('data:image/webp')) mimeType = 'image/webp';
+      else if (base64Data.startsWith('data:image/webp'))
+        mimeType = 'image/webp';
 
       const ext = mimeType.split('/')[1];
       const filePath = `${Date.now()}-${fileName}.${ext}`;

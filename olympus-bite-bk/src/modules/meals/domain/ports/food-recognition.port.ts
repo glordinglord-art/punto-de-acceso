@@ -11,6 +11,20 @@ export interface FoodAnalysisResult {
   goalRating: 'excelente' | 'buena' | 'regular' | 'mala';
 }
 
+export interface FoodRecognitionContext {
+  goal?: string;
+  description?: string;
+  weight?: number;
+  height?: number;
+  experienceLevel?: string;
+  equipmentAccess?: string;
+  medicalConditions?: string;
+  dietaryPreferences?: string;
+}
+
 export interface FoodRecognitionPort {
-  analyzeImage(imageBase64: string, goal?: string): Promise<FoodAnalysisResult>;
+  analyzeImages(
+    imagesBase64: string[],
+    context?: FoodRecognitionContext,
+  ): Promise<FoodAnalysisResult>;
 }
