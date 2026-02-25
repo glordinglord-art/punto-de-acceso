@@ -286,19 +286,30 @@ export function RoutineCalendar({
                 type="button"
                 onClick={() => setSelectedDate(date)}
                 className={cn(
-                  "relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-xl text-sm transition-all",
+                  "relative mx-auto flex h-12 w-12 flex-col items-center justify-center rounded-xl text-sm transition-all",
                   isSelected
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold"
+                    ? hasTraining
+                      ? "bg-primary-500 text-white font-bold shadow-lg shadow-primary-900/30"
+                      : hasRest
+                        ? "bg-amber-500 text-white font-bold shadow-lg shadow-amber-900/30"
+                        : "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold"
                     : isTodayDate
-                      ? "ring-2 ring-neutral-900 dark:ring-white font-semibold text-neutral-900 dark:text-white"
+                      ? hasTraining
+                        ? "bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-neutral-900 font-bold"
+                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white ring-2 ring-neutral-900 dark:ring-white font-semibold"
                       : hasTraining
-                        ? "bg-primary-100 text-primary-900 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50 font-medium"
+                        ? "bg-primary-100/80 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 ring-1 ring-primary-500/30 hover:bg-primary-100 dark:hover:bg-primary-500/20 font-semibold"
                         : hasRest
-                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50 font-medium"
+                          ? "bg-amber-100/80 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20"
                           : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800",
                 )}
               >
-                {date.getDate()}
+                <span className="leading-none">{date.getDate()}</span>
+                {!isSelected && (hasTraining || hasRest) && (
+                  <span className="mt-0.5 text-[8px] leading-none opacity-60">
+                    {hasTraining ? "💪" : "😴"}
+                  </span>
+                )}
               </button>
             );
           })}
