@@ -26,8 +26,8 @@ export function StatsOverview(props: StatsOverviewProps) {
       label: 'Comidas hoy',
       value: props.activeMealsToday,
       icon: '🍽️',
-      gradient: 'from-emerald-600 to-emerald-400',
-      lightBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      gradient: 'from-primary-600 to-primary-400',
+      lightBg: 'bg-primary-50 dark:bg-primary-950/40',
       extra: weekDiff !== 0 ? `${weekDiff > 0 ? '+' : ''}${weekDiff}% vs sem. pasada` : null,
       extraPositive: weekDiff >= 0,
     },
@@ -74,7 +74,7 @@ export function StatsOverview(props: StatsOverviewProps) {
             <p className={`text-xs mt-2 font-medium truncate ${
               'extraPositive' in card
                 ? card.extraPositive
-                  ? 'text-emerald-600 dark:text-emerald-400'
+                  ? 'text-primary-600 dark:text-primary-400'
                   : 'text-red-500 dark:text-red-400'
                 : 'text-neutral-400'
             }`}>

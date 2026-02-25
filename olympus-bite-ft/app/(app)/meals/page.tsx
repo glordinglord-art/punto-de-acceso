@@ -10,14 +10,17 @@ import { NutritionSummary } from "@/features/meals/components/NutritionSummary";
 import { FoodScanner } from "@/features/meals/components/FoodScanner";
 import { ClientMealsView } from "@/features/meals/components/ClientMealsView";
 import { Modal } from "@/shared/components/ui/Modal";
+import { ClientAiChat } from "@/features/clients/components/ClientAiChat";
 import { mealsService } from "@/features/meals/services/meals.service";
 import type { Meal } from "@/features/meals/types/meals.types";
+import type { User } from "@/shared/types/common.types";
 import { cn } from "@/shared/lib/utils";
 
 export default function MealsPage() {
   const { user, isTrainer } = useAuth();
   const [tab, setTab] = useState<"mine" | "clients">("mine");
   const [showScanner, setShowScanner] = useState(false);
+  const [showAiChat, setShowAiChat] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,9 +126,18 @@ export default function MealsPage() {
         }
         action={
           tab === "mine" ? (
-            <Button onClick={() => setShowScanner(true)} size="md">
-              + Registrar comida
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowAiChat(true)}
+                size="md"
+              >
+                ✨ Consultar IA
+              </Button>
+              <Button onClick={() => setShowScanner(true)} size="md">
+                + Registrar comida
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -291,6 +303,15 @@ export default function MealsPage() {
             onClose={() => setShowScanner(false)}
           />
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showAiChat}
+        onClose={() => setShowAiChat(false)}
+        title="Recomendador Smart AI 10X"
+        size="md"
+      >
+        {user && <ClientAiChat client={user as User} />}
       </Modal>
 
       {/* Meal Detail Modal */}

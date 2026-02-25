@@ -53,7 +53,7 @@ export function ClientsList({ clients }: ClientsListProps) {
                 {/* Activity indicator dot */}
                 <span
                   className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-neutral-900 ${
-                    hasActivity ? 'bg-emerald-400' : 'bg-neutral-300 dark:bg-neutral-600'
+                    hasActivity ? 'bg-primary-400' : 'bg-neutral-300 dark:bg-neutral-600'
                   }`}
                 />
               </div>

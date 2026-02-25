@@ -122,8 +122,8 @@ export function OnboardingSurveyModal() {
                 onClick={() => setGoal(key)}
                 className={`cursor-pointer rounded-xl border-2 p-3 transition-all flex items-center gap-3 ${
                   goal === key
-                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
-                    : "border-neutral-200 bg-white hover:border-emerald-200 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-emerald-800"
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+                    : "border-neutral-200 bg-white hover:border-primary-200 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-800"
                 }`}
               >
                 <div className="text-2xl">{def.icon}</div>

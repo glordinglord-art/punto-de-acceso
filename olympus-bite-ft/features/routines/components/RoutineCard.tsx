@@ -15,7 +15,7 @@ function DayPreview({ day }: { day: RoutineDay }) {
   if (day.isRestDay) {
     return (
       <div className="flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 dark:bg-neutral-800/50">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-400">
           {day.dayNumber}
         </span>
         <div>

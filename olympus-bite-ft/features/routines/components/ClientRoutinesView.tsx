@@ -378,7 +378,7 @@ export function ClientRoutinesView() {
                         <span
                           className={cn(
                             "h-1.5 w-1.5 rounded-full",
-                            isSelected ? "bg-emerald-400" : "bg-emerald-500",
+                            isSelected ? "bg-primary-400" : "bg-primary-500",
                           )}
                         />
                       )}
@@ -400,7 +400,7 @@ export function ClientRoutinesView() {
           {/* Legend */}
           <div className="mt-4 flex items-center gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />{" "}
+              <span className="h-2 w-2 rounded-full bg-primary-500" />{" "}
               Entrenamiento
             </div>
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
@@ -422,15 +422,15 @@ export function ClientRoutinesView() {
 
             {selectedDayInfo ? (
               selectedDayInfo.isRestDay ? (
-                <Card className="bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30">
+                <Card className="bg-primary-50/50 border-primary-100 dark:bg-primary-900/10 dark:border-primary-900/30">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">🧘</span>
                     <div>
-                      <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+                      <p className="font-semibold text-primary-800 dark:text-primary-300">
                         Día de descanso
                       </p>
                       {selectedDayInfo.restDayNote && (
-                        <p className="text-sm text-emerald-600 dark:text-emerald-400/70">
+                        <p className="text-sm text-primary-600 dark:text-primary-400/70">
                           {selectedDayInfo.restDayNote}
                         </p>
                       )}
@@ -548,7 +548,7 @@ export function ClientRoutinesView() {
                       }
                       className={`group flex items-center gap-3 rounded-xl px-3 py-3 transition-all cursor-pointer ${
                         logged
-                          ? "bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                          ? "bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40"
                           : "bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                       }`}
                     >
@@ -557,8 +557,8 @@ export function ClientRoutinesView() {
                         disabled={isSaving}
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                           logged
-                            ? "border-emerald-500 bg-emerald-500 text-white"
-                            : "border-neutral-300 dark:border-neutral-600 group-hover:border-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/30"
+                            ? "border-primary-500 bg-primary-500 text-white"
+                            : "border-neutral-300 dark:border-neutral-600 group-hover:border-primary-400 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30"
                         }`}
                       >
                         {isSaving ? (
@@ -582,7 +582,7 @@ export function ClientRoutinesView() {
 
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm font-medium ${logged ? "text-emerald-700 dark:text-emerald-300 line-through" : "text-neutral-900 dark:text-white"}`}
+                          className={`text-sm font-medium ${logged ? "text-primary-700 dark:text-primary-300 line-through" : "text-neutral-900 dark:text-white"}`}
                         >
                           {ex.name}
                         </p>
@@ -678,7 +678,7 @@ export function ClientRoutinesView() {
           </div>
           <div className="h-3 w-full rounded-full bg-neutral-100 dark:bg-neutral-800">
             <div
-              className="h-full rounded-full bg-linear-to-r from-emerald-500 to-emerald-400 transition-all"
+              className="h-full rounded-full bg-linear-to-r from-primary-500 to-primary-400 transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -710,7 +710,7 @@ export function ClientRoutinesView() {
               <Card
                 key={day.dayNumber}
                 padding="sm"
-                className={isToday ? "ring-2 ring-emerald-500/50" : ""}
+                className={isToday ? "ring-2 ring-primary-500/50" : ""}
               >
                 <div className="px-2 pt-2 pb-1 flex items-center justify-between">
                   <div className="flex items-center gap-2">

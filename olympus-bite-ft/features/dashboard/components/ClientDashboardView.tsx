@@ -91,8 +91,8 @@ export function ClientDashboardView() {
       <div className="space-y-6 max-w-full overflow-hidden">
         {/* Row 1: Quick Stats */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="relative overflow-hidden rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-neutral-100 dark:border-neutral-800 p-5 min-w-0">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-emerald-600 to-emerald-400" />
+          <div className="relative overflow-hidden rounded-2xl bg-primary-50 dark:bg-primary-950/40 border border-neutral-100 dark:border-neutral-800 p-5 min-w-0">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary-600 to-primary-400" />
             <span className="text-2xl">🍽️</span>
             <p className="text-3xl font-extrabold text-neutral-900 dark:text-white mt-2">{stats.mealsToday}</p>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Comidas hoy</p>
@@ -194,7 +194,7 @@ export function ClientDashboardView() {
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800">
                       <div
-                        className="h-full rounded-full bg-emerald-500 transition-all"
+                        className="h-full rounded-full bg-primary-500 transition-all"
                         style={{ width: `${routineProgress}%` }}
                       />
                     </div>
@@ -211,7 +211,7 @@ export function ClientDashboardView() {
                   </div>
                   <div className="h-2 w-full rounded-full bg-neutral-100 dark:bg-neutral-800">
                     <div
-                      className="h-full rounded-full bg-emerald-500 transition-all"
+                      className="h-full rounded-full bg-primary-500 transition-all"
                       style={{ width: `${routineProgress}%` }}
                     />
                   </div>

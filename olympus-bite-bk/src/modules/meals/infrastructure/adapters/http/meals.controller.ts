@@ -25,6 +25,8 @@ import {
   RecommendMealDto,
 } from '../../../application/dtos/meal.dto';
 import { MealResponseDto } from '../../../application/dtos/meal-response.dto';
+import { GetDietChatHistoryUseCase } from '../../../application/use-cases/get-diet-chat-history.use-case';
+import { ClearDietChatHistoryUseCase } from '../../../application/use-cases/clear-diet-chat-history.use-case';
 
 @Controller('meals')
 export class MealsController {
@@ -36,6 +38,8 @@ export class MealsController {
     private readonly chatDietRecommendationUseCase: ChatDietRecommendationUseCase,
     private readonly deleteMealUseCase: DeleteMealUseCase,
     private readonly getTrainerClientsMealsUseCase: GetTrainerClientsMealsUseCase,
+    private readonly getChatHistoryUseCase: GetDietChatHistoryUseCase,
+    private readonly clearChatHistoryUseCase: ClearDietChatHistoryUseCase,
   ) {}
 
   @Post(':userId')
@@ -118,8 +122,10 @@ export class MealsController {
     @Param('userId') userId: string,
     @Body() dto: ChatDietRecommendationDto,
   ) {
-    const recommendation =
-      await this.chatDietRecommendationUseCase.execute(dto);
+    const recommendation = await this.chatDietRecommendationUseCase.execute(
+      userId,
+      dto,
+    );
     return { success: true, data: { text: recommendation } };
   }
 
@@ -128,5 +134,18 @@ export class MealsController {
   async deleteMeal(@Param('mealId') mealId: string) {
     await this.deleteMealUseCase.execute(mealId);
     return { success: true, message: 'Comida eliminada correctamente' };
+  }
+
+  @Get('chat-history/:userId')
+  async getChatHistory(@Param('userId') userId: string) {
+    const history = await this.getChatHistoryUseCase.execute(userId);
+    return { success: true, data: history };
+  }
+
+  @Delete('chat-history/:userId')
+  @HttpCode(HttpStatus.OK)
+  async clearChatHistory(@Param('userId') userId: string) {
+    await this.clearChatHistoryUseCase.execute(userId);
+    return { success: true, message: 'Historial de chat limpiado' };
   }
 }

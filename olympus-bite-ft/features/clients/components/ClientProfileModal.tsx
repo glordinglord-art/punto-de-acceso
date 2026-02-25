@@ -211,7 +211,7 @@ export function ClientProfileModal({
                     Objetivo Principal
                   </label>
                   <select
-                    className="w-full text-sm rounded-xl border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:border-emerald-500 focus:ring-emerald-500"
+                    className="w-full text-sm rounded-xl border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:border-primary-500 focus:ring-primary-500"
                     value={goal}
                     onChange={(e) => setGoal(e.target.value)}
                   >
@@ -229,7 +229,7 @@ export function ClientProfileModal({
                   </label>
                   <input
                     type="number"
-                    className="w-full text-sm rounded-xl border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 placeholder-neutral-400"
+                    className="w-full text-sm rounded-xl border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:border-primary-500 focus:ring-primary-500 placeholder-neutral-400"
                     value={calories}
                     placeholder="Ej. 2200"
                     onChange={(e) => setCalories(e.target.value)}

@@ -36,7 +36,7 @@ export function TopFoods({ foods }: TopFoodsProps) {
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-linear-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                    className="h-full rounded-full bg-linear-to-r from-primary-400 to-primary-500 transition-all duration-500"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

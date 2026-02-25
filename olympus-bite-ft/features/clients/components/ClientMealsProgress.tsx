@@ -60,7 +60,7 @@ export function ClientMealsProgress({
         </h3>
         <div className="flex justify-between items-end mb-2">
           <div>
-            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+            <span className="text-3xl font-black text-primary-600 dark:text-primary-400">
               {currentCalories.toLocaleString()}
             </span>
             <span className="text-sm text-neutral-500 ml-1">
@@ -78,7 +78,7 @@ export function ClientMealsProgress({
         <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-3 mb-2 overflow-hidden">
           <div
             className={`h-3 rounded-full transition-all duration-500 ${
-              isOverGoal ? "bg-red-500" : "bg-emerald-500"
+              isOverGoal ? "bg-red-500" : "bg-primary-500"
             }`}
             style={{ width: `${progressPercentage}%` }}
           />
@@ -120,7 +120,7 @@ export function ClientMealsProgress({
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-bold text-primary-600 dark:text-primary-400">
                     {meal.calories}
                   </span>
                   <span className="text-xs text-neutral-500 ml-1">kcal</span>

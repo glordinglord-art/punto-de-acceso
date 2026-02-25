@@ -1,7 +1,15 @@
-'use client';
+"use client";
 
-import { AuthProvider } from '@/features/auth/hooks/useAuth';
+import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/features/auth/hooks/useAuth";
+import { SettingsProvider } from "@/shared/contexts/SettingsContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <SettingsProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </SettingsProvider>
+    </ThemeProvider>
+  );
 }

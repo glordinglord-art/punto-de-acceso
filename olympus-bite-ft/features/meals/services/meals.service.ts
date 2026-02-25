@@ -69,6 +69,7 @@ export const mealsService = {
         medicalConditions?: string;
         dietaryPreferences?: string;
         targetCalories?: number | null;
+        history?: { role: "user" | "ai"; content: string }[];
       };
     },
   ) =>
@@ -86,6 +87,14 @@ export const mealsService = {
   }) => api.post<ApiResponse<Meal>>("/meals/recommend", data),
 
   remove: (mealId: string) => api.delete<ApiResponse<null>>(`/meals/${mealId}`),
+
+  getChatHistory: (userId: string) =>
+    api.get<
+      ApiResponse<{ role: "user" | "ai"; content: string; createdAt: string }[]>
+    >(`/meals/chat-history/${userId}`),
+
+  clearChatHistory: (userId: string) =>
+    api.delete<ApiResponse<null>>(`/meals/chat-history/${userId}`),
 
   getByTrainerClients: (
     trainerId: string,

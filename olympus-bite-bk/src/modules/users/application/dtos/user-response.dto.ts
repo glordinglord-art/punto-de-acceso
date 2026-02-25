@@ -8,6 +8,7 @@ export class UserResponseDto {
   avatarUrl: string | null;
   phone: string | null;
   dietaryGoal: string | null;
+  targetCalories: number | null;
   weight: number | null;
   height: number | null;
   onboardingCompleted: boolean;
@@ -30,6 +31,7 @@ export class UserResponseDto {
     dto.avatarUrl = user.avatarUrl;
     dto.phone = user.phone;
     dto.dietaryGoal = user.dietaryGoal;
+    dto.targetCalories = user.targetCalories;
     dto.weight = user.weight;
     dto.height = user.height;
     dto.onboardingCompleted = user.onboardingCompleted;

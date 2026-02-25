@@ -32,7 +32,7 @@ export const FITNESS_GOALS: Record<FitnessGoal, { label: string; icon: string; d
 };
 
 export const GOAL_RATING_CONFIG: Record<GoalRating, { label: string; color: string; bgColor: string; icon: string }> = {
-  excelente: { label: 'Excelente', color: 'text-emerald-600', bgColor: 'bg-emerald-50 dark:bg-emerald-900/20', icon: '🌟' },
+  excelente: { label: 'Excelente', color: 'text-primary-600', bgColor: 'bg-primary-50 dark:bg-primary-900/20', icon: '🌟' },
   buena: { label: 'Buena', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-900/20', icon: '👍' },
   regular: { label: 'Regular', color: 'text-amber-600', bgColor: 'bg-amber-50 dark:bg-amber-900/20', icon: '⚠️' },
   mala: { label: 'No recomendada', color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-900/20', icon: '❌' },

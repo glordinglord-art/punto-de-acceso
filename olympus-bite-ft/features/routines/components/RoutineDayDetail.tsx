@@ -45,17 +45,17 @@ function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number })
 export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
   if (day.isRestDay) {
     return (
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+      <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-6 dark:border-primary-900/30 dark:bg-primary-900/10">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-lg font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-lg font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-400">
             {day.dayNumber}
           </span>
           <div>
-            <h3 className="font-semibold text-emerald-800 dark:text-emerald-300">
+            <h3 className="font-semibold text-primary-800 dark:text-primary-300">
               Día de Descanso
             </h3>
             {day.restDayNote && (
-              <p className="text-sm text-emerald-600 dark:text-emerald-400/70 mt-0.5">
+              <p className="text-sm text-primary-600 dark:text-primary-400/70 mt-0.5">
                 {day.restDayNote}
               </p>
             )}

@@ -11,9 +11,14 @@ import { ChatDietRecommendationUseCase } from '../application/use-cases/chat-die
 import { DeleteMealUseCase } from '../application/use-cases/delete-meal.use-case';
 import { GetTrainerClientsMealsUseCase } from '../application/use-cases/get-trainer-clients-meals.use-case';
 import { MEAL_REPOSITORY } from '../domain/ports/meal.repository.port';
+import { DIET_CHAT_MESSAGE_REPOSITORY } from '../domain/ports/diet-chat-message.repository.port';
 import { FOOD_RECOGNITION_SERVICE } from '../domain/ports/food-recognition.port';
 import { DIET_RECOMMENDER_SERVICE } from '../domain/ports/diet-recommender.port';
 import { SupabaseStorageService } from '../../../shared/infrastructure/supabase/supabase-storage.service';
+
+import { PrismaDietChatMessageRepository } from './adapters/persistence/prisma-diet-chat-message.repository';
+import { GetDietChatHistoryUseCase } from '../application/use-cases/get-diet-chat-history.use-case';
+import { ClearDietChatHistoryUseCase } from '../application/use-cases/clear-diet-chat-history.use-case';
 
 @Module({
   controllers: [MealsController],
@@ -21,6 +26,10 @@ import { SupabaseStorageService } from '../../../shared/infrastructure/supabase/
     {
       provide: MEAL_REPOSITORY,
       useClass: PrismaMealRepository,
+    },
+    {
+      provide: DIET_CHAT_MESSAGE_REPOSITORY,
+      useClass: PrismaDietChatMessageRepository,
     },
     {
       provide: FOOD_RECOGNITION_SERVICE,
@@ -38,6 +47,8 @@ import { SupabaseStorageService } from '../../../shared/infrastructure/supabase/
     ChatDietRecommendationUseCase,
     DeleteMealUseCase,
     GetTrainerClientsMealsUseCase,
+    GetDietChatHistoryUseCase,
+    ClearDietChatHistoryUseCase,
   ],
   exports: [MEAL_REPOSITORY, GetMealsByUserUseCase],
 })

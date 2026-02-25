@@ -88,8 +88,9 @@ model User {
   clients User[] @relation("TrainerClients")
 
   meals             Meal[]
-  routinesAsClient  Routine[]    @relation("ClientRoutines")
-  routinesAsTrainer Routine[]    @relation("TrainerRoutines")
+  dietChatMessages  DietChatMessage[]
+  routinesAsClient  Routine[]         @relation("ClientRoutines")
+  routinesAsTrainer Routine[]         @relation("TrainerRoutines")
   workoutLogs       WorkoutLog[]
 
   codesGenerated InvitationCode[] @relation("TrainerCodes")
@@ -142,6 +143,18 @@ model Meal {
   user User @relation(fields: [userId], references: [id])
 
   @@map("meals")
+}
+
+model DietChatMessage {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  role      String // "user" o "ai"
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("diet_chat_messages")
 }
 
 model Routine {

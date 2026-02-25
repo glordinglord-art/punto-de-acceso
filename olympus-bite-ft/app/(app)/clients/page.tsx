@@ -278,7 +278,7 @@ export default function ClientsPage() {
         size="sm"
       >
         <div className="text-center py-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-900/20">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 dark:bg-primary-900/20">
             <span className="text-3xl">🔑</span>
           </div>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">

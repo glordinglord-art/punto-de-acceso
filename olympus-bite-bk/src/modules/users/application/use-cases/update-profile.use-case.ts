@@ -30,6 +30,7 @@ export class UpdateProfileUseCase {
       dietaryPreferences: dto.dietaryPreferences,
       weight: dto.weight,
       height: dto.height,
+      targetCalories: dto.targetCalories,
     });
 
     return this.userRepository.update(user);

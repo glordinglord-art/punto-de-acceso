@@ -432,9 +432,9 @@ export function FoodScanner({
       {/* Analysis Result */}
       {analysis && (
         <>
-          <Card className="border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+          <Card className="border-primary-100 bg-primary-50/30 dark:border-primary-900/30 dark:bg-primary-900/10">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-emerald-600 text-lg">✨</span>
+              <span className="text-primary-600 text-lg">✨</span>
               <h3 className="font-semibold text-neutral-900 dark:text-white">
                 Análisis completado
               </h3>

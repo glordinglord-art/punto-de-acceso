@@ -45,6 +45,8 @@ export class GeminiDietRecommenderAdapter
       medicalConditions,
       dietaryPreferences,
       targetCalories,
+      recentMeals,
+      history = [],
     } = context || {};
 
     const goalLabels: Record<string, string> = {
@@ -69,28 +71,59 @@ export class GeminiDietRecommenderAdapter
     if (dietaryPreferences)
       userContextString += `\n- Preferencias alimentarias o alergias: ${dietaryPreferences}`;
 
+    if (recentMeals && recentMeals.length > 0) {
+      userContextString += `\n- ÚLTIMAS COMIDAS QUE EL CLIENTE REGISTRÓ (Tómalo en cuenta para no repetir o evaluar qué falta):\n`;
+      recentMeals.forEach((m) => {
+        userContextString += `  • ${m.date} - ${m.name} (${m.type}): ${m.calories} kcal [${m.macros}]\n`;
+      });
+    }
+
     const systemInstruction = `
-Eres un nutricionista deportivo de clase mundial ayudando a un entrenador personal a planificar la dieta de su cliente.
-Usa los datos del cliente para dar respuestas sumamente precisas y profesionales.
-Devuelve la respuesta SOLAMENTE en Markdown estructurado y amigable de leer, usando listas, negritas y emojis relevantes. No devuelvas formato JSON, sino texto narrativo directo. Si el entrenador dice que quiere "4000 calorias", diseña algo para 4000 calorias.
+Eres un asistente experto en nutrición y fitness de clase mundial, conversando directamente con tu usuario (el cliente).
+Tu objetivo es ayudarlo a lograr sus metas de salud basándote en su contexto (calorías, comidas previas, alergias, peso).
+Habla de forma directa, motivadora, empática y en primera persona. NO hables de un "cliente" ni menciones a un "entrenador". Tú estás hablando interactiva y directamente con la persona.
+Devuelve tu respuesta SOLAMENTE en Markdown estructurado y amigable, usando listas, negritas y emojis relevantes. Si el usuario te indica que una comida le cayó mal o pregunta algo de su historial, respóndele como un humano inteligente usando el historial brindado.
     `;
 
-    const finalPrompt = `
-${systemInstruction}
-
-CONTEXTO DEL CLIENTE:
-${userContextString ? userContextString : 'Ningún dato específico configurado.'}
-
-PETICIÓN DEL ENTRENADOR:
-"${promptStr}"
-    `;
+    const mappedHistory = history.map((msg) => ({
+      role: msg.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }));
 
     try {
-      const result = await this.model.generateContent(finalPrompt);
+      const chat = this.model.startChat({
+        history: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text:
+                  systemInstruction +
+                  '\n\n' +
+                  'CONTEXTO NUTRICIONAL DEL USUARIO:\n' +
+                  (userContextString
+                    ? userContextString
+                    : 'Ningún dato específico configurado.'),
+              },
+            ],
+          },
+          {
+            role: 'model',
+            parts: [
+              {
+                text: 'Entendido. Estoy listo para platicar directamente contigo, entender tu cuerpo y ayudarte a alcanzar tus objetivos nutricionales usando toda mi sabiduría. ¡Hablemos! 🥦✨',
+              },
+            ],
+          },
+          ...mappedHistory,
+        ],
+      });
+
+      const result = await chat.sendMessage(promptStr);
       const output = result.response.text();
       return output;
     } catch (e) {
-      this.logger.error('Error generando recomendación:', e);
+      this.logger.error('Error generando recomendación con historial:', e);
       throw new Error('No se pudo generar la recomendación en este momento.');
     }
   }

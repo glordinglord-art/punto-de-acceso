@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { cn } from '@/shared/lib/utils';
-import { RoutineDayDetail } from './RoutineDayDetail';
-import type { Routine, RoutineDay } from '../types/routines.types';
+import { useState, useMemo } from "react";
+import { cn } from "@/shared/lib/utils";
+import { RoutineDayDetail } from "./RoutineDayDetail";
+import type { Routine, RoutineDay } from "../types/routines.types";
 
 interface RoutineCalendarProps {
   routines: Routine[];
@@ -13,10 +13,20 @@ interface RoutineCalendarProps {
   trainerId?: string;
 }
 
-const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
 interface DayInfo {
@@ -70,12 +80,16 @@ function isToday(date: Date): boolean {
   );
 }
 
-export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCalendarProps) {
+export function RoutineCalendar({
+  routines,
+  clientNames,
+  trainerId,
+}: RoutineCalendarProps) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [filterClient, setFilterClient] = useState<string>('all'); // 'all' | 'me' | clientId
+  const [filterClient, setFilterClient] = useState<string>("all"); // 'all' | 'me' | clientId
 
   // Build unique client options from routines
   const clientOptions = useMemo(() => {
@@ -94,8 +108,9 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
 
   // Filtered routines based on selection
   const filteredRoutines = useMemo(() => {
-    if (filterClient === 'all') return routines;
-    if (filterClient === 'me') return routines.filter((r) => r.clientId === trainerId);
+    if (filterClient === "all") return routines;
+    if (filterClient === "me")
+      return routines.filter((r) => r.clientId === trainerId);
     return routines.filter((r) => r.clientId === filterClient);
   }, [routines, filterClient, trainerId]);
 
@@ -157,16 +172,36 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
               onClick={prevMonth}
               className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <button
               onClick={nextMonth}
               className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -176,12 +211,12 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
           <button
             type="button"
-            onClick={() => setFilterClient('all')}
+            onClick={() => setFilterClient("all")}
             className={cn(
-              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all',
-              filterClient === 'all'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700',
+              "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all",
+              filterClient === "all"
+                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700",
             )}
           >
             Todos
@@ -189,12 +224,12 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
           {trainerId && hasOwnRoutines && (
             <button
               type="button"
-              onClick={() => setFilterClient('me')}
+              onClick={() => setFilterClient("me")}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all',
-                filterClient === 'me'
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700',
+                "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all",
+                filterClient === "me"
+                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700",
               )}
             >
               🏋️ Yo
@@ -206,13 +241,13 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
               type="button"
               onClick={() => setFilterClient(cid)}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all',
+                "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all",
                 filterClient === cid
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700',
+                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700",
               )}
             >
-              {clientNames[cid] ?? 'Cliente'}
+              {clientNames[cid] ?? "Cliente"}
             </button>
           ))}
         </div>
@@ -251,40 +286,19 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
                 type="button"
                 onClick={() => setSelectedDate(date)}
                 className={cn(
-                  'relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-xl text-sm transition-all',
+                  "relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-xl text-sm transition-all",
                   isSelected
-                    ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold'
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold"
                     : isTodayDate
-                      ? 'ring-2 ring-neutral-900 dark:ring-white font-semibold text-neutral-900 dark:text-white'
-                      : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800',
+                      ? "ring-2 ring-neutral-900 dark:ring-white font-semibold text-neutral-900 dark:text-white"
+                      : hasTraining
+                        ? "bg-primary-100 text-primary-900 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50 font-medium"
+                        : hasRest
+                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50 font-medium"
+                          : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800",
                 )}
               >
                 {date.getDate()}
-                {/* Dots */}
-                {(hasTraining || hasRest) && (
-                  <div className="absolute bottom-1 flex gap-0.5">
-                    {hasTraining && (
-                      <span
-                        className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          isSelected
-                            ? 'bg-emerald-400'
-                            : 'bg-emerald-500 dark:bg-emerald-400',
-                        )}
-                      />
-                    )}
-                    {hasRest && !hasTraining && (
-                      <span
-                        className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          isSelected
-                            ? 'bg-amber-400'
-                            : 'bg-amber-400 dark:bg-amber-500',
-                        )}
-                      />
-                    )}
-                  </div>
-                )}
               </button>
             );
           })}
@@ -293,11 +307,11 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
         {/* Legend */}
         <div className="mt-4 flex items-center gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="h-4 w-4 rounded-md bg-primary-50 dark:bg-primary-500/15 ring-1 ring-inset ring-primary-500/20 dark:ring-primary-500/30" />
             Entrenamiento
           </div>
           <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="h-4 w-4 rounded-md bg-amber-50 dark:bg-amber-500/15 ring-1 ring-inset ring-amber-500/20 dark:ring-amber-500/30" />
             Descanso
           </div>
         </div>
@@ -308,10 +322,16 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
-              {selectedDate.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {selectedDate.toLocaleDateString("es", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
             </h3>
             {selectedDayInfos.length === 0 && (
-              <span className="text-sm text-neutral-400">— Sin actividad programada</span>
+              <span className="text-sm text-neutral-400">
+                — Sin actividad programada
+              </span>
             )}
           </div>
 
@@ -322,9 +342,11 @@ export function RoutineCalendar({ routines, clientNames, trainerId }: RoutineCal
                   <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
                     {routine.name}
                   </span>
-                  <span className="text-xs text-neutral-300 dark:text-neutral-600">·</span>
+                  <span className="text-xs text-neutral-300 dark:text-neutral-600">
+                    ·
+                  </span>
                   <span className="text-xs text-neutral-400">
-                    {clientNames[routine.clientId] ?? 'Cliente'}
+                    {clientNames[routine.clientId] ?? "Cliente"}
                   </span>
                 </div>
                 <RoutineDayDetail day={day} />

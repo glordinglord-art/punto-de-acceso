@@ -15,6 +15,7 @@ export interface LoginResult {
     dietaryGoal?: string | null;
     weight?: number | null;
     height?: number | null;
+    targetCalories?: number | null;
     onboardingCompleted: boolean;
     experienceLevel?: string | null;
     equipmentAccess?: string | null;
@@ -69,6 +70,7 @@ export class LoginUseCase {
         dietaryGoal: user.dietaryGoal,
         weight: user.weight,
         height: user.height,
+        targetCalories: user.targetCalories,
         onboardingCompleted: user.onboardingCompleted,
         experienceLevel: user.experienceLevel,
         equipmentAccess: user.equipmentAccess,

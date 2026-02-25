@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSettings } from "@/shared/contexts/SettingsContext";
 import { cn } from "../../lib/utils";
 
 const adminNavItems = [
@@ -127,32 +128,49 @@ const adminNavItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { logout, user, isTrainer } = useAuth();
+  const { layout } = useSettings();
 
   const navItems = adminNavItems.filter(
     (item) => !("trainerOnly" in item && item.trainerOnly) || isTrainer,
   );
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-neutral-100 dark:bg-neutral-950 dark:border-neutral-800">
+    <aside
+      className={cn(
+        "hidden lg:bg-white lg:dark:bg-neutral-950 transition-all z-30",
+        layout === "mini"
+          ? "lg:flex lg:flex-row lg:items-center lg:fixed lg:top-0 lg:left-0 lg:w-full lg:h-16 lg:px-6 lg:border-b lg:border-neutral-100 lg:dark:border-neutral-800"
+          : "lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-neutral-100 lg:dark:border-neutral-800",
+      )}
+    >
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-neutral-100 dark:border-neutral-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 dark:bg-white">
-          <span className="text-lg font-bold text-white dark:text-neutral-900">
-            O
-          </span>
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          layout === "mini"
+            ? "h-full border-none"
+            : "h-16 px-6 border-b border-neutral-100 dark:border-neutral-800",
+        )}
+      >
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900">
+          <span className="text-lg font-bold">O</span>
         </div>
         <div>
-          <h1 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
+          <h1 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight leading-tight">
             Punto de Inflexión
           </h1>
-          <p className="text-[11px] text-neutral-400 -mt-0.5">
-            Nutrition & Training
-          </p>
+          <p className="text-[11px] text-neutral-400">Nutrition & Training</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav
+        className={cn(
+          layout === "mini"
+            ? "flex-1 flex items-center justify-center gap-2 px-8"
+            : "flex-1 px-3 py-4 space-y-1",
+        )}
+      >
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -164,19 +182,29 @@ export function Sidebar() {
                 isActive
                   ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                   : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white",
+                layout === "mini" && "px-4 py-2",
               )}
             >
-              {item.icon}
-              {item.label}
+              <div className={cn(layout === "mini" && "w-5 h-5")}>
+                {item.icon}
+              </div>
+              {layout !== "mini" && item.label}
             </Link>
           );
         })}
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-neutral-100 p-4 dark:border-neutral-800">
-        {user && (
-          <div className="mb-3 px-3">
+      <div
+        className={cn(
+          "flex items-center gap-4",
+          layout === "mini"
+            ? "pr-6"
+            : "border-t border-neutral-100 p-4 dark:border-neutral-800 flex-col",
+        )}
+      >
+        {user && layout !== "mini" && (
+          <div className="mb-3 px-3 w-full">
             <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
               {user.name}
             </p>
@@ -184,8 +212,14 @@ export function Sidebar() {
           </div>
         )}
         <button
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300 transition-colors"
+          className={cn(
+            "flex items-center justify-center gap-3 rounded-xl text-sm font-medium text-neutral-500 hover:bg-neutral-50 hover:text-red-500 dark:hover:bg-neutral-800 dark:hover:text-red-400 transition-colors",
+            layout === "mini"
+              ? "p-2 hover:bg-neutral-100"
+              : "w-full px-3 py-2.5",
+          )}
           onClick={logout}
+          title="Cerrar sesión"
         >
           <svg
             className="h-5 w-5"
@@ -200,7 +234,7 @@ export function Sidebar() {
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
             />
           </svg>
-          Cerrar sesión
+          {layout !== "mini" && "Cerrar sesión"}
         </button>
       </div>
     </aside>
