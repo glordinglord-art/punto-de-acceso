@@ -12,7 +12,7 @@ export function SettingsTrigger() {
       {/* Fab button — bigger on mobile so it's tap-friendly */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40
+        className="fixed top-4 right-4 lg:bottom-6 lg:top-auto lg:right-6 z-40
           flex items-center gap-2
           p-3.5 sm:p-3
           bg-white dark:bg-neutral-800
