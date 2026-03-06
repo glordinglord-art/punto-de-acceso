@@ -10,6 +10,7 @@ import { MEAL_TYPES } from "@/shared/lib/constants";
 import { FITNESS_GOALS, GOAL_RATING_CONFIG } from "../types/meals.types";
 import type { FoodAnalysis, FitnessGoal } from "../types/meals.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { getLocalDateString, localDateToISO } from "@/shared/lib/utils";
 
 interface FoodScannerProps {
   userId: string;
@@ -35,9 +36,7 @@ export function FoodScanner({
   const [scanMealType, setScanMealType] = useState<string>("lunch");
   const [scanName, setScanName] = useState("");
   const { user } = useAuth();
-  const [scanDate, setScanDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [scanDate, setScanDate] = useState(() => getLocalDateString());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ─── Manual state ──────────────────────── */
@@ -124,7 +123,7 @@ export function FoodScanner({
         sugar: analysis.nutritionalInfo.sugar,
         recommendation: analysis.recommendation,
         goalRating: analysis.goalRating,
-        date: new Date(scanDate).toISOString(),
+date: localDateToISO(scanDate),
       });
       onMealSaved();
     } catch (err) {
@@ -158,7 +157,7 @@ export function FoodScanner({
         protein: Number(manualProtein) || 0,
         carbs: Number(manualCarbs) || 0,
         fat: Number(manualFat) || 0,
-        date: new Date(scanDate).toISOString(),
+        date: localDateToISO(scanDate),
       });
       onMealSaved();
     } catch (err) {

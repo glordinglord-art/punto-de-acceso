@@ -1,6 +1,6 @@
 import { api } from "@/shared/lib/api";
 import type { ApiResponse } from "@/shared/types/common.types";
-import type { Routine, WorkoutLog } from "../types/routines.types";
+import type { Routine, WorkoutLog, SetLogData } from "../types/routines.types";
 
 export interface LogWorkoutPayload {
   exerciseId: string;
@@ -8,6 +8,8 @@ export interface LogWorkoutPayload {
   weight?: number;
   repsDone?: string;
   observations?: string;
+  setsData?: SetLogData[];
+  duration?: number;
 }
 
 export const routinesService = {

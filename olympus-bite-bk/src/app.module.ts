@@ -5,6 +5,7 @@ import { UsersModule } from './modules/users/infrastructure/users.module';
 import { MealsModule } from './modules/meals/infrastructure/meals.module';
 import { RoutinesModule } from './modules/routines/infrastructure/routines.module';
 import { DashboardModule } from './modules/dashboard/infrastructure/dashboard.module';
+import { TasksModule } from './modules/tasks/infrastructure/tasks.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { DashboardModule } from './modules/dashboard/infrastructure/dashboard.mo
     MealsModule,
     RoutinesModule,
     DashboardModule,
+    TasksModule,
   ],
   controllers: [],
   providers: [],

@@ -44,6 +44,9 @@ export class LogWorkoutUseCase {
         weight: dto.weight,
         repsDone: dto.repsDone,
         observations: dto.observations,
+        setsData: dto.setsData,
+        duration: dto.duration,
+        completedAt: dto.setsData ? new Date() : undefined,
       });
       return this.workoutLogRepository.update(existingForWeek);
     }
@@ -55,6 +58,9 @@ export class LogWorkoutUseCase {
       weight: dto.weight,
       repsDone: dto.repsDone,
       observations: dto.observations,
+      setsData: dto.setsData,
+      duration: dto.duration,
+      completedAt: dto.setsData ? new Date() : undefined,
     });
 
     return this.workoutLogRepository.save(log);

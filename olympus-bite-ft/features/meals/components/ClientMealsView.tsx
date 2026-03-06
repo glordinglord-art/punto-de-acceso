@@ -8,7 +8,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { MealDetail } from './MealDetail';
 import { mealsService } from '../services/meals.service';
 import { MEAL_TYPES } from '@/shared/lib/constants';
-import { formatCalories, formatTime, cn } from '@/shared/lib/utils';
+import { formatCalories, formatTime, cn, getLocalDateString, localDateToRange } from '@/shared/lib/utils';
 import type { Meal, ClientMealsGroup } from '../types/meals.types';
 
 interface ClientMealsViewProps {
@@ -21,16 +21,12 @@ export function ClientMealsView({ trainerId }: ClientMealsViewProps) {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [selectedClientName, setSelectedClientName] = useState('');
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const start = `${selectedDate}T00:00:00.000Z`;
-      const end = `${selectedDate}T23:59:59.999Z`;
+      const { start, end } = localDateToRange(selectedDate);
       const res = await mealsService.getByTrainerClients(trainerId, start, end);
       setGroups(res.data ?? []);
     } catch {
@@ -45,21 +41,23 @@ export function ClientMealsView({ trainerId }: ClientMealsViewProps) {
   }, [loadData]);
 
   /* ─── Date nav ─── */
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const isToday = selectedDate === today;
 
   const changeDate = (offset: number) => {
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() + offset);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + offset);
+    setSelectedDate(getLocalDateString(dt));
   };
 
   const formatDateLabel = (dateStr: string) => {
     if (dateStr === today) return 'Hoy';
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    if (dateStr === yesterday.toISOString().split('T')[0]) return 'Ayer';
-    return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-ES', {
+    if (dateStr === getLocalDateString(yesterday)) return 'Ayer';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',

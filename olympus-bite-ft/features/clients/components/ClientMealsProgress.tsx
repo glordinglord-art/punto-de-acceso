@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { mealsService } from "@/features/meals/services/meals.service";
 import type { Meal } from "@/features/meals/types/meals.types";
 import { Card } from "@/shared/components/ui/Card";
+import { getLocalDateString, localDateToRange } from "@/shared/lib/utils";
 
 interface ClientMealsProgressProps {
   clientId: string;
@@ -20,8 +21,9 @@ export function ClientMealsProgress({
       try {
         setLoading(true);
         // We fetch only today's meals for the progress bar
-        const today = new Date().toISOString().split("T")[0];
-        const res = await mealsService.getByDateRange(clientId, today, today);
+        const today = getLocalDateString();
+        const { start, end } = localDateToRange(today);
+        const res = await mealsService.getByDateRange(clientId, start, end);
         setMeals(res.data);
       } catch (error) {
         console.error("Error fetching client meals:", error);

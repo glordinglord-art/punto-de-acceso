@@ -95,4 +95,12 @@ export class LogWorkoutDto {
   @IsString()
   @IsOptional()
   observations?: string;
+
+  @IsArray()
+  @IsOptional()
+  setsData?: { set: number; weight: number | null; reps: number | null; rest: number | null; completed: boolean }[];
+
+  @IsNumber()
+  @IsOptional()
+  duration?: number;
 }

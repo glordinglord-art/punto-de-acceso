@@ -1,6 +1,7 @@
 'use client';
 
 import { MUSCLE_GROUPS } from '@/shared/lib/constants';
+import { formatRest } from '@/shared/lib/utils';
 import type { Exercise, RoutineDay } from '../types/routines.types';
 
 interface RoutineDayDetailProps {
@@ -33,7 +34,7 @@ function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number })
         {exercise.reps}
       </td>
       <td className="py-3 pr-3 text-center text-sm tabular-nums text-neutral-500 dark:text-neutral-400">
-        {exercise.restSeconds}s
+        {formatRest(exercise.restSeconds)}
       </td>
       <td className="py-3 text-sm text-neutral-500 dark:text-neutral-400 max-w-50 truncate">
         {exercise.observations ?? '—'}

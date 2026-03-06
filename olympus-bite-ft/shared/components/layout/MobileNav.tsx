@@ -9,6 +9,7 @@ const allNavItems = [
   { href: '/dashboard', label: 'Inicio', icon: '🏠' },
   { href: '/meals', label: 'Comidas', icon: '🍽️' },
   { href: '/routines', label: 'Rutinas', icon: '💪' },
+  { href: '/tasks', label: 'Tareas', icon: '📋' },
   { href: '/clients', label: 'Clientes', icon: '👥', trainerOnly: true },
   { href: '/profile', label: 'Perfil', icon: '👤' },
 ];

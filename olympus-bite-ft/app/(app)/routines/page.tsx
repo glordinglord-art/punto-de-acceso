@@ -19,7 +19,7 @@ import type {
 import type { User } from "@/shared/types/common.types";
 import { cn } from "@/shared/lib/utils";
 
-type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit";
+type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine";
 type OverviewTab = "cards" | "calendar";
 
 export default function RoutinesPage() {
@@ -215,6 +215,7 @@ function TrainerRoutinesPage() {
 
   // Resolve client name for a routine
   const getClientName = (clientId: string) => {
+    if (user && clientId === user.id) return "Yo";
     const c = clients.find((cl) => cl.id === clientId);
     return c?.name ?? "Cliente";
   };
@@ -224,8 +225,23 @@ function TrainerRoutinesPage() {
     clients.forEach((c) => {
       map[c.id] = c.name;
     });
+    if (user) map[user.id] = "Yo";
     return map;
-  }, [clients]);
+  }, [clients, user]);
+
+  /* ─── My Routine view (trainer as client) ─── */
+  if (view === "myRoutine") {
+    return (
+      <div>
+        <div className="mb-4">
+          <Button variant="ghost" size="md" onClick={() => setView("overview")}>
+            ← Volver a rutinas
+          </Button>
+        </div>
+        <ClientRoutinesView />
+      </div>
+    );
+  }
 
   /* ─── Create view ─────────────────────────── */
   if (view === "create") {
@@ -237,6 +253,7 @@ function TrainerRoutinesPage() {
         />
         <RoutineBuilder
           clients={clients}
+          trainerId={user?.id}
           onSubmit={handleCreateRoutine}
           onCancel={() => setView("overview")}
         />
@@ -254,6 +271,7 @@ function TrainerRoutinesPage() {
         />
         <RoutineBuilder
           clients={clients}
+          trainerId={user?.id}
           onSubmit={handleUpdateRoutine}
           onCancel={() => setView("detail")}
           initialData={selectedRoutine}
@@ -272,9 +290,14 @@ function TrainerRoutinesPage() {
             loading ? "Cargando..." : `${routines.length} rutinas creadas`
           }
           action={
-            <Button size="md" onClick={() => setView("create")}>
-              + Nueva rutina
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="md" onClick={() => setView("myRoutine")}>
+                🏋️ Mi Rutina
+              </Button>
+              <Button size="md" onClick={() => setView("create")}>
+                + Nueva rutina
+              </Button>
+            </div>
           }
         />
 
@@ -355,6 +378,21 @@ function TrainerRoutinesPage() {
 
   /* ─── Detail ──────────────────────────────── */
   if (view === "detail" && selectedRoutine) {
+    const isOwnRoutine = user && selectedRoutine.clientId === user.id;
+    const totalExercises = selectedRoutine.days.reduce(
+      (s, d) => s + d.exercises.length,
+      0,
+    );
+    const totalPossible = totalExercises * selectedRoutine.weekCount;
+    const completedLogs = logs.length;
+    const progress =
+      totalPossible > 0 ? Math.round((completedLogs / totalPossible) * 100) : 0;
+    const sortedLogs = [...logs].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    const lastActivity = sortedLogs[0];
+
     return (
       <>
         <Header
@@ -365,7 +403,12 @@ function TrainerRoutinesPage() {
               <Button variant="ghost" size="md" onClick={handleBack}>
                 ← Volver
               </Button>
-              <Button size="md" onClick={() => setView("tracking")}>
+              {isOwnRoutine && (
+                <Button size="md" onClick={() => setView("myRoutine")}>
+                  💪 Hacer entrenamiento
+                </Button>
+              )}
+              <Button size="md" variant={isOwnRoutine ? "ghost" : "primary"} onClick={() => setView("tracking")}>
                 📊 Seguimiento
               </Button>
             </div>
@@ -378,22 +421,63 @@ function TrainerRoutinesPage() {
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          <Button size="sm" variant="ghost" onClick={() => setView("edit")}>
-            ✏️ Editar rutina
-          </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() => setShowDeleteModal(true)}
-          >
-            🗑️ Eliminar
-          </Button>
-
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-              Evaluación:
-            </span>
+        {/* ── Client Progress Summary ── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Progreso
+            </p>
+            <p className="text-2xl font-extrabold text-neutral-900 dark:text-white mt-1">
+              {progress}%
+            </p>
+            <div className="mt-2 h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  progress === 100
+                    ? "bg-green-500"
+                    : "bg-linear-to-r from-primary-500 to-primary-400",
+                )}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Ejercicios
+            </p>
+            <p className="text-2xl font-extrabold text-neutral-900 dark:text-white mt-1">
+              {completedLogs}
+              <span className="text-sm font-medium text-neutral-400">
+                /{totalPossible}
+              </span>
+            </p>
+            <p className="text-[10px] text-neutral-400 mt-1">completados</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Última Actividad
+            </p>
+            {lastActivity ? (
+              <>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white mt-1.5">
+                  {new Date(lastActivity.createdAt).toLocaleDateString("es", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </p>
+                <p className="text-[10px] text-neutral-400 mt-0.5 truncate">
+                  Semana {lastActivity.weekNumber}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-neutral-400 mt-1.5">Sin actividad</p>
+            )}
+          </div>
+          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Evaluación
+            </p>
             <select
               title="Evaluar rutina"
               value={
@@ -409,19 +493,68 @@ function TrainerRoutinesPage() {
                   handleEvaluateRoutine(val === "yes");
                 }
               }}
-              className="text-sm rounded-lg border border-neutral-300 px-3 py-1.5 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+              className="mt-1.5 text-sm rounded-lg border border-neutral-200 px-2 py-1 w-full dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
             >
-              <option value="">Pendiente...</option>
+              <option value="">Pendiente</option>
               <option value="yes">👍 Favorable</option>
               <option value="no">👎 Desfavorable</option>
             </select>
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <Button size="sm" variant="ghost" onClick={() => setView("edit")}>
+            ✏️ Editar rutina
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => setShowDeleteModal(true)}
+          >
+            🗑️ Eliminar
+          </Button>
+        </div>
+
         <div className="space-y-4">
-          {selectedRoutine.days.map((day) => (
-            <RoutineDayDetail key={day.id} day={day} />
-          ))}
+          {selectedRoutine.days.map((day) => {
+            // Calculate per-day progress
+            const dayLogCount = day.isRestDay
+              ? 0
+              : day.exercises.filter((ex) =>
+                  logs.some((l) => l.exerciseId === ex.id),
+                ).length;
+            const dayTotal = day.isRestDay ? 0 : day.exercises.length * selectedRoutine.weekCount;
+            const dayPct = dayTotal > 0 ? Math.round((dayLogCount / dayTotal) * 100) : 0;
+
+            return (
+              <div key={day.id}>
+                <RoutineDayDetail day={day} />
+                {!day.isRestDay && dayTotal > 0 && (
+                  <div className="flex items-center gap-3 px-6 py-2 -mt-1 rounded-b-2xl bg-neutral-50 border border-t-0 border-neutral-100 dark:bg-neutral-800/30 dark:border-neutral-800">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                      Progreso cliente
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 max-w-60">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          dayPct === 100
+                            ? "bg-green-500"
+                            : dayPct > 0
+                              ? "bg-primary-500"
+                              : "bg-transparent",
+                        )}
+                        style={{ width: `${dayPct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-neutral-500">
+                      {dayLogCount}/{dayTotal}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Delete confirmation modal */}
@@ -469,8 +602,8 @@ function TrainerRoutinesPage() {
     return (
       <>
         <Header
-          title="Seguimiento"
-          subtitle={`${selectedRoutine.name} · ${getClientName(selectedRoutine.clientId)}`}
+          title={`Progreso de ${getClientName(selectedRoutine.clientId)}`}
+          subtitle={`${selectedRoutine.name} · ${selectedRoutine.weekCount} semanas`}
           action={
             <Button variant="ghost" size="md" onClick={handleBack}>
               ← Volver a rutina
@@ -481,7 +614,6 @@ function TrainerRoutinesPage() {
           days={selectedRoutine.days}
           weekCount={selectedRoutine.weekCount}
           logs={logs}
-          onLogSave={handleLogSave}
         />
       </>
     );

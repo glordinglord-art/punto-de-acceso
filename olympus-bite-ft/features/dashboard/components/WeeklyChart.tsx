@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Card, CardTitle } from "@/shared/components/ui/Card";
+import { getLocalDateString } from "@/shared/lib/utils";
 import type { WeeklyTrendDay } from "../types/dashboard.types";
 
 interface WeeklyChartProps {
@@ -29,7 +30,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
     [data],
   );
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   if (!data.length) {
     return (

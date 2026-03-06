@@ -30,7 +30,7 @@ export class GetDashboardStatsUseCase {
     const thirtyDaysAgo = new Date(todayStart);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // ── BATCH 1: Todo en paralelo (solo 1 round-trip lógico) ──
+    // ── BATCH: Todo en una sola ronda de queries paralelas ──
     const [trainer, clients] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: trainerId },
@@ -45,27 +45,21 @@ export class GetDashboardStatsUseCase {
     const clientIds = clients.map((c) => c.id);
     const allUserIds = [trainerId, ...clientIds];
 
-    // ── BATCH 2: Todas las queries de datos en paralelo ──
+    // ── Queries de datos en paralelo (sin queries redundantes) ──
     const [
       totalRoutines,
       activeRoutines,
       activeRoutinesByClient,
       mealsLast30,
-      recentMealsRaw,
-      mealsThisWeek,
-      mealsLastWeek,
     ] = await Promise.all([
-      // Rutinas totales
       this.prisma.routine.count({ where: { trainerId } }),
-      // Rutinas activas
       this.prisma.routine.count({ where: { trainerId, isActive: true } }),
-      // Rutinas activas agrupadas por cliente (para clientsOverview)
       this.prisma.routine.groupBy({
         by: ['clientId'],
         where: { trainerId, isActive: true },
         _count: true,
       }),
-      // TODAS las comidas de 30 días (una sola query para: hoy, semanal, trends, tipos, foods)
+      // UNA sola query para: hoy, semanal, trends, tipos, foods, recent
       this.prisma.meal.findMany({
         where: {
           userId: { in: allUserIds },
@@ -88,36 +82,6 @@ export class GetDashboardStatsUseCase {
           user: { select: { name: true } },
         },
         orderBy: { date: 'desc' },
-      }),
-      // Últimas 15 comidas (ya incluye las de hoy, pero necesitamos el top reciente)
-      this.prisma.meal.findMany({
-        where: { userId: { in: allUserIds } },
-        orderBy: { date: 'desc' },
-        take: 15,
-        select: {
-          id: true,
-          name: true,
-          calories: true,
-          protein: true,
-          mealType: true,
-          imageUrl: true,
-          date: true,
-          user: { select: { name: true } },
-        },
-      }),
-      // Conteo semana actual
-      this.prisma.meal.count({
-        where: {
-          userId: { in: allUserIds },
-          date: { gte: weekStart, lt: todayEnd },
-        },
-      }),
-      // Conteo semana pasada
-      this.prisma.meal.count({
-        where: {
-          userId: { in: allUserIds },
-          date: { gte: lastWeekStart, lt: lastWeekEnd },
-        },
       }),
     ]);
 
@@ -211,8 +175,8 @@ export class GetDashboardStatsUseCase {
       .slice(0, 8)
       .map(([name, count]) => ({ name, count }));
 
-    // Recent meals
-    const recentMeals = recentMealsRaw.map((m) => ({
+    // Recent meals (ya viene ordenadas desc, tomamos las primeras 15)
+    const recentMeals = mealsLast30.slice(0, 15).map((m) => ({
       id: m.id,
       userName: m.user.name,
       mealName: m.name,
@@ -223,13 +187,20 @@ export class GetDashboardStatsUseCase {
       time: m.date,
     }));
 
+    // Conteos de semana actual y pasada (calculados en memoria)
+    const mealsThisWeek = mealsLast30.filter(
+      (m) => m.date >= weekStart && m.date < todayEnd,
+    ).length;
+    const mealsLastWeek = mealsLast30.filter(
+      (m) => m.date >= lastWeekStart && m.date < lastWeekEnd,
+    ).length;
+
     // Rutinas activas como mapa para lookup O(1)
     const routineMap = new Map<string, number>();
     activeRoutinesByClient.forEach((r) => routineMap.set(r.clientId, r._count));
 
     // Última comida por usuario: agrupar desde mealsLast30 (ya ordenadas por date desc)
     const lastMealByUser = new Map<string, Date>();
-    // recentMealsRaw ya está desc, pero mealsLast30 también; usemos mealsLast30 que tiene userId
     for (const m of mealsLast30) {
       if (!lastMealByUser.has(m.userId)) {
         lastMealByUser.set(m.userId, m.date);

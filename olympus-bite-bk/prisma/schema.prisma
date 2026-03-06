@@ -95,7 +95,10 @@ model User {
 
   codesGenerated InvitationCode[] @relation("TrainerCodes")
   usedCode       InvitationCode?  @relation("UsedByUser")
+  dailyTasks     DailyTask[]
+  taskLogs       TaskLog[]
 
+  @@index([trainerId, isActive])
   @@map("users")
 }
 
@@ -142,6 +145,8 @@ model Meal {
   // Relaciones
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId, date])
+  @@index([date])
   @@map("meals")
 }
 
@@ -174,6 +179,8 @@ model Routine {
   client      User         @relation("ClientRoutines", fields: [clientId], references: [id])
   routineDays RoutineDay[]
 
+  @@index([trainerId, isActive])
+  @@index([clientId, isActive])
   @@map("routines")
 }
 
@@ -219,15 +226,18 @@ model Exercise {
 
 // Registro semanal: el cliente trackea peso, reps y observaciones por ejercicio por semana
 model WorkoutLog {
-  id           String   @id @default(uuid())
-  exerciseId   String   @map("exercise_id")
-  userId       String   @map("user_id") // El cliente
-  weekNumber   Int      @map("week_number") // 1, 2, 3, 4
-  weight       Float? // Peso usado (kg)
-  repsDone     String?  @map("reps_done") // Reps logradas
+  id           String    @id @default(uuid())
+  exerciseId   String    @map("exercise_id")
+  userId       String    @map("user_id") // El cliente
+  weekNumber   Int       @map("week_number") // 1, 2, 3, 4
+  weight       Float? // Peso usado (kg) — resumen / peso principal
+  repsDone     String?   @map("reps_done") // Reps logradas — resumen
   observations String? // Notas del cliente
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  setsData     Json?     @map("sets_data") // [{set:1, weight:40, reps:12, completed:true}, ...]
+  duration     Int? // Duración total en segundos
+  completedAt  DateTime? @map("completed_at") // Cuándo se marcó como completado
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relaciones
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
@@ -246,4 +256,39 @@ model ExerciseDictionary {
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   @@map("exercise_dictionary")
+}
+
+// ─── Daily Tasks (Checklist de tareas diarias) ──────────
+
+model DailyTask {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String   // "Desayunar", "Entrenar", "Almorzar", etc.
+  icon      String   @default("✅") // Emoji
+  order     Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs TaskLog[]
+
+  @@index([userId, isActive])
+  @@map("daily_tasks")
+}
+
+model TaskLog {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  date      String   // "2026-03-06" — fecha local del usuario
+  completed Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, date])
+  @@index([userId, date])
+  @@map("task_logs")
 }

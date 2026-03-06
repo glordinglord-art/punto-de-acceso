@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { WorkoutLogRepositoryPort } from '../../../application/use-cases/log-workout.use-case';
-import { WorkoutLog } from '../../../domain/entities/workout-log.entity';
+import {
+  WorkoutLog,
+  SetData,
+} from '../../../domain/entities/workout-log.entity';
 import type { WorkoutLog as PrismaWorkoutLog } from '@prisma/client';
 
 @Injectable()
@@ -17,6 +20,11 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
         weight: raw.weight ?? undefined,
         repsDone: raw.repsDone ?? undefined,
         observations: raw.observations ?? undefined,
+        setsData: (raw as any).setsData
+          ? ((raw as any).setsData as SetData[])
+          : undefined,
+        duration: (raw as any).duration ?? undefined,
+        completedAt: (raw as any).completedAt ?? undefined,
       },
       raw.id,
     );
@@ -64,6 +72,9 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
         weight: entity.weight,
         repsDone: entity.repsDone,
         observations: entity.observations,
+        setsData: entity.setsData as any,
+        duration: entity.duration,
+        completedAt: entity.completedAt,
       },
     });
     return this.toDomain(raw);
@@ -76,6 +87,9 @@ export class PrismaWorkoutLogRepository implements WorkoutLogRepositoryPort {
         weight: entity.weight,
         repsDone: entity.repsDone,
         observations: entity.observations,
+        setsData: entity.setsData as any,
+        duration: entity.duration,
+        completedAt: entity.completedAt,
       },
     });
     return this.toDomain(raw);

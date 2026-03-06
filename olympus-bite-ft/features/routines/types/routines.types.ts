@@ -18,6 +18,14 @@ export interface RoutineDay {
   exercises: Exercise[];
 }
 
+export interface SetLogData {
+  set: number;
+  weight: number | null;
+  reps: number | null;
+  rest: number | null;
+  completed: boolean;
+}
+
 export interface WorkoutLog {
   id: string;
   exerciseId: string;
@@ -26,6 +34,9 @@ export interface WorkoutLog {
   weight: number | null;
   repsDone: string | null;
   observations: string | null;
+  setsData: SetLogData[] | null;
+  duration: number | null;
+  completedAt: string | null;
   createdAt: string;
 }
 

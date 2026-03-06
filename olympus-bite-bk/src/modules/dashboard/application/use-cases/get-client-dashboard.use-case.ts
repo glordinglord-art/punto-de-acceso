@@ -85,8 +85,8 @@ export class GetClientDashboardUseCase {
     const sevenDaysAgo = new Date(todayStart);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-    // ── BATCH 1: Todo en paralelo ──
-    const [client, activeRoutine, mealsLast7, mealsThisWeek, recentMealsRaw] =
+    // ── BATCH: Todo en paralelo ──
+    const [client, activeRoutine, mealsLast7, recentMealsRaw] =
       await Promise.all([
         // Info del cliente + trainer
         this.prisma.user.findUnique({
@@ -125,6 +125,7 @@ export class GetClientDashboardUseCase {
             date: { gte: sevenDaysAgo },
           },
           select: {
+            id: true,
             calories: true,
             protein: true,
             carbs: true,
@@ -132,17 +133,13 @@ export class GetClientDashboardUseCase {
             fiber: true,
             sugar: true,
             mealType: true,
+            name: true,
+            imageUrl: true,
             date: true,
           },
+          orderBy: { date: 'desc' },
         }),
-        // Conteo semana
-        this.prisma.meal.count({
-          where: {
-            userId: clientId,
-            date: { gte: weekStart, lt: todayEnd },
-          },
-        }),
-        // Comidas recientes
+        // Comidas recientes (solo últimas 10 fuera de ventana de 7d)
         this.prisma.meal.findMany({
           where: { userId: clientId },
           orderBy: { date: 'desc' },
@@ -163,6 +160,11 @@ export class GetClientDashboardUseCase {
     const mealsToday = mealsLast7.filter(
       (m) => m.date >= todayStart && m.date < todayEnd,
     );
+
+    // Conteo semana (en memoria)
+    const mealsThisWeek = mealsLast7.filter(
+      (m) => m.date >= weekStart && m.date < todayEnd,
+    ).length;
 
     const caloriesToday = mealsToday.reduce((s, m) => s + m.calories, 0);
     const proteinToday = mealsToday.reduce((s, m) => s + m.protein, 0);

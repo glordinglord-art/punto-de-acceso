@@ -47,6 +47,8 @@ interface RoutineBuilderProps {
   onCancel: () => void;
   /** Pass an existing routine to pre-fill the form (edit mode) */
   initialData?: Routine;
+  /** Trainer's user id — adds "Para mí" option in client select */
+  trainerId?: string;
 }
 
 const emptyExercise = (): ExerciseForm => ({
@@ -73,6 +75,7 @@ export function RoutineBuilder({
   onSubmit,
   onCancel,
   initialData,
+  trainerId,
 }: RoutineBuilderProps) {
   const isEditing = !!initialData;
 
@@ -256,6 +259,9 @@ export function RoutineBuilder({
                 className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 transition-all duration-200 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-700"
               >
                 <option value="">Selecciona un cliente</option>
+                {trainerId && (
+                  <option value={trainerId}>📌 Para mí (mi rutina)</option>
+                )}
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} — {c.email}
@@ -524,26 +530,77 @@ export function RoutineBuilder({
                           })
                         }
                       />
-                      <Input
-                        label="Descanso (s)"
-                        type="number"
-                        min={0}
-                        step={15}
-                        value={ex.restSeconds as any}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateExercise(activeDayIdx, exIdx, {
-                            restSeconds: val === "" ? ("" as any) : Number(val),
-                          });
-                        }}
-                        onBlur={() => {
-                          if (ex.restSeconds === ("" as any)) {
-                            updateExercise(activeDayIdx, exIdx, {
-                              restSeconds: 0,
-                            });
-                          }
-                        }}
-                      />
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                          Descanso
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={59}
+                            placeholder="0"
+                            value={
+                              ex.restSeconds === ("" as any)
+                                ? ""
+                                : Math.floor(Number(ex.restSeconds) / 60) || ""
+                            }
+                            onChange={(e) => {
+                              const mins =
+                                e.target.value === ""
+                                  ? 0
+                                  : parseInt(e.target.value, 10);
+                              const currentSecs =
+                                ex.restSeconds === ("" as any)
+                                  ? 0
+                                  : Number(ex.restSeconds) % 60;
+                              updateExercise(activeDayIdx, exIdx, {
+                                restSeconds: mins * 60 + currentSecs,
+                              });
+                            }}
+                          />
+                          <span className="text-sm text-neutral-400 shrink-0">
+                            min
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={59}
+                            placeholder="0"
+                            value={
+                              ex.restSeconds === ("" as any)
+                                ? ""
+                                : Number(ex.restSeconds) % 60 || ""
+                            }
+                            onChange={(e) => {
+                              const secs =
+                                e.target.value === ""
+                                  ? 0
+                                  : Math.min(
+                                      59,
+                                      parseInt(e.target.value, 10),
+                                    );
+                              const currentMins =
+                                ex.restSeconds === ("" as any)
+                                  ? 0
+                                  : Math.floor(Number(ex.restSeconds) / 60);
+                              updateExercise(activeDayIdx, exIdx, {
+                                restSeconds: currentMins * 60 + secs,
+                              });
+                            }}
+                            onBlur={() => {
+                              if (ex.restSeconds === ("" as any)) {
+                                updateExercise(activeDayIdx, exIdx, {
+                                  restSeconds: 0,
+                                });
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-neutral-400 shrink-0">
+                            seg
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <Input
