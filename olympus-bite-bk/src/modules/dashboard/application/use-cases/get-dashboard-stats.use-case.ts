@@ -6,16 +6,16 @@ import { DashboardStatsDto } from '../dtos/dashboard-stats.dto';
 export class GetDashboardStatsUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(trainerId: string): Promise<DashboardStatsDto> {
+  async execute(trainerId: string, tzOffset = 0): Promise<DashboardStatsDto> {
+    // Calcular "hoy" en la zona horaria del usuario
     const now = new Date();
+    const userNow = new Date(now.getTime() - tzOffset * 60_000);
     const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
+      Date.UTC(userNow.getUTCFullYear(), userNow.getUTCMonth(), userNow.getUTCDate()) + tzOffset * 60_000,
     );
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
-    const dayOfWeek = now.getDay();
+    const dayOfWeek = todayStart.getUTCDay();
     const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const weekStart = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - mondayOffset);

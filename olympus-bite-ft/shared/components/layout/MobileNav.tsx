@@ -11,6 +11,7 @@ const allNavItems = [
   { href: '/routines', label: 'Rutinas', icon: '💪' },
   { href: '/tasks', label: 'Tareas', icon: '📋' },
   { href: '/clients', label: 'Clientes', icon: '👥', trainerOnly: true },
+  { href: '/summary', label: 'Resumen', icon: '📊', trainerOnly: true },
   { href: '/profile', label: 'Perfil', icon: '👤' },
 ];
 
