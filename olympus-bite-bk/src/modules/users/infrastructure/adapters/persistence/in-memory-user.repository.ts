@@ -39,4 +39,12 @@ export class InMemoryUserRepository implements UserRepositoryPort {
   async delete(id: string): Promise<void> {
     this.users.delete(id);
   }
+
+  async linkToTrainer(email: string, trainerId: string): Promise<User | null> {
+    const user = Array.from(this.users.values()).find((u) => u.email === email);
+    if (!user) return null;
+    user.trainerId = trainerId;
+    this.users.set(user.id, user);
+    return user;
+  }
 }
