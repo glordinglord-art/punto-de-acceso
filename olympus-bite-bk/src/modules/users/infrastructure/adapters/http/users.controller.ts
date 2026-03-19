@@ -3,11 +3,14 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Param,
   Body,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { CreateUserUseCase } from '../../../application/use-cases/create-user.use-case';
 import { GetUserUseCase } from '../../../application/use-cases/get-user.use-case';
 import { GetUsersByTrainerUseCase } from '../../../application/use-cases/get-users-by-trainer.use-case';
@@ -23,6 +26,10 @@ import {
   CompleteOnboardingUseCase,
   CompleteOnboardingDto,
 } from '../../../application/use-cases/complete-onboarding.use-case';
+import {
+  USER_REPOSITORY,
+  UserRepositoryPort,
+} from '../../../domain/ports/user.repository.port';
 
 @Controller('users')
 export class UsersController {
@@ -33,6 +40,8 @@ export class UsersController {
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly completeOnboardingUseCase: CompleteOnboardingUseCase,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: UserRepositoryPort,
   ) {}
 
   @Get(':id')
@@ -78,6 +87,16 @@ export class UsersController {
     @Body() dto: CompleteOnboardingDto,
   ) {
     const user = await this.completeOnboardingUseCase.execute(id, dto);
+    return { success: true, data: UserResponseDto.fromEntity(user) };
+  }
+
+  @Patch('trainer/:trainerId/link-client')
+  async linkClient(
+    @Param('trainerId') trainerId: string,
+    @Body() body: { email: string },
+  ) {
+    const user = await this.userRepository.linkToTrainer(body.email, trainerId);
+    if (!user) throw new NotFoundException('No se encontró ningún usuario con ese email');
     return { success: true, data: UserResponseDto.fromEntity(user) };
   }
 }

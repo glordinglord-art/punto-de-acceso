@@ -18,6 +18,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         role: raw.role as unknown as UserRole,
         avatarUrl: raw.avatarUrl ?? undefined,
         phone: raw.phone ?? undefined,
+        trainerId: raw.trainerId ?? undefined,
         dietaryGoal: raw.dietaryGoal ?? undefined,
         weight: raw.weight ?? undefined,
         height: raw.height ?? undefined,
@@ -66,6 +67,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         role: entity.role as string as any,
         avatarUrl: entity.avatarUrl,
         phone: entity.phone,
+        trainerId: entity.trainerId,
         dietaryGoal: entity.dietaryGoal,
         weight: entity.weight,
         height: entity.height,
@@ -91,6 +93,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         role: entity.role as string as any,
         avatarUrl: entity.avatarUrl,
         phone: entity.phone,
+        trainerId: entity.trainerId,
         dietaryGoal: entity.dietaryGoal,
         weight: entity.weight,
         height: entity.height,
@@ -108,5 +111,15 @@ export class PrismaUserRepository implements UserRepositoryPort {
 
   async delete(id: string): Promise<void> {
     await this.prisma.user.delete({ where: { id } });
+  }
+
+  async linkToTrainer(email: string, trainerId: string): Promise<User | null> {
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (!existing) return null;
+    const raw = await this.prisma.user.update({
+      where: { email },
+      data: { trainerId },
+    });
+    return this.toDomain(raw);
   }
 }

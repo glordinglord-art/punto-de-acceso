@@ -24,4 +24,7 @@ export const clientsService = {
       dietaryPreferences?: string;
     },
   ) => api.put<ApiResponse<User>>(`/users/${id}/onboarding`, data),
+
+  linkClient: (trainerId: string, email: string) =>
+    api.patch<ApiResponse<User>>(`/users/trainer/${trainerId}/link-client`, { email }),
 };

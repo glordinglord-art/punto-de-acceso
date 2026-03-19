@@ -33,6 +33,10 @@ export default function ClientsPage() {
   const [existingCodes, setExistingCodes] = useState<InvCode[]>([]);
   const [showCodesPanel, setShowCodesPanel] = useState(false);
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState("");
 
   const loadClients = useCallback(async () => {
     if (!user) return;
@@ -77,6 +81,22 @@ export default function ClientsPage() {
     }
   };
 
+  const handleLinkClient = async () => {
+    if (!user || !linkEmail.trim()) return;
+    setLinkLoading(true);
+    setLinkError("");
+    try {
+      await clientsService.linkClient(user.id, linkEmail.trim());
+      setShowLinkModal(false);
+      setLinkEmail("");
+      await loadClients();
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : "No se encontró ningún usuario con ese email");
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
   const handleSaveProfile = async (
     clientId: string,
     data: { dietaryGoal?: string; targetCalories?: number | null },
@@ -118,6 +138,9 @@ export default function ClientsPage() {
         }
         action={
           <div className="flex gap-2">
+            <Button onClick={() => setShowLinkModal(true)} variant="ghost" size="md">
+              🔗 Vincular cliente
+            </Button>
             <Button onClick={handleShowCodes} variant="secondary" size="md">
               📋 Ver códigos
             </Button>
@@ -344,6 +367,40 @@ export default function ClientsPage() {
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
       />
+
+      {/* Vincular cliente existente */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-1">
+              Vincular cliente existente
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+              Si un cliente ya se registró pero no aparece en tu lista, ingresas su email y lo vinculas a tu cuenta.
+            </p>
+            <input
+              type="email"
+              value={linkEmail}
+              onChange={(e) => { setLinkEmail(e.target.value); setLinkError(""); }}
+              placeholder="email@ejemplo.com"
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 mb-2"
+              onKeyDown={(e) => e.key === "Enter" && handleLinkClient()}
+              autoFocus
+            />
+            {linkError && (
+              <p className="text-xs text-red-500 mb-3">{linkError}</p>
+            )}
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="ghost" size="md" onClick={() => { setShowLinkModal(false); setLinkEmail(""); setLinkError(""); }}>
+                Cancelar
+              </Button>
+              <Button size="md" onClick={handleLinkClient} loading={linkLoading} disabled={!linkEmail.trim()}>
+                Vincular
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

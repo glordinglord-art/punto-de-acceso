@@ -254,9 +254,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {displayUser.role === "client" &&
-                displayUser.onboardingCompleted && (
-                  <>
+              <>
                     <hr className="border-neutral-100 dark:border-neutral-800 my-4" />
                     <h3 className="text-sm font-medium text-neutral-900 dark:text-white mb-2">
                       Perfil Fitness y Salud
@@ -378,7 +376,6 @@ export default function ProfilePage() {
                       />
                     </div>
                   </>
-                )}
 
               {editError && (
                 <p className="text-sm text-red-500 dark:text-red-400">
@@ -542,8 +539,8 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        {/* Advanced Client Profile Section */}
-        {displayUser.role === "client" && displayUser.onboardingCompleted && (
+        {/* Fitness Profile Section */}
+        {(displayUser.weight != null || displayUser.height != null || displayUser.dietaryGoal || displayUser.experienceLevel) && (
           <Card>
             <h3 className="font-semibold text-neutral-900 dark:text-white mb-4">
               Perfil Fitness y Salud

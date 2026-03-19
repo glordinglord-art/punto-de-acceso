@@ -70,6 +70,13 @@ export class RegisterWithCodeUseCase {
 
     const savedUser = await this.userRepository.save(user);
 
+    // Guard: verify trainerId was actually persisted (protects against stale Prisma client)
+    if (trainerId && savedUser.trainerId !== trainerId) {
+      // Attempt self-heal: update the record with the correct trainerId
+      savedUser.trainerId = trainerId;
+      await this.userRepository.update(savedUser);
+    }
+
     // Si fue código de invitación normal, marcarlo como usado
     if (!isAdminCode && invitation) {
       invitation.markAsUsed(savedUser.id);
