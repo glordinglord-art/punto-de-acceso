@@ -1,4 +1,17 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const DEFAULT_API_BASE_URL = 'http://localhost:3000/api/v1';
+
+function resolveApiBaseUrl(rawUrl?: string): string {
+  const base = (rawUrl ?? DEFAULT_API_BASE_URL).trim().replace(/\/$/, '');
+
+  // If the env var points to the API domain root, ensure the expected Nest prefix exists.
+  if (/\/api\/v1$/i.test(base)) {
+    return base;
+  }
+
+  return `${base}/api/v1`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 type RequestOptions = {
   method?: string;
