@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
 import { Button } from "@/shared/components/ui/Button";
@@ -13,7 +13,7 @@ import { ClientProfileModal } from "@/features/clients/components/ClientProfileM
 import type { User } from "@/shared/types/common.types";
 import { formatDate } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
-import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users } from "lucide-react";
+import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface InvCode {
   id: string;
@@ -27,6 +27,8 @@ export default function ClientsPage() {
   const { user } = useAuth();
   const [clients, setClients] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modals
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -37,6 +39,12 @@ export default function ClientsPage() {
   const [linkEmail, setLinkEmail] = useState("");
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState("");
+
+  // Pagination & Filtering
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "name_asc" | "name_desc">("recent");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const loadClients = useCallback(async () => {
     if (!user) return;
@@ -54,6 +62,38 @@ export default function ClientsPage() {
   useEffect(() => {
     loadClients();
   }, [loadClients]);
+
+  // Client filtering, sorting and pagination logic
+  const filteredAndSortedClients = useMemo(() => {
+    let result = [...clients];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        c.email.toLowerCase().includes(q)
+      );
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    return result;
+  }, [clients, searchQuery, sortBy]);
+
+  const totalPages = Math.ceil(filteredAndSortedClients.length / ITEMS_PER_PAGE) || 1;
+
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedClients.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredAndSortedClients, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy]);
 
   const handleGenerateCode = async () => {
     if (!user) return;
@@ -134,7 +174,7 @@ export default function ClientsPage() {
       <Header
         title="Gestión de Clientes"
         subtitle={
-          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE ACTIVO' : 'CLIENTES ACTIVOS'}`
+          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE TOTAL' : 'CLIENTES TOTALES'}`
         }
         action={
           <div className="flex gap-3">
@@ -155,6 +195,37 @@ export default function ClientsPage() {
           </div>
         }
       />
+
+      {/* Toolbar: Search and Filter */}
+      {!loading && clients.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-white/5 p-4 rounded-2xl border border-neutral-200 dark:border-white/10 shadow-sm backdrop-blur-sm">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o correo..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all dark:text-white"
+            />
+          </div>
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+              <ArrowUpDown className="w-4 h-4 text-neutral-400 shrink-0" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "recent" | "name_asc" | "name_desc")}
+                className="bg-transparent text-sm font-medium text-neutral-700 dark:text-neutral-300 focus:outline-none w-full cursor-pointer"
+              >
+                <option value="recent">Más Recientes</option>
+                <option value="name_asc">Nombre (A-Z)</option>
+                <option value="name_desc">Nombre (Z-A)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-4 mt-6">
@@ -185,102 +256,149 @@ export default function ClientsPage() {
             Generar Código de Acceso
           </Button>
         </div>
+      ) : paginatedClients.length === 0 ? (
+        <div className="rounded-2xl border border-neutral-200 p-12 text-center dark:border-white/10 mt-6 bg-white/50 dark:bg-black/20 backdrop-blur-sm">
+          <Search className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-4" />
+          <h3 className="text-lg font-condensed font-bold text-neutral-900 dark:text-white uppercase tracking-wider">
+            No hay resultados
+          </h3>
+          <p className="text-sm text-neutral-500 mt-1">
+            No se encontraron clientes que coincidan con &quot;{searchQuery}&quot;
+          </p>
+          <Button variant="ghost" onClick={() => setSearchQuery("")} className="mt-4 font-condensed uppercase tracking-wider font-bold">
+            Limpiar Búsqueda
+          </Button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 mt-6">
-          {clients.map((client) => (
-            <div
-              key={client.id}
-              onClick={() => setSelectedClient(client)}
-              className="group flex flex-col sm:flex-row gap-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 p-5 transition-all hover:border-primary-300 dark:hover:border-primary-500/50 hover:shadow-lg cursor-pointer backdrop-blur-sm relative overflow-hidden"
-            >
-              {/* Highlight bar on hover */}
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="flex flex-col gap-6 mt-6">
+          <div className="grid grid-cols-1 gap-4">
+            {paginatedClients.map((client) => (
+              <div
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className="group flex flex-col sm:flex-row gap-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 p-5 transition-all hover:border-primary-300 dark:hover:border-primary-500/50 hover:shadow-lg cursor-pointer backdrop-blur-sm relative overflow-hidden"
+              >
+                {/* Highlight bar on hover */}
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-              <div className="flex items-center gap-4 flex-1">
-                <Avatar name={client.name} size="xl" className="ring-2 ring-white dark:ring-black shadow-md" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
-                      {client.name}
-                    </h3>
-                    <Badge variant={client.isActive ? "success" : "danger"} className="shadow-sm">
-                      {client.isActive ? "ACTIVO" : "INACTIVO"}
-                    </Badge>
+                <div className="flex items-center gap-4 flex-1">
+                  <Avatar name={client.name} size="xl" className="ring-2 ring-white dark:ring-black shadow-md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
+                        {client.name}
+                      </h3>
+                      <Badge variant={client.isActive ? "success" : "danger"} className="shadow-sm">
+                        {client.isActive ? "ACTIVO" : "INACTIVO"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1 truncate">
+                      {client.email}
+                    </p>
+
+                    {/* Advanced Profile Pills */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {client.experienceLevel && (
+                        <span className="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20 shadow-sm">
+                          <Dumbbell className="w-3 h-3 mr-1.5" /> {client.experienceLevel}
+                        </span>
+                      )}
+                      {client.equipmentAccess && (
+                        <span className="inline-flex items-center rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20 shadow-sm">
+                          <Activity className="w-3 h-3 mr-1.5" /> {client.equipmentAccess}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1 truncate">
-                    {client.email}
-                  </p>
+                </div>
 
-                  {/* Advanced Profile Pills */}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {client.experienceLevel && (
-                      <span className="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20 shadow-sm">
-                        <Dumbbell className="w-3 h-3 mr-1.5" /> {client.experienceLevel}
-                      </span>
-                    )}
-                    {client.equipmentAccess && (
-                      <span className="inline-flex items-center rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20 shadow-sm">
-                        <Activity className="w-3 h-3 mr-1.5" /> {client.equipmentAccess}
-                      </span>
-                    )}
+                {/* Medical / Dietary info if any */}
+                <div className="hidden lg:flex flex-col justify-center flex-1 max-w-xs border-l border-neutral-100 dark:border-white/5 pl-5">
+                  {(client.medicalConditions || client.dietaryPreferences) ? (
+                    <div className="space-y-2">
+                      {client.medicalConditions && (
+                        <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-100 dark:border-amber-500/20">
+                          <HeartPulse className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span className="leading-tight"><strong className="font-bold">CONDICIÓN:</strong> {client.medicalConditions}</span>
+                        </div>
+                      )}
+                      {client.dietaryPreferences && (
+                        <div className="flex items-start gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 p-2 rounded-lg border border-orange-100 dark:border-orange-500/20">
+                          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span className="leading-tight"><strong className="font-bold">DIETA/ALERGIA:</strong> {client.dietaryPreferences}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-neutral-400 font-condensed uppercase tracking-wider border border-dashed border-neutral-200 dark:border-white/10 rounded-xl p-2 bg-neutral-50/50 dark:bg-white/5">
+                      Sin restricciones
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 items-center justify-items-end xl:justify-items-center bg-neutral-50 dark:bg-black/20 p-4 rounded-xl border border-neutral-100 dark:border-white/5">
+                  <div className="text-right xl:text-center w-full">
+                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Objetivo</p>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white capitalize">
+                      {client.dietaryGoal
+                        ? FITNESS_GOALS[
+                            client.dietaryGoal as keyof typeof FITNESS_GOALS
+                          ]?.label || client.dietaryGoal
+                        : "--"}
+                    </p>
+                  </div>
+
+                  <div className="text-right xl:text-center w-full">
+                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Macros</p>
+                    <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                      {client.targetCalories
+                        ? `${client.targetCalories} kcal`
+                        : "--"}
+                    </p>
+                  </div>
+
+                  <div className="text-right xl:text-center w-full col-span-2 md:col-span-2 xl:col-span-1 border-t md:border-t-0 pt-2 md:pt-0 mt-2 md:mt-0 border-neutral-200 dark:border-white/10">
+                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Ingreso</p>
+                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                      {formatDate(client.createdAt)}
+                    </p>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
 
-              {/* Medical / Dietary info if any */}
-              <div className="hidden lg:flex flex-col justify-center flex-1 max-w-xs border-l border-neutral-100 dark:border-white/5 pl-5">
-                {(client.medicalConditions || client.dietaryPreferences) ? (
-                  <div className="space-y-2">
-                    {client.medicalConditions && (
-                      <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-100 dark:border-amber-500/20">
-                        <HeartPulse className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span className="leading-tight"><strong className="font-bold">CONDICIÓN:</strong> {client.medicalConditions}</span>
-                      </div>
-                    )}
-                    {client.dietaryPreferences && (
-                      <div className="flex items-start gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 p-2 rounded-lg border border-orange-100 dark:border-orange-500/20">
-                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span className="leading-tight"><strong className="font-bold">DIETA/ALERGIA:</strong> {client.dietaryPreferences}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-neutral-400 font-condensed uppercase tracking-wider border border-dashed border-neutral-200 dark:border-white/10 rounded-xl p-2 bg-neutral-50/50 dark:bg-white/5">
-                    Sin restricciones
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 items-center justify-items-end xl:justify-items-center bg-neutral-50 dark:bg-black/20 p-4 rounded-xl border border-neutral-100 dark:border-white/5">
-                <div className="text-right xl:text-center w-full">
-                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Objetivo</p>
-                  <p className="text-sm font-bold text-neutral-900 dark:text-white capitalize">
-                    {client.dietaryGoal
-                      ? FITNESS_GOALS[
-                          client.dietaryGoal as keyof typeof FITNESS_GOALS
-                        ]?.label || client.dietaryGoal
-                      : "--"}
-                  </p>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between bg-white dark:bg-white/5 p-4 rounded-2xl border border-neutral-200 dark:border-white/10 shadow-sm backdrop-blur-sm">
+              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                Mostrando <span className="font-bold text-neutral-900 dark:text-white">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> a <span className="font-bold text-neutral-900 dark:text-white">{Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedClients.length)}</span> de <span className="font-bold text-neutral-900 dark:text-white">{filteredAndSortedClients.length}</span> clientes
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-3"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="flex items-center gap-1 px-3 bg-neutral-50 dark:bg-black/20 rounded-xl font-condensed font-bold">
+                  {currentPage} / {totalPages}
                 </div>
-
-                <div className="text-right xl:text-center w-full">
-                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Macros</p>
-                  <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
-                    {client.targetCalories
-                      ? `${client.targetCalories} kcal`
-                      : "--"}
-                  </p>
-                </div>
-
-                <div className="text-right xl:text-center w-full col-span-2 md:col-span-2 xl:col-span-1 border-t md:border-t-0 pt-2 md:pt-0 mt-2 md:mt-0 border-neutral-200 dark:border-white/10">
-                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Ingreso</p>
-                  <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                    {formatDate(client.createdAt)}
-                  </p>
-                </div>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-3"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
