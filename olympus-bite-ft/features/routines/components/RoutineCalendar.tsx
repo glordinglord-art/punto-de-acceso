@@ -153,16 +153,16 @@ export function RoutineCalendar({
   return (
     <div className="space-y-4">
       {/* Calendar Card */}
-      <div className="rounded-[24px] border border-white/8 bg-white/4 p-5">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:border-white/8 dark:bg-white/4 dark:shadow-none">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {MONTH_NAMES[currentMonth]} {currentYear}
             </h2>
             <button
               onClick={goToday}
-              className="rounded-lg bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               Hoy
             </button>
@@ -170,7 +170,7 @@ export function RoutineCalendar({
           <div className="flex items-center gap-1">
             <button
               onClick={prevMonth}
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
             >
               <svg
                 className="h-4 w-4"
@@ -188,7 +188,7 @@ export function RoutineCalendar({
             </button>
             <button
               onClick={nextMonth}
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
             >
               <svg
                 className="h-4 w-4"
@@ -213,10 +213,10 @@ export function RoutineCalendar({
             type="button"
             onClick={() => setFilterClient("all")}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-white/8",
-              filterClient === "all"
-                ? "bg-white/10 text-white"
-                : "bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5",
+                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
+                filterClient === "all"
+                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
+                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
             )}
           >
             Todos
@@ -226,10 +226,10 @@ export function RoutineCalendar({
               type="button"
               onClick={() => setFilterClient("me")}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-white/8",
+                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
                 filterClient === "me"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5",
+                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
+                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
               )}
             >
               🏋️ Yo
@@ -241,10 +241,10 @@ export function RoutineCalendar({
               type="button"
               onClick={() => setFilterClient(cid)}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-white/8",
+                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
                 filterClient === cid
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5",
+                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
+                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
               )}
             >
               {clientNames[cid] ?? "Cliente"}
@@ -292,16 +292,16 @@ export function RoutineCalendar({
                       ? "bg-primary-500 text-slate-950 shadow-[0_0_12px_rgba(52,211,153,0.4)]"
                       : hasRest
                         ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                        : "bg-white text-slate-950"
+                        : "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
                     : isTodayDate
                       ? hasTraining
-                        ? "bg-primary-500/20 text-primary-300 border border-primary-500/50"
-                        : "bg-white/10 text-white border border-white/20"
+                        ? "bg-primary-500/15 text-primary-700 border border-primary-500/40 dark:bg-primary-500/20 dark:text-primary-300 dark:border-primary-500/50"
+                        : "bg-slate-100 text-slate-900 border border-slate-300 dark:bg-white/10 dark:text-white dark:border-white/20"
                       : hasTraining
-                        ? "bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 border border-primary-500/20"
+                        ? "bg-primary-500/10 text-primary-700 hover:bg-primary-500/20 border border-primary-500/20 dark:text-primary-400"
                         : hasRest
-                          ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
-                          : "text-slate-400 hover:bg-white/5",
+                          ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20 dark:text-amber-400"
+                          : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5",
                 )}
               >
                 <span className="leading-none">{date.getDate()}</span>
@@ -316,7 +316,7 @@ export function RoutineCalendar({
         </div>
 
         {/* Legend */}
-        <div className="mt-2 flex items-center gap-4 border-t border-white/8 pt-4">
+        <div className="mt-2 flex items-center gap-4 border-t border-slate-200 pt-4 dark:border-white/8">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
             <span className="h-3 w-3 rounded-[4px] border border-primary-500/30 bg-primary-500/15" />
             Entrenamiento
@@ -332,7 +332,7 @@ export function RoutineCalendar({
       {selectedDate && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-white capitalize">
+            <h3 className="text-base font-bold text-slate-900 capitalize dark:text-white">
               {selectedDate.toLocaleDateString("es", {
                 weekday: "long",
                 day: "numeric",
@@ -350,11 +350,11 @@ export function RoutineCalendar({
             selectedDayInfos.map(({ routine, day }) => (
               <div key={`${routine.id}-${day.id}`} className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     {routine.name}
                   </span>
                   <span className="text-slate-600">·</span>
-                  <span className="text-xs font-semibold text-slate-300">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                     {clientNames[routine.clientId] ?? "Cliente"}
                   </span>
                 </div>
@@ -362,9 +362,9 @@ export function RoutineCalendar({
               </div>
             ))
           ) : (
-            <div className="rounded-[24px] border border-dashed border-white/12 bg-white/4 p-8 text-center">
+            <div className="rounded-[24px] border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm dark:border-white/12 dark:bg-white/4 dark:shadow-none">
               <span className="text-3xl">🏖️</span>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 No hay rutinas programadas para este día
               </p>
             </div>

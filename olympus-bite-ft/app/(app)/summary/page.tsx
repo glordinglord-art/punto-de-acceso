@@ -158,12 +158,12 @@ export default function ClientSummaryPage() {
           <Spinner size="lg" />
         </div>
       ) : clients.length === 0 ? (
-        <div className="text-center py-20 px-6 rounded-[24px] border border-white/5 bg-white/5 backdrop-blur-md max-w-2xl mx-auto">
-          <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-2xl bg-white/5 mb-4 text-neutral-400">
+        <div className="text-center py-20 px-6 rounded-[24px] border border-slate-200 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.08)] backdrop-blur-md max-w-2xl mx-auto dark:border-white/5 dark:bg-white/5 dark:shadow-none">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-2xl bg-slate-100 mb-4 text-slate-500 dark:bg-white/5 dark:text-neutral-400">
             <Users className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-white mb-2">Sin clientes aún</h3>
-          <p className="text-neutral-400">
+          <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 mb-2 dark:text-white">Sin clientes aún</h3>
+          <p className="text-slate-600 dark:text-neutral-400">
             Cuando tus clientes se registren y comiencen su progreso, podrás ver su resumen diario aquí.
           </p>
         </div>
@@ -182,7 +182,7 @@ export default function ClientSummaryPage() {
                       'w-full flex items-center gap-4 rounded-2xl p-3 text-left transition-all border relative overflow-hidden group',
                       isActive
                         ? 'bg-primary-500/10 border-primary-500/30'
-                        : 'bg-[#1a1a1a] border-white/5 hover:bg-[#222] hover:border-white/10'
+                        : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 dark:bg-[#1a1a1a] dark:border-white/5 dark:hover:bg-[#222] dark:hover:border-white/10'
                     )}
                   >
                     {isActive && (
@@ -194,10 +194,10 @@ export default function ClientSummaryPage() {
                       className={isActive ? 'ring-2 ring-primary-500 shadow-[0_0_15px_rgba(var(--color-primary-500),0.3)]' : ''}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className={cn('text-base font-condensed font-bold uppercase tracking-wide truncate', isActive ? 'text-primary-400' : 'text-white group-hover:text-primary-400 transition-colors')}>
+                      <p className={cn('text-base font-condensed font-bold uppercase tracking-wide truncate', isActive ? 'text-primary-500 dark:text-primary-400' : 'text-slate-900 group-hover:text-primary-500 transition-colors dark:text-white dark:group-hover:text-primary-400')}>
                         {client.name}
                       </p>
-                      <p className={cn('text-xs truncate font-medium', isActive ? 'text-primary-200' : 'text-neutral-500')}>
+                      <p className={cn('text-xs truncate font-medium', isActive ? 'text-primary-600 dark:text-primary-200' : 'text-slate-500 dark:text-neutral-500')}>
                         {client.email}
                       </p>
                     </div>
@@ -211,13 +211,13 @@ export default function ClientSummaryPage() {
           {/* ─── Client Detail (right) ─── */}
           <div className="flex-1 min-w-0">
             {detailLoading ? (
-              <div className="flex items-center justify-center py-20 h-full rounded-[24px] border border-white/5 bg-white/5 backdrop-blur-md">
+              <div className="flex items-center justify-center py-20 h-full rounded-[24px] border border-slate-200 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/5 dark:bg-white/5 dark:shadow-none">
                 <Spinner size="lg" />
               </div>
             ) : detail && selectedClient ? (
               <ClientDetailView client={selectedClient} detail={detail} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-neutral-400 h-full rounded-[24px] border border-white/5 bg-white/5 backdrop-blur-md">
+              <div className="flex flex-col items-center justify-center py-20 text-slate-600 h-full rounded-[24px] border border-slate-200 bg-white/90 shadow-[0_12px_36px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/5 dark:bg-white/5 dark:text-neutral-400 dark:shadow-none">
                 <Search className="w-8 h-8 mb-3 opacity-20" />
                 <p className="text-sm font-condensed uppercase tracking-wider font-bold">Selecciona un cliente para ver su resumen</p>
               </div>
@@ -257,16 +257,16 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
   return (
     <div className="space-y-6">
       {/* ══════════ Header ══════════ */}
-      <div className="rounded-[28px] bg-gradient-to-br from-[#1a1a1a] to-black border border-white/5 p-6 md:p-8 relative overflow-hidden">
+      <div className="rounded-[28px] bg-gradient-to-br from-white to-slate-50 border border-slate-200 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.08)] md:p-8 relative overflow-hidden dark:from-[#1a1a1a] dark:to-black dark:border-white/5 dark:shadow-none">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-[60px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
-          <Avatar name={client.name} src={client.avatarUrl} size="xl" className="h-20 w-20 ring-2 ring-white/10" />
+          <Avatar name={client.name} src={client.avatarUrl} size="xl" className="h-20 w-20 ring-2 ring-slate-200 dark:ring-white/10" />
           <div className="flex-1 min-w-0 text-center md:text-left">
-            <h2 className="text-3xl font-condensed font-bold uppercase tracking-wide text-white truncate drop-shadow-md">{client.name}</h2>
+            <h2 className="text-3xl font-condensed font-bold uppercase tracking-wide text-slate-900 truncate drop-shadow-sm dark:text-white dark:drop-shadow-md">{client.name}</h2>
             <p className="text-primary-400 font-medium text-sm mb-2">{client.email}</p>
             {goalInfo && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider font-condensed mt-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-bold text-slate-900 uppercase tracking-wider font-condensed mt-2 dark:bg-white/5 dark:border-white/10 dark:text-white">
                 <span className="text-base">{goalInfo.icon}</span> {goalInfo.label}
               </span>
             )}
@@ -274,7 +274,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
           
           <div className="text-center md:text-right flex flex-col items-center md:items-end justify-center">
             <div className="flex items-baseline gap-1">
-              <p className="text-5xl font-condensed font-bold text-white drop-shadow-lg leading-none">{dashboard.caloriesToday.toLocaleString()}</p>
+              <p className="text-5xl font-condensed font-bold text-slate-900 drop-shadow-sm leading-none dark:text-white dark:drop-shadow-lg">{dashboard.caloriesToday.toLocaleString()}</p>
               <span className="text-sm font-bold text-neutral-500 font-condensed tracking-widest uppercase">Kcal</span>
             </div>
             <p className="text-xs text-primary-400 font-bold uppercase tracking-widest mt-1">
@@ -284,23 +284,23 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
         </div>
 
         {(client.weight || client.height || client.experienceLevel) && (
-          <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap gap-4 text-xs">
+          <div className="mt-6 pt-6 border-t border-slate-200 flex flex-wrap gap-4 text-xs dark:border-white/5">
             {client.weight && (
-              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/5">
-                <span className="text-neutral-400">⚖️</span>
-                <span className="text-white font-bold">{client.weight} kg</span>
+              <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-slate-200 dark:bg-white/5 dark:border-white/5">
+                <span className="text-slate-500 dark:text-neutral-400">⚖️</span>
+                <span className="text-slate-900 font-bold dark:text-white">{client.weight} kg</span>
               </div>
             )}
             {client.height && (
-              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/5">
-                <span className="text-neutral-400">📏</span>
-                <span className="text-white font-bold">{client.height} cm</span>
+              <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-slate-200 dark:bg-white/5 dark:border-white/5">
+                <span className="text-slate-500 dark:text-neutral-400">📏</span>
+                <span className="text-slate-900 font-bold dark:text-white">{client.height} cm</span>
               </div>
             )}
             {client.experienceLevel && (
-              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/5">
+              <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-slate-200 dark:bg-white/5 dark:border-white/5">
                 <Target className="w-3.5 h-3.5 text-primary-400" />
-                <span className="text-white font-bold">{client.experienceLevel}</span>
+                <span className="text-slate-900 font-bold dark:text-white">{client.experienceLevel}</span>
               </div>
             )}
           </div>
@@ -333,8 +333,8 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
         <div className="space-y-6">
           {/* ══════════ Macros ══════════ */}
           {dashboard.caloriesToday > 0 && (
-            <Card className="bg-[#111] border-white/5">
-              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white mb-4">Macro Balance</h3>
+            <Card>
+              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 mb-4 dark:text-white">Macro Balance</h3>
               <div className="grid grid-cols-5 gap-3">
                 <MacroBar label="PROT" value={dashboard.proteinToday} unit="g" color="bg-red-500" />
                 <MacroBar label="CARB" value={dashboard.carbsToday} unit="g" color="bg-amber-500" />
@@ -347,21 +347,21 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
 
           {/* ══════════ Tareas del día ══════════ */}
           {tasksTotal > 0 && (
-            <Card className="bg-[#111] border-white/5">
+            <Card>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white">Objetivos Diarios</h3>
+                <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 dark:text-white">Objetivos Diarios</h3>
                 <span className={cn(
                   'text-xs font-bold px-3 py-1 rounded-full font-condensed tracking-widest',
                   tasksPct === 100
                     ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
                     : tasksPct > 0
                       ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-white/5 text-neutral-400 border border-white/10'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-white/5 dark:text-neutral-400 dark:border-white/10'
                 )}>
                   {tasksPct}%
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 mb-5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-slate-100 mb-5 overflow-hidden dark:bg-white/5">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-1000 ease-out',
@@ -380,7 +380,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                         'flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all border',
                         done
                           ? 'bg-green-500/5 border-green-500/20'
-                          : 'bg-[#1a1a1a] border-white/5'
+                          : 'bg-white border-slate-200 dark:bg-[#1a1a1a] dark:border-white/5'
                       )}
                     >
                       <div
@@ -388,7 +388,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                           'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] transition-all',
                           done
                             ? 'bg-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]'
-                            : 'border-2 border-white/10 text-transparent'
+                            : 'border-2 border-slate-200 text-transparent dark:border-white/10'
                         )}
                       >
                         {done ? '✓' : ''}
@@ -397,8 +397,8 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                       <span className={cn(
                         'flex-1 font-medium',
                         done
-                          ? 'text-neutral-500 line-through'
-                          : 'text-neutral-200'
+                          ? 'text-slate-500 line-through dark:text-neutral-500'
+                          : 'text-slate-900 dark:text-neutral-200'
                       )}>
                         {task.title}
                       </span>
@@ -411,46 +411,46 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
 
           {/* ══════════ Rutina activa ══════════ */}
           {activeRoutine ? (
-            <Card className="bg-[#111] border-white/5 p-0 overflow-hidden">
-              <div className="p-6 border-b border-white/5">
+            <Card className="p-0 overflow-hidden">
+              <div className="p-6 border-b border-slate-200 dark:border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 flex items-center gap-2 dark:text-white">
                     <Dumbbell className="w-5 h-5 text-primary-500" /> {activeRoutine.name}
                   </h3>
                   <Badge variant="success" className="font-condensed tracking-widest text-[10px]">ACTIVA</Badge>
                 </div>
                 {activeRoutine.description && (
-                  <p className="text-sm text-neutral-400">{activeRoutine.description}</p>
+                  <p className="text-sm text-slate-600 dark:text-neutral-400">{activeRoutine.description}</p>
                 )}
                 
                 <div className="grid grid-cols-3 gap-3 mt-6">
-                  <div className="rounded-xl border border-white/5 bg-[#1a1a1a] p-3 text-center">
-                    <p className="text-2xl font-condensed font-bold text-white leading-none">
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
+                    <p className="text-2xl font-condensed font-bold text-slate-900 leading-none dark:text-white">
                       {activeRoutine.days.filter((d) => !d.isRestDay).length}
                     </p>
                     <p className="text-[10px] font-condensed font-bold tracking-widest uppercase text-neutral-500 mt-1">Días</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-[#1a1a1a] p-3 text-center">
-                    <p className="text-2xl font-condensed font-bold text-white leading-none">
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
+                    <p className="text-2xl font-condensed font-bold text-slate-900 leading-none dark:text-white">
                       {activeRoutine.days.reduce((sum, d) => sum + d.exercises.length, 0)}
                     </p>
                     <p className="text-[10px] font-condensed font-bold tracking-widest uppercase text-neutral-500 mt-1">Ejer.</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-[#1a1a1a] p-3 text-center">
-                    <p className="text-2xl font-condensed font-bold text-white leading-none">{activeRoutine.weekCount}</p>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
+                    <p className="text-2xl font-condensed font-bold text-slate-900 leading-none dark:text-white">{activeRoutine.weekCount}</p>
                     <p className="text-[10px] font-condensed font-bold tracking-widest uppercase text-neutral-500 mt-1">Sem.</p>
                   </div>
                 </div>
               </div>
 
-              <div className="max-h-[400px] overflow-y-auto custom-scrollbar bg-[#161616]">
+              <div className="max-h-[400px] overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-[#161616]">
                 {activeRoutine.days.map((day) => (
-                  <div key={day.id} className="border-b border-white/5 last:border-0">
+                  <div key={day.id} className="border-b border-slate-200 last:border-0 dark:border-white/5">
                     <div className={cn(
                       'px-5 py-3 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md',
-                      day.isRestDay ? 'bg-black/80' : 'bg-[#1a1a1a]/90'
+                      day.isRestDay ? 'bg-slate-100 dark:bg-black/80' : 'bg-white/90 dark:bg-[#1a1a1a]/90'
                     )}>
-                      <span className="text-sm font-condensed font-bold uppercase tracking-wider text-white">
+                      <span className="text-sm font-condensed font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                         Día {day.dayNumber}
                         {!day.isRestDay && (
                           <span className="ml-2 text-primary-400">/ {day.focusArea}</span>
@@ -468,7 +468,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                     </div>
 
                     {!day.isRestDay && day.exercises.length > 0 && (
-                      <div className="divide-y divide-white/5 px-2 pb-2">
+                      <div className="divide-y divide-slate-200 px-2 pb-2 dark:divide-white/5">
                         {day.exercises.map((ex) => {
                           const exLogs = logsByExercise[ex.id] ?? [];
                           const muscleKey = ex.muscleGroup.toLowerCase();
@@ -478,13 +478,13 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                             : null;
 
                           return (
-                            <div key={ex.id} className="p-3 rounded-xl hover:bg-white/5 transition-colors my-1">
+                            <div key={ex.id} className="p-3 rounded-xl hover:bg-white transition-colors my-1 dark:hover:bg-white/5">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="text-xl drop-shadow-sm">{emoji}</span>
-                                  <span className="text-sm font-bold text-white truncate">{ex.name}</span>
+                                  <span className="text-sm font-bold text-slate-900 truncate dark:text-white">{ex.name}</span>
                                 </div>
-                                <span className="text-xs font-condensed font-bold tracking-widest text-neutral-400 bg-[#222] px-2 py-1 rounded-md shrink-0 border border-white/5">
+                                <span className="text-xs font-condensed font-bold tracking-widest text-slate-600 bg-white px-2 py-1 rounded-md shrink-0 border border-slate-200 dark:text-neutral-400 dark:bg-[#222] dark:border-white/5">
                                   {ex.sets}×{ex.reps}
                                 </span>
                               </div>
@@ -498,7 +498,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                                         'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold font-condensed tracking-wider',
                                         s.completed
                                           ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                                          : 'bg-white/5 text-neutral-400 border border-white/5'
+                                          : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-white/5 dark:text-neutral-400 dark:border-white/5'
                                       )}
                                     >
                                       S{s.set}: {s.weight ?? 0}kg × {s.reps ?? 0}
@@ -523,12 +523,12 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
               </div>
             </Card>
           ) : (
-            <Card className="bg-[#111] border-dashed border-2 border-white/10 text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 text-neutral-500">
+            <Card className="border-dashed border-2 text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4 text-slate-500 dark:bg-white/5 dark:text-neutral-500">
                 <Dumbbell className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white mb-2">Sin rutina activa</h3>
-              <p className="text-sm text-neutral-400">Este cliente no tiene una rutina asignada actualmente.</p>
+              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 mb-2 dark:text-white">Sin rutina activa</h3>
+              <p className="text-sm text-slate-600 dark:text-neutral-400">Este cliente no tiene una rutina asignada actualmente.</p>
             </Card>
           )}
         </div>
@@ -536,9 +536,9 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
         <div className="space-y-6">
           {/* ══════════ Comidas de hoy detalladas ══════════ */}
           {todayMeals.length > 0 && (
-            <Card className="bg-[#111] border-white/5">
+            <Card>
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white">
+                <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 dark:text-white">
                   Dieta de Hoy
                 </h3>
                   <Badge variant="default" className="font-condensed font-bold">{todayMeals.length} REGISTROS</Badge>
@@ -547,7 +547,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                 {todayMeals.map((meal) => {
                   const ratingConf = meal.goalRating ? GOAL_RATING_CONFIG[meal.goalRating] : null;
                   return (
-                    <div key={meal.id} className="rounded-2xl border border-white/5 bg-[#1a1a1a] overflow-hidden group hover:border-white/10 transition-all">
+                    <div key={meal.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden group hover:border-slate-300 transition-all dark:border-white/5 dark:bg-[#1a1a1a] dark:hover:border-white/10">
                       <div className="flex gap-4 p-4">
                         {meal.imageUrl ? (
                           <div className="relative h-20 w-20 shrink-0 rounded-xl overflow-hidden border border-white/10">
@@ -555,7 +555,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                           </div>
                         ) : (
-                          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-white/5 text-3xl shrink-0 border border-white/5 shadow-inner">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 text-3xl shrink-0 border border-slate-200 shadow-inner dark:bg-white/5 dark:border-white/5">
                             {MEAL_EMOJI[meal.mealType] ?? '🍽️'}
                           </div>
                         )}
@@ -570,17 +570,17 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                               </span>
                             )}
                           </div>
-                          <p className="text-base font-bold text-white truncate">{meal.name}</p>
+                          <p className="text-base font-bold text-slate-900 truncate dark:text-white">{meal.name}</p>
                           {meal.foods.length > 0 && (
-                            <p className="text-xs text-neutral-400 mt-1 line-clamp-1">
+                            <p className="text-xs text-slate-600 mt-1 line-clamp-1 dark:text-neutral-400">
                               {meal.foods.join(', ')}
                             </p>
                           )}
-                          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
+                          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-white/5">
                             <span className="text-sm font-bold text-amber-500 font-condensed tracking-wider">
                               {formatCalories(meal.calories)} <span className="text-[10px] text-amber-500/50">KCAL</span>
                             </span>
-                            <div className="flex gap-2 text-xs font-medium text-neutral-400">
+                            <div className="flex gap-2 text-xs font-medium text-slate-600 dark:text-neutral-400">
                               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {meal.protein}g</span>
                               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {meal.carbs}g</span>
                               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> {meal.fat}g</span>
@@ -590,7 +590,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                       </div>
                       {meal.recommendation && (
                         <div className="px-4 pb-4">
-                          <div className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-4 py-3 text-sm text-primary-200">
+                          <div className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-4 py-3 text-sm text-primary-800 dark:text-primary-200">
                             <span className="font-bold text-primary-400 font-condensed uppercase tracking-wider block mb-1">IA Insight</span>
                             {meal.recommendation}
                           </div>
@@ -605,8 +605,8 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
 
           {/* ══════════ Tendencia semanal ══════════ */}
           {dashboard.weeklyTrend.length > 0 && (
-            <Card className="bg-[#111] border-white/5">
-              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white mb-6">Actividad Semanal</h3>
+            <Card>
+              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 mb-6 dark:text-white">Actividad Semanal</h3>
               <div className="flex items-end justify-between gap-2 h-32 px-2">
                 {dashboard.weeklyTrend.map((d) => {
                   const maxCal = Math.max(...dashboard.weeklyTrend.map((t) => t.calories), 1);
@@ -621,7 +621,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                         <div
                           className={cn(
                             'w-full max-w-10 rounded-xl transition-all duration-500 relative overflow-hidden',
-                            isActive ? 'bg-primary-500/20 border border-primary-500/30 shadow-[0_0_15px_rgba(var(--color-primary-500),0.1)]' : 'bg-white/5'
+                            isActive ? 'bg-primary-500/20 border border-primary-500/30 shadow-[0_0_15px_rgba(var(--color-primary-500),0.1)]' : 'bg-slate-100 dark:bg-white/5'
                           )}
                           style={{ height: `${Math.max(height, 8)}%` }}
                         >
@@ -642,15 +642,15 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
 
           {/* ══════════ Info adicional del cliente ══════════ */}
           {(client.medicalConditions || client.dietaryPreferences) && (
-            <Card className="bg-[#111] border-white/5">
-              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white mb-4">Avisos Importantes</h3>
+            <Card>
+              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-slate-900 mb-4 dark:text-white">Avisos Importantes</h3>
               <div className="space-y-3">
                 {client.medicalConditions && (
                   <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4">
                     <p className="text-xs font-bold text-red-500 font-condensed uppercase tracking-widest flex items-center gap-2 mb-2">
                       <ShieldAlert className="w-4 h-4" /> Condiciones médicas
                     </p>
-                    <p className="text-sm text-red-200">{client.medicalConditions}</p>
+                    <p className="text-sm text-red-800 dark:text-red-200">{client.medicalConditions}</p>
                   </div>
                 )}
                 {client.dietaryPreferences && (
@@ -658,7 +658,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
                     <p className="text-xs font-bold text-blue-400 font-condensed uppercase tracking-widest flex items-center gap-2 mb-2">
                       <Apple className="w-4 h-4" /> Preferencias alimentarias
                     </p>
-                    <p className="text-sm text-blue-200">{client.dietaryPreferences}</p>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">{client.dietaryPreferences}</p>
                   </div>
                 )}
               </div>
@@ -680,17 +680,17 @@ function StatCard({ label, value, icon, sub, active }: {
 }) {
   return (
     <div className={cn(
-      "rounded-2xl border bg-[#1a1a1a] p-4 relative overflow-hidden transition-all",
-      active ? "border-primary-500/30 shadow-[0_0_15px_rgba(var(--color-primary-500),0.1)]" : "border-white/5"
+      "rounded-2xl border bg-white p-4 relative overflow-hidden transition-all shadow-sm dark:bg-[#1a1a1a] dark:shadow-none",
+      active ? "border-primary-500/30 shadow-[0_8px_24px_rgba(15,23,42,0.08)] dark:shadow-[0_0_15px_rgba(var(--color-primary-500),0.1)]" : "border-slate-200 dark:border-white/5"
     )}>
       {active && <div className="absolute inset-0 bg-primary-500/5 pointer-events-none" />}
       <div className="flex items-center justify-between mb-3 relative z-10">
-        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200 dark:bg-white/5 dark:border-white/5">
           {icon}
         </div>
       </div>
       <div className="relative z-10">
-        <p className="text-3xl font-condensed font-bold text-white tracking-wide leading-none mb-1">
+        <p className="text-3xl font-condensed font-bold text-slate-900 tracking-wide leading-none mb-1 dark:text-white">
           {value}
         </p>
         <p className="text-[11px] font-bold text-neutral-500 font-condensed tracking-widest uppercase">{label}</p>
@@ -708,10 +708,10 @@ function MacroBar({ label, value, unit, color }: {
   color: string;
 }) {
   return (
-    <div className="text-center bg-[#1a1a1a] rounded-xl p-3 border border-white/5">
-      <p className="text-xl font-condensed font-bold text-white leading-none mb-0.5">{value > 0 ? value : '0'}</p>
+    <div className="text-center bg-white rounded-xl p-3 border border-slate-200 shadow-sm dark:bg-[#1a1a1a] dark:border-white/5 dark:shadow-none">
+      <p className="text-xl font-condensed font-bold text-slate-900 leading-none mb-0.5 dark:text-white">{value > 0 ? value : '0'}</p>
       <p className="text-[10px] text-neutral-500 font-condensed font-bold uppercase tracking-widest">{unit}</p>
-      <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
+      <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden dark:bg-white/5">
         <div className={cn('h-full rounded-full transition-all duration-1000', color, value > 0 ? 'opacity-100' : 'opacity-0')} style={{ width: value > 0 ? '100%' : '0%' }} />
       </div>
       <p className="text-[10px] font-condensed font-bold tracking-widest text-neutral-400 mt-2">{label}</p>

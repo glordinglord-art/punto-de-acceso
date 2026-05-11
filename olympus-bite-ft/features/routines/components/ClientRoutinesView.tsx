@@ -237,7 +237,9 @@ function ExerciseTrackingCard({
       <div
         className={cn(
           "rounded-2xl transition-all overflow-hidden",
-          expanded ? "bg-[#1a1c23] border border-primary-500/30 shadow-[0_0_20px_rgba(234,88,12,0.1)]" : "bg-white/5 border border-white/10 hover:bg-white/10",
+          expanded
+            ? "border border-primary-500/30 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:bg-[#1a1c23] dark:shadow-[0_0_20px_rgba(234,88,12,0.1)]"
+            : "border border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
         )}
       >
         {/* Header - clickable to expand/collapse */}
@@ -555,7 +557,7 @@ function GuidedRoutineSession({
   if (!exercise) {
     return (
       <Card className="text-center">
-        <p className="text-lg font-bold text-white">No hay ejercicios para este día.</p>
+        <p className="text-lg font-bold text-slate-900 dark:text-white">No hay ejercicios para este día.</p>
         <Button className="mt-4" variant="secondary" onClick={onBack}>Volver</Button>
       </Card>
     );
@@ -594,15 +596,15 @@ function GuidedRoutineSession({
 
   return (
     <div className="space-y-5">
-      <Card className="relative overflow-hidden border-primary-400/20 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <Card className="relative overflow-hidden border-primary-400/20 bg-gradient-to-br from-white via-slate-50 to-white shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-300/70 to-transparent" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-300">Sesión guiada</p>
-            <h2 className="mt-2 font-display text-3xl font-black uppercase leading-none text-white sm:text-5xl">
+            <h2 className="mt-2 font-display text-3xl font-black uppercase leading-none text-slate-900 dark:text-white sm:text-5xl">
               {day.focusArea}
             </h2>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {routine.name} · Semana {weekNumber} · {DAY_NAMES[day.dayNumber]}
             </p>
           </div>
@@ -610,11 +612,11 @@ function GuidedRoutineSession({
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
             <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
               Ejercicio {exerciseIndex + 1}/{day.exercises.length}
             </p>
-            <h3 className="mt-2 text-3xl font-black uppercase text-white sm:text-5xl">
+            <h3 className="mt-2 text-3xl font-black uppercase text-slate-900 dark:text-white sm:text-5xl">
               {exercise.name}
             </h3>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -624,26 +626,26 @@ function GuidedRoutineSession({
               <Badge variant="default">{formatRest(exercise.restSeconds)} descanso</Badge>
             </div>
             {exercise.observations && (
-              <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-400/10 dark:text-amber-100">
                 {exercise.observations}
               </p>
             )}
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 text-center">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:shadow-none">
             <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Serie actual</p>
-            <p className="mt-2 font-display text-7xl font-black text-white">{setIndex + 1}</p>
-            <p className="text-sm text-slate-400">de {totalSets}</p>
+            <p className="mt-2 font-display text-7xl font-black text-slate-900 dark:text-white">{setIndex + 1}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">de {totalSets}</p>
             {restRemaining > 0 && (
               <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Descanso</p>
-                <p className="mt-1 text-3xl font-black text-cyan-100">{formatRest(restRemaining)}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-300">Descanso</p>
+                <p className="mt-1 text-3xl font-black text-cyan-700 dark:text-cyan-100">{formatRest(restRemaining)}</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
           <div className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-300 transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
         <p className="mt-2 text-xs text-slate-500">{completedSteps}/{totalSteps} series registradas</p>
@@ -697,7 +699,7 @@ function GuidedSetForm({
               step="0.5"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-2xl font-bold text-white outline-none focus:border-primary-400"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-2xl font-bold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
               placeholder="0"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">kg</span>
@@ -710,7 +712,7 @@ function GuidedSetForm({
             inputMode="numeric"
             value={reps}
             onChange={(e) => setReps(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-2xl font-bold text-white outline-none focus:border-primary-400"
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-2xl font-bold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
             placeholder={exercise.reps}
           />
         </label>

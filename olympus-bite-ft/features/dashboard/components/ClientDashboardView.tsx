@@ -138,7 +138,7 @@ function RingLabel({ cfg, index }: { cfg: RingConfig; index: number }) {
       </div>
       <div className="text-center">
         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">{cfg.label}</p>
-        <p className="text-sm font-bold text-white">
+        <p className="text-sm font-bold text-slate-900 dark:text-white">
           <AnimatedCounter value={cfg.current} />
           <span className="text-[10px] font-normal text-slate-500">/{cfg.goal}</span>
         </p>
@@ -153,11 +153,11 @@ function RingLabel({ cfg, index }: { cfg: RingConfig; index: number }) {
 // ─────────────────────────────────────────────────────────
 function EmptyPanel({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="mt-4 flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-white/10 bg-white/3 px-6 text-center">
+    <div className="mt-4 flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 text-center dark:border-white/10 dark:bg-white/3">
       {icon}
       <div>
-        <p className="text-sm font-semibold text-white">{title}</p>
-        <p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">{description}</p>
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+        <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600 dark:text-slate-400">{description}</p>
       </div>
     </div>
   );
@@ -197,7 +197,7 @@ export function ClientDashboardView({
         <Header title="Preparando tu día" subtitle="Cargando tu progreso..." />
         <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
           {[1, 2].map((i) => (
-            <div key={i} className="h-80 animate-pulse rounded-[28px] bg-white/6" />
+            <div key={i} className="h-80 animate-pulse rounded-[28px] bg-slate-100 dark:bg-white/6" />
           ))}
         </div>
       </>
@@ -297,7 +297,7 @@ export function ClientDashboardView({
         <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 
           {/* Activity Rings card */}
-          <Card className="relative overflow-hidden border-white/10 bg-gradient-to-br from-slate-950 via-slate-900/95 to-slate-950">
+          <Card className="relative overflow-hidden border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900/95 dark:to-slate-950 dark:shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/50 to-transparent" />
 
             <div className="grid gap-6 sm:grid-cols-2">
@@ -326,10 +326,10 @@ export function ClientDashboardView({
                   >
                     <div className="text-center">
                       <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Calorías</p>
-                      <p className="font-display text-4xl font-bold leading-none text-white">
+                      <p className="font-display text-4xl font-bold leading-none text-slate-900 dark:text-white">
                         {caloriePct}%
                       </p>
-                      <p className="mt-1 text-xs text-slate-400">{formatCalories(stats.caloriesToday)}</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{formatCalories(stats.caloriesToday)}</p>
                     </div>
                   </motion.div>
                 </div>
@@ -345,20 +345,20 @@ export function ClientDashboardView({
               {/* Stats column */}
               <div className="flex flex-col justify-between gap-3">
                 {/* Calorie goal */}
-                <div className="rounded-[22px] border border-white/8 bg-white/5 p-4">
+                <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-white/5 dark:shadow-none">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Meta diaria</p>
-                      <p className="mt-1.5 text-xl font-bold text-white">{formatCalories(calorieGoal)}</p>
+                      <p className="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">{formatCalories(calorieGoal)}</p>
                     </div>
                     <Badge variant={caloriePct >= 100 ? 'success' : 'info'}>
                       {caloriePct}% completado
                     </Badge>
                   </div>
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
                     {caloriesLeft > 0 ? `Faltan ${formatCalories(caloriesLeft)}` : '¡Objetivo cumplido hoy!'}
                   </p>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/8">
                     <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-orange-500 to-red-400"
                       initial={{ width: 0 }}
@@ -381,11 +381,11 @@ export function ClientDashboardView({
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.4 + i * 0.08 }}
-                      className="rounded-[18px] border border-white/8 bg-white/4 p-3"
+                      className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 dark:border-white/8 dark:bg-white/4"
                     >
                       <p className="text-[9px] uppercase tracking-[0.14em] text-slate-500">{item.label}</p>
                       <p className="mt-1 text-lg font-bold" style={{ color: item.color }}>{item.value}</p>
-                      <p className="text-[9px] text-slate-600">{item.sub}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-slate-600">{item.sub}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -395,7 +395,7 @@ export function ClientDashboardView({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Droplets className="h-4 w-4 text-cyan-400" />
-                      <p className="text-sm font-semibold text-slate-300">Hidratación</p>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Hidratación</p>
                     </div>
                     <span className="text-sm font-bold text-cyan-300">{waterGlasses}/{WATER_GOAL} vasos</span>
                   </div>
@@ -408,7 +408,7 @@ export function ClientDashboardView({
                           'h-7 flex-1 rounded-full border cursor-pointer transition-all hover:brightness-110 active:scale-95',
                           i < waterGlasses
                             ? 'border-cyan-400/30 bg-gradient-to-t from-cyan-600 to-cyan-300'
-                            : 'border-white/8 bg-white/4',
+                            : 'border-slate-200 bg-slate-100 dark:border-white/8 dark:bg-white/4',
                         )}
                         initial={{ scaleY: 0.2, opacity: 0 }}
                         animate={{ scaleY: 1, opacity: 1 }}
@@ -456,7 +456,7 @@ export function ClientDashboardView({
                 <div className="flex items-center justify-between rounded-[20px] border border-primary-400/20 bg-primary-500/8 px-4 py-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.16em] text-primary-400/80">Enfoque</p>
-                    <p className="mt-0.5 text-base font-bold text-white">{todayDay.focusArea}</p>
+                    <p className="mt-0.5 text-base font-bold text-slate-900 dark:text-white">{todayDay.focusArea}</p>
                   </div>
                   <Badge variant="info">{todayDay.exercises.length} ejercicios</Badge>
                 </div>
@@ -468,14 +468,14 @@ export function ClientDashboardView({
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 + i * 0.06 }}
-                      className="flex items-center gap-3 rounded-[18px] border border-white/6 bg-slate-950/50 px-4 py-2.5"
+                      className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-2.5 dark:border-white/6 dark:bg-slate-950/50"
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/8 text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-900 dark:bg-white/8 dark:text-white">
                         {i + 1}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-white">{ex.name}</p>
-                        <p className="text-xs text-slate-400">{ex.sets} × {ex.reps}</p>
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{ex.name}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{ex.sets} × {ex.reps}</p>
                       </div>
                       <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-slate-500">{ex.muscleGroup}</span>
                     </motion.div>
@@ -491,12 +491,12 @@ export function ClientDashboardView({
             )}
 
             {stats.activeRoutine && (
-              <div className="mt-4 rounded-[20px] border border-white/8 bg-white/4 p-4">
+              <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 p-4 dark:border-white/8 dark:bg-white/4">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-slate-400">Progreso total</span>
-                  <span className="font-bold text-white">{routineProgress}%</span>
+                  <span className="text-slate-600 dark:text-slate-400">Progreso total</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{routineProgress}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/8">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/8">
                   <motion.div
                     className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-300"
                     initial={{ width: 0 }}
@@ -521,10 +521,10 @@ export function ClientDashboardView({
                 return (
                   <div key={m.label}>
                     <div className="mb-1.5 flex items-center justify-between text-sm">
-                      <span className="text-slate-300/80">{m.label}</span>
-                      <span className="font-bold text-white">{m.value}g</span>
+                      <span className="text-slate-600 dark:text-slate-300/80">{m.label}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{m.value}g</span>
                     </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-white/8">
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/8">
                       <motion.div
                         className="h-full rounded-full"
                         style={{ backgroundColor: m.color }}
@@ -539,7 +539,7 @@ export function ClientDashboardView({
             </div>
 
             {stats.mealTypeDistribution.length > 0 && (
-              <div className="mt-5 border-t border-white/8 pt-4">
+              <div className="mt-5 border-t border-slate-200 pt-4 dark:border-white/8">
                 <p className="mb-3 text-xs uppercase tracking-[0.18em] text-slate-500">Distribución de comidas</p>
                 <div className="flex h-3 overflow-hidden rounded-full">
                   {stats.mealTypeDistribution.map((mt) => {
@@ -563,9 +563,9 @@ export function ClientDashboardView({
                       <span
                         key={mt.type}
                         className={cn(
-                          'inline-flex items-center gap-1.5 rounded-full border border-white/8 px-3 py-1 text-xs font-semibold',
-                          cfg?.bg ?? 'bg-white/8',
-                          cfg?.text ?? 'text-white',
+                          'inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold dark:border-white/8',
+                          cfg?.bg ?? 'bg-slate-100 dark:bg-white/8',
+                          cfg?.text ?? 'text-slate-900 dark:text-white',
                         )}
                       >
                         {mt.type} <span className="font-bold">{mt.count}</span>
@@ -603,20 +603,20 @@ export function ClientDashboardView({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.07 }}
-                    className="group relative overflow-hidden rounded-[24px] border border-white/8 bg-white/4 p-4 transition-all hover:border-white/14 hover:bg-white/6"
+                    className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-4 transition-all hover:border-slate-300 hover:bg-white dark:border-white/8 dark:bg-white/4 dark:hover:border-white/14 dark:hover:bg-white/6"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <span
                           className={cn(
                             'inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]',
-                            mealColor?.bg ?? 'bg-white/8',
-                            mealColor?.text ?? 'text-white',
+                            mealColor?.bg ?? 'bg-slate-100 dark:bg-white/8',
+                            mealColor?.text ?? 'text-slate-900 dark:text-white',
                           )}
                         >
                           {spanishType}
                         </span>
-                        <p className="mt-2 truncate text-sm font-bold text-white">{meal.mealName}</p>
+                        <p className="mt-2 truncate text-sm font-bold text-slate-900 dark:text-white">{meal.mealName}</p>
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="text-sm font-bold text-orange-300">{formatCalories(meal.calories)}</p>

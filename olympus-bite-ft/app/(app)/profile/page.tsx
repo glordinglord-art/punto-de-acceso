@@ -205,7 +205,7 @@ export default function ProfilePage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-32 animate-pulse rounded-2xl bg-white/5 border border-white/5"
+              className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 dark:border-white/5 dark:bg-white/5"
             />
           ))}
         </div>
@@ -220,10 +220,10 @@ export default function ProfilePage() {
         <Header title="Editar Perfil" />
         <div className="max-w-3xl mx-auto space-y-6">
           <Card padding="lg">
-            <div className="flex items-center gap-5 mb-8 pb-6 border-b border-white/5">
+            <div className="flex items-center gap-5 mb-8 pb-6 border-b border-slate-200 dark:border-white/5">
               <Avatar name={displayUser.name} size="xl" className="ring-2 ring-primary-500/20" />
               <div>
-                <h2 className="text-2xl font-condensed font-bold uppercase tracking-wide text-white leading-tight">
+                <h2 className="text-2xl font-condensed font-bold uppercase tracking-wide text-slate-900 leading-tight dark:text-white">
                   Editar información
                 </h2>
                 <p className="text-sm text-primary-400 font-bold uppercase tracking-wider font-condensed">
@@ -246,10 +246,10 @@ export default function ProfilePage() {
                 onChange={(e) => setEditPhone(e.target.value)}
               />
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-200">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                   Email
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-neutral-400">
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-white/5 dark:bg-white/5 dark:text-neutral-400">
                   🔒 {displayUser.email}
                   <span className="ml-auto text-xs opacity-50 uppercase tracking-widest font-condensed font-bold">(No editable)</span>
                 </div>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
               <>
                 <div className="mt-8 mb-4 flex items-center gap-3">
                   <Activity className="text-primary-500 w-5 h-5" />
-                  <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-white m-0">
+                  <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 m-0 dark:text-white">
                     Perfil Fitness y Salud
                   </h3>
                 </div>
@@ -283,7 +283,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-3 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-3 flex items-center gap-2 dark:text-slate-200">
                       🎯 Objetivo Nutricional
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -299,15 +299,15 @@ export default function ProfilePage() {
                           onClick={() => setEditDietaryGoal(key)}
                           className={`flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all border ${
                             editDietaryGoal === key
-                              ? "bg-primary-500/10 border-primary-500 text-white shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)]"
-                              : "bg-[#1a1a1a] border-white/5 text-neutral-400 hover:border-white/20 hover:bg-[#222]"
+                              ? "bg-primary-500/10 border-primary-500 text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.08)] dark:text-white dark:shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)]"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:bg-[#1a1a1a] dark:border-white/5 dark:text-neutral-400 dark:hover:border-white/20 dark:hover:bg-[#222]"
                           }`}
                         >
                           <span className="text-2xl drop-shadow-md">
                             {val.icon}
                           </span>
                           <div>
-                            <p className={`font-condensed font-bold uppercase tracking-wide ${editDietaryGoal === key ? "text-primary-400" : "text-neutral-200"}`}>
+                            <p className={`font-condensed font-bold uppercase tracking-wide ${editDietaryGoal === key ? "text-primary-500 dark:text-primary-400" : "text-slate-900 dark:text-neutral-200"}`}>
                               {val.label}
                             </p>
                             <p className="text-[11px] leading-tight mt-0.5 opacity-70">
@@ -321,12 +321,12 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-slate-200">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                         Nivel de Experiencia
                       </label>
                       <div className="relative">
                         <select
-                          className="w-full rounded-2xl border border-white/12 bg-[#1a1a1a] px-4 py-3 text-sm text-white appearance-none transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 appearance-none transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 dark:border-white/12 dark:bg-[#1a1a1a] dark:text-white"
                           value={editExperience}
                           onChange={(e) => setEditExperience(e.target.value)}
                         >
@@ -335,7 +335,7 @@ export default function ProfilePage() {
                           <option value="Intermedio">Intermedio (1-3 años)</option>
                           <option value="Avanzado">Avanzado (+3 años)</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/50">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-white/50">
                           <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                             <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                           </svg>
@@ -344,12 +344,12 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-slate-200">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                         Equipamiento Disponible
                       </label>
                       <div className="relative">
                         <select
-                          className="w-full rounded-2xl border border-white/12 bg-[#1a1a1a] px-4 py-3 text-sm text-white appearance-none transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 appearance-none transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 dark:border-white/12 dark:bg-[#1a1a1a] dark:text-white"
                           value={editEquipment}
                           onChange={(e) => setEditEquipment(e.target.value)}
                         >
@@ -359,7 +359,7 @@ export default function ProfilePage() {
                           <option value="Solo mancuernas/cintas">Solo mancuernas / cintas</option>
                           <option value="Peso corporal (casa)">Peso corporal (casa)</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/50">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-white/50">
                           <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                             <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                           </svg>
@@ -393,7 +393,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="mt-8 flex gap-3 pt-6 border-t border-white/5">
+            <div className="mt-8 flex gap-3 pt-6 border-t border-slate-200 dark:border-white/5">
               <Button
                 variant="ghost"
                 onClick={() => setView("view")}
@@ -423,12 +423,12 @@ export default function ProfilePage() {
         <Header title="Cambiar Contraseña" />
         <div className="max-w-2xl mx-auto space-y-6">
           <Card padding="lg">
-            <div className="flex items-center gap-5 mb-8 pb-6 border-b border-white/5">
+            <div className="flex items-center gap-5 mb-8 pb-6 border-b border-slate-200 dark:border-white/5">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 shadow-[0_0_15px_rgba(var(--color-amber-500),0.1)]">
                 <KeyRound className="w-7 h-7" />
               </div>
               <div>
-                <h2 className="text-2xl font-condensed font-bold uppercase tracking-wide text-white leading-tight">
+                <h2 className="text-2xl font-condensed font-bold uppercase tracking-wide text-slate-900 leading-tight dark:text-white">
                   Seguridad
                 </h2>
                 <p className="text-sm text-amber-400 font-bold uppercase tracking-wider font-condensed">
@@ -443,7 +443,7 @@ export default function ProfilePage() {
                   <Sparkles className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-green-400 mb-2">¡Contraseña Actualizada!</h3>
-                <p className="text-sm text-neutral-400">
+                <p className="text-sm text-slate-600 dark:text-neutral-400">
                   Tu contraseña ha sido cambiada de forma segura.
                 </p>
               </div>
@@ -477,7 +477,7 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                <div className="mt-8 flex gap-3 pt-6 border-t border-white/5">
+                <div className="mt-8 flex gap-3 pt-6 border-t border-slate-200 dark:border-white/5">
                   <Button
                     variant="ghost"
                     onClick={() => setView("view")}
@@ -516,10 +516,10 @@ export default function ProfilePage() {
             <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
               <Avatar name={displayUser.name} size="xl" className="h-24 w-24 ring-4 ring-white/5 shadow-xl" />
               <div className="text-center md:text-left flex-1">
-                <h2 className="text-3xl font-condensed font-bold uppercase tracking-wide text-white">
+                <h2 className="text-3xl font-condensed font-bold uppercase tracking-wide text-slate-900 dark:text-white">
                   {displayUser.name}
                 </h2>
-                <p className="text-neutral-400 mb-3">
+                <p className="text-slate-600 mb-3 dark:text-neutral-400">
                   {displayUser.email}
                 </p>
                 <Badge variant={displayUser.role === 'trainer' ? 'success' : 'default'} className="px-3 py-1 font-condensed tracking-widest text-xs uppercase">
@@ -534,46 +534,46 @@ export default function ProfilePage() {
             <Card>
               <div className="flex items-center gap-3 mb-6">
                 <Activity className="text-primary-500 w-5 h-5" />
-                <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-white m-0">
+                <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 m-0 dark:text-white">
                   Perfil Fitness y Salud
                 </h3>
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 {displayUser.weight != null && (
-                  <div className="rounded-2xl border border-white/5 bg-[#1a1a1a] p-4 text-center">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
                     <Scale className="w-5 h-5 text-neutral-400 mx-auto mb-2" />
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Peso</p>
-                    <p className="text-xl font-bold text-white font-condensed">
+                    <p className="text-xl font-bold text-slate-900 font-condensed dark:text-white">
                       {displayUser.weight} <span className="text-sm text-neutral-500">kg</span>
                     </p>
                   </div>
                 )}
                 {displayUser.height != null && (
-                  <div className="rounded-2xl border border-white/5 bg-[#1a1a1a] p-4 text-center">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
                     <Ruler className="w-5 h-5 text-neutral-400 mx-auto mb-2" />
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Estatura</p>
-                    <p className="text-xl font-bold text-white font-condensed">
+                    <p className="text-xl font-bold text-slate-900 font-condensed dark:text-white">
                       {displayUser.height} <span className="text-sm text-neutral-500">cm</span>
                     </p>
                   </div>
                 )}
                 {displayUser.experienceLevel && (
-                  <div className="rounded-2xl border border-white/5 bg-[#1a1a1a] p-4 text-center">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
                     <Dumbbell className="w-5 h-5 text-neutral-400 mx-auto mb-2" />
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Nivel</p>
-                    <p className="text-sm font-bold text-white leading-tight">
+                    <p className="text-sm font-bold text-slate-900 leading-tight dark:text-white">
                       {displayUser.experienceLevel}
                     </p>
                   </div>
                 )}
                 {displayUser.dietaryGoal && (
-                  <div className="rounded-2xl border border-white/5 bg-[#1a1a1a] p-4 text-center">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
                     <div className="text-xl mx-auto mb-2">
                       {FITNESS_GOALS[displayUser.dietaryGoal as FitnessGoal]?.icon || "🎯"}
                     </div>
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Objetivo</p>
-                    <p className="text-sm font-bold text-white leading-tight">
+                    <p className="text-sm font-bold text-slate-900 leading-tight dark:text-white">
                       {FITNESS_GOALS[displayUser.dietaryGoal as FitnessGoal]?.label || displayUser.dietaryGoal}
                     </p>
                   </div>
@@ -582,9 +582,9 @@ export default function ProfilePage() {
 
               <div className="space-y-3">
                 {displayUser.equipmentAccess && (
-                  <div className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
-                    <span className="text-sm text-neutral-400">Equipamiento</span>
-                    <span className="font-medium text-white">{displayUser.equipmentAccess}</span>
+                  <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5">
+                    <span className="text-sm text-slate-600 dark:text-neutral-400">Equipamiento</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{displayUser.equipmentAccess}</span>
                   </div>
                 )}
                 {displayUser.medicalConditions && displayUser.medicalConditions.trim() !== "" && (
@@ -592,7 +592,7 @@ export default function ProfilePage() {
                     <p className="text-[11px] font-bold tracking-widest uppercase font-condensed text-amber-500 flex items-center gap-1.5 mb-1.5">
                       <ShieldAlert className="w-3.5 h-3.5" /> Lesiones o Condiciones
                     </p>
-                    <p className="text-sm text-amber-200">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
                       {displayUser.medicalConditions}
                     </p>
                   </div>
@@ -602,7 +602,7 @@ export default function ProfilePage() {
                     <p className="text-[11px] font-bold tracking-widest uppercase font-condensed text-blue-400 flex items-center gap-1.5 mb-1.5">
                       <Apple className="w-3.5 h-3.5" /> Preferencias o Alergias
                     </p>
-                    <p className="text-sm text-blue-200">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
                       {displayUser.dietaryPreferences}
                     </p>
                   </div>
@@ -613,7 +613,7 @@ export default function ProfilePage() {
 
           {/* Details Info */}
           <Card>
-            <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-white mb-4">
+            <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 mb-4 dark:text-white">
               Información de Contacto
             </h3>
             <div className="space-y-2">
@@ -628,11 +628,11 @@ export default function ProfilePage() {
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="flex justify-between items-center rounded-xl bg-white/5 px-4 py-3"
+                  className="flex justify-between items-center rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5"
                 >
-                  <span className="text-sm text-neutral-400">{item.label}</span>
+                  <span className="text-sm text-slate-600 dark:text-neutral-400">{item.label}</span>
                   <span
-                    className={`text-sm font-medium ${item.value === "Sin registrar" ? "text-neutral-500 italic" : "text-white"}`}
+                    className={`text-sm font-medium ${item.value === "Sin registrar" ? "text-slate-500 italic" : "text-slate-900 dark:text-white"}`}
                   >
                     {item.value}
                   </span>
@@ -645,7 +645,7 @@ export default function ProfilePage() {
         {/* Sidebar Actions */}
         <div className="space-y-6">
           <Card className="sticky top-6">
-            <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-white mb-6">
+            <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 mb-6 dark:text-white">
               Acciones
             </h3>
             <div className="space-y-3">
@@ -655,7 +655,7 @@ export default function ProfilePage() {
               <Button variant="secondary" fullWidth onClick={openPasswordChange} className="justify-start font-condensed tracking-wider uppercase font-bold text-sm h-12">
                 <KeyRound className="w-4 h-4 mr-3" /> Cambiar contraseña
               </Button>
-              <div className="pt-4 mt-4 border-t border-white/5">
+              <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/5">
                 <Button variant="danger" fullWidth onClick={logout} className="justify-start font-condensed tracking-wider uppercase font-bold text-sm h-12 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border-none">
                   <LogOut className="w-4 h-4 mr-3" /> Cerrar sesión
                 </Button>

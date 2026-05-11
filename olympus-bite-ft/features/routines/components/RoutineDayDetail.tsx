@@ -13,18 +13,18 @@ function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number })
   const muscleInfo = MUSCLE_GROUPS[exercise.muscleGroup as keyof typeof MUSCLE_GROUPS];
 
   return (
-    <tr className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-      <td className="py-4 pr-3 text-xs text-slate-400 tabular-nums text-center">{index + 1}</td>
+    <tr className="border-b border-slate-200 last:border-0 transition-colors hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/[0.02]">
+      <td className="py-4 pr-3 text-xs text-slate-500 tabular-nums text-center dark:text-slate-400">{index + 1}</td>
       <td className="py-4 pr-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">{muscleInfo?.icon ?? '💪'}</span>
-          <span className="text-sm font-semibold tracking-wide text-white">
+          <span className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
             {exercise.name}
           </span>
         </div>
       </td>
       <td className="py-4 pr-3">
-        <span className="inline-flex items-center rounded-md bg-white/10 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-300 border border-white/5">
+        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600 border border-slate-200 dark:bg-white/10 dark:text-slate-300 dark:border-white/5">
           {muscleInfo?.label ?? exercise.muscleGroup}
         </span>
       </td>
@@ -34,10 +34,10 @@ function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number })
       <td className="py-4 pr-3 text-center text-sm font-semibold text-primary-400">
         {exercise.reps}
       </td>
-      <td className="py-4 pr-3 text-center text-sm tabular-nums text-slate-400">
+      <td className="py-4 pr-3 text-center text-sm tabular-nums text-slate-600 dark:text-slate-400">
         {formatRest(exercise.restSeconds)}
       </td>
-      <td className="py-4 text-sm text-slate-400 max-w-50 truncate">
+      <td className="py-4 text-sm text-slate-600 max-w-50 truncate dark:text-slate-400">
         {exercise.observations ?? '—'}
       </td>
     </tr>
@@ -71,14 +71,14 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
   return (
     <Card className="p-6">
       <div className="flex items-center gap-4 mb-6">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-xl font-bold text-white shadow-inner">
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-xl font-bold text-slate-900 shadow-inner dark:bg-white/10 dark:text-white">
           {day.dayNumber}
         </span>
         <div>
-          <h3 className="text-lg font-bold uppercase tracking-wider text-white">
+          <h3 className="text-lg font-bold uppercase tracking-wider text-slate-900 dark:text-white">
             {day.focusArea}
           </h3>
-          <p className="text-sm font-medium text-slate-400 mt-0.5 uppercase tracking-widest">
+          <p className="text-sm font-medium text-slate-600 mt-0.5 uppercase tracking-widest dark:text-slate-400">
             {day.exercises.length} ejercicio{day.exercises.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -87,7 +87,7 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
       <div className="overflow-x-auto -mx-2">
         <table className="w-full min-w-[700px] text-left px-2">
           <thead>
-            <tr className="border-b border-white/10">
+            <tr className="border-b border-slate-200 dark:border-white/10">
               <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500 text-center">#</th>
               <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500">Ejercicio</th>
               <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500">Músculo</th>

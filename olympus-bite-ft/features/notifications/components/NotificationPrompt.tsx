@@ -25,6 +25,11 @@ export function NotificationPrompt() {
     notificationsService.getPreferences(user.id).then((res) => setPrefs(res.data ?? null)).catch(() => undefined);
   }, [user]);
 
+  useEffect(() => {
+    if (!isOpen || !user || !isPushSupported()) return;
+    notificationsService.getConfig().then((res) => setConfig(res.data ?? null)).catch(() => undefined);
+  }, [isOpen, user]);
+
   if (!user || !isPushSupported()) return null;
   if (permission === 'granted' && !isOpen) return null;
 
@@ -32,7 +37,7 @@ export function NotificationPrompt() {
     setLoading(true);
     setMessage(null);
     try {
-      const currentConfig = config ?? (await notificationsService.getConfig()).data;
+      const currentConfig = (await notificationsService.getConfig()).data;
       setConfig(currentConfig ?? null);
       if (!currentConfig?.configured || !currentConfig.publicKey) {
         setMessage('Faltan claves VAPID en el backend para activar push real.');
@@ -73,6 +78,8 @@ export function NotificationPrompt() {
     setLoading(true);
     setMessage(null);
     try {
+      const currentConfig = (await notificationsService.getConfig()).data;
+      setConfig(currentConfig ?? null);
       const res = await notificationsService.sendTest(user.id);
       setMessage(res.data?.skipped ? 'Backend sin claves VAPID configuradas.' : 'Notificacion de prueba enviada.');
     } catch (error) {

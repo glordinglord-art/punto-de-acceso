@@ -68,7 +68,7 @@ function ActivityRing({
         </defs>
         <circle
           cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth}
+          fill="none" stroke="rgba(148,163,184,0.22)" strokeWidth={strokeWidth}
         />
         <motion.circle
           cx={size / 2} cy={size / 2} r={radius}
@@ -105,8 +105,8 @@ function RingLabel({ cfg, index }: { cfg: RingCfg; index: number }) {
         {cfg.icon}
       </div>
       <div className="text-center">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{cfg.label}</p>
-        <p className="font-display text-xl leading-none text-white mt-1">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{cfg.label}</p>
+        <p className="font-display text-xl leading-none text-slate-900 mt-1 dark:text-white">
           <AnimatedCounter value={cfg.current} />
           <span className="text-[10px] font-sans text-slate-500 ml-0.5">/{cfg.goal}</span>
         </p>
@@ -172,7 +172,7 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
     stats.totalClients > 0 ? Math.round((clientsActiveToday / stats.totalClients) * 100) : 0;
 
   return (
-    <Card className="relative overflow-hidden border-primary-400/12 bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
+    <Card className="relative overflow-hidden border-primary-400/20 bg-linear-to-br from-white via-slate-50 to-white shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-primary-400/12 dark:bg-linear-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
       <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary-400/50 to-transparent" />
 
       <div className="grid gap-6 sm:grid-cols-[0.9fr_1.1fr]">
@@ -202,11 +202,11 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
               transition={{ duration: 0.8, delay: 0.7 }}
             >
               <div className="text-center">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">Actividad</p>
-                <p className="font-display text-4xl leading-none text-white">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Actividad</p>
+                <p className="font-display text-4xl leading-none text-slate-900 dark:text-white">
                   {engagementPct}%
                 </p>
-                <p className="mt-1 text-xs text-slate-300/68">de clientes</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300/68">de clientes</p>
               </div>
             </motion.div>
           </div>
@@ -222,14 +222,14 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
         {/* ── Stats column ── */}
         <div className="flex flex-col justify-between gap-3">
           {/* Weekly comparison */}
-          <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-white/5 dark:shadow-none">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Actividad semanal</p>
-                <p className="mt-1.5 font-display text-4xl leading-none text-white">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Actividad semanal</p>
+                <p className="mt-1.5 font-display text-4xl leading-none text-slate-900 dark:text-white">
                   <AnimatedCounter value={stats.mealsThisWeek} />
                 </p>
-                <p className="mt-1 text-xs text-slate-300/68">comidas registradas</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300/68">comidas registradas</p>
               </div>
               <div
                 className={cn(
@@ -246,7 +246,7 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
             <p className="mt-2 text-[10px] uppercase tracking-wider text-slate-500">
               vs {stats.mealsLastWeek} la semana pasada
             </p>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/8">
               <motion.div
                 className={cn(
                   'h-full rounded-full',
@@ -309,13 +309,13 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4 + i * 0.08 }}
-                className={cn("rounded-[24px] border border-white/8 bg-linear-to-br p-3", item.tone)}
+                className={cn("rounded-[24px] border border-slate-200 bg-linear-to-br p-3 shadow-sm dark:border-white/8 dark:shadow-none", item.tone)}
               >
-                <p className="text-[9px] uppercase tracking-[0.14em] text-slate-400">{item.label}</p>
+                <p className="text-[9px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{item.label}</p>
                 <p className={cn("mt-1 text-xl font-bold", item.color)}>
                   {item.display}
                 </p>
-                <p className="text-[9px] text-slate-300/64">{item.sub}</p>
+                <p className="text-[9px] text-slate-600 dark:text-slate-300/64">{item.sub}</p>
               </motion.div>
             ))}
           </div>
@@ -325,13 +325,13 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Utensils className="h-4 w-4 text-amber-400" />
-                <p className="text-xs uppercase tracking-wider text-slate-400">Promedio kcal clientes</p>
+                <p className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">Promedio kcal clientes</p>
               </div>
-              <span className="text-xl font-display font-bold text-amber-300">
+              <span className="text-xl font-display font-bold text-amber-600 dark:text-amber-300">
                 {formatCalories(Math.round(stats.avgCaloriesToday))}
               </span>
             </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/8">
               <motion.div
                 className="h-full rounded-full bg-linear-to-r from-amber-500 to-orange-400"
                 initial={{ width: 0 }}
