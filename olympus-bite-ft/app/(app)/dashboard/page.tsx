@@ -16,7 +16,7 @@ import { dashboardService } from '@/features/dashboard/services/dashboard.servic
 import type { DashboardStats } from '@/features/dashboard/types/dashboard.types';
 
 export default function DashboardPage() {
-  const { user, isTrainer } = useAuth();
+  const { isTrainer } = useAuth();
   const [view, setView] = useState<'trainer' | 'client'>('trainer');
 
   // Client dashboard

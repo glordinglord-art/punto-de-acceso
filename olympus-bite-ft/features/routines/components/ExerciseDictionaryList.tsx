@@ -13,6 +13,7 @@ import {
 } from "@/features/routines/services/exercise-dictionary.service";
 import toast from "react-hot-toast";
 import { Spinner } from "@/shared/components/ui/Spinner";
+import { Search, Plus, Trash2, Video, PlayCircle } from "lucide-react";
 
 export function ExerciseDictionaryList() {
   const [exercises, setExercises] = useState<ExerciseDict[]>([]);
@@ -31,7 +32,7 @@ export function ExerciseDictionaryList() {
       setLoading(true);
       const data = await exerciseDictionaryService.getAll();
       setExercises(data);
-    } catch (_error) {
+    } catch {
       toast.error("Error al cargar los ejercicios");
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ export function ExerciseDictionaryList() {
       await exerciseDictionaryService.delete(id);
       toast.success("Ejercicio eliminado");
       setExercises((prev) => prev.filter((e) => e.id !== id));
-    } catch (error) {
+    } catch {
       toast.error("Error al eliminar el ejercicio");
     }
   };
@@ -85,18 +86,19 @@ export function ExerciseDictionaryList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="w-full md:w-96">
+        <div className="w-full md:w-96 relative">
           <Input
-            placeholder="🔍 Buscar ejercicio..."
+            placeholder="Buscar ejercicio..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            icon={<Search className="w-4 h-4" />}
           />
         </div>
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="shrink-0 w-full md:w-auto"
+          className="shrink-0 w-full md:w-auto font-condensed uppercase tracking-wider font-bold"
         >
-          + Nuevo Ejercicio
+          <Plus className="w-4 h-4 mr-2" /> Nuevo Ejercicio
         </Button>
       </div>
 
@@ -105,8 +107,14 @@ export function ExerciseDictionaryList() {
           <Spinner size="lg" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-neutral-500">
+        <div className="text-center py-20 px-6 rounded-[24px] border border-white/5 bg-white/5 backdrop-blur-md">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-2xl bg-white/5 mb-4">
+            <Search className="w-8 h-8 text-neutral-400" />
+          </div>
+          <p className="text-lg font-condensed font-bold uppercase tracking-wide text-white mb-2">
+            Sin resultados
+          </p>
+          <p className="text-neutral-400">
             {search
               ? "No se encontraron ejercicios con esa búsqueda."
               : "No hay ejercicios registrados en el diccionario aún."}
@@ -118,12 +126,12 @@ export function ExerciseDictionaryList() {
             const mg =
               MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
             return (
-              <Card key={ex.id} className="flex justify-between items-start">
+              <Card key={ex.id} hover className="flex justify-between items-start group">
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-neutral-900 dark:text-white leading-tight">
+                  <h3 className="font-bold text-white text-base leading-tight font-condensed uppercase tracking-wide">
                     {ex.name}
                   </h3>
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-primary-400 font-bold uppercase tracking-wider font-condensed">
                     <span>{mg?.icon || "💪"}</span>
                     <span>{mg?.label || ex.muscleGroup}</span>
                   </div>
@@ -132,49 +140,19 @@ export function ExerciseDictionaryList() {
                       href={ex.videoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-block mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                      className="inline-flex mt-3 text-xs text-blue-400 hover:text-blue-300 font-medium items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-colors border border-blue-500/20"
                     >
-                      <svg
-                        className="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <PlayCircle className="w-3.5 h-3.5" />
                       Ver video
                     </a>
                   )}
                 </div>
                 <button
                   onClick={() => handleDelete(ex.id)}
-                  className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                  className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                   aria-label="Eliminar"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </Card>
             );
@@ -187,7 +165,7 @@ export function ExerciseDictionaryList() {
         onClose={() => setIsModalOpen(false)}
         title="Nuevo Ejercicio Global"
       >
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleCreate} className="space-y-5 p-1">
           <Input
             label="Nombre del ejercicio"
             placeholder="Ej: Press de banca con mancuernas"
@@ -198,25 +176,32 @@ export function ExerciseDictionaryList() {
           />
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <label className="block text-sm font-medium text-slate-200">
               Grupo muscular principal
             </label>
-            <select
-              value={muscleGroup}
-              onChange={(e) => setMuscleGroup(e.target.value)}
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            >
-              {(
-                Object.entries(MUSCLE_GROUPS) as [
-                  string,
-                  { icon: string; label: string },
-                ][]
-              ).map(([key, val]) => (
-                <option key={key} value={key}>
-                  {val.icon} {val.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={muscleGroup}
+                onChange={(e) => setMuscleGroup(e.target.value)}
+                className="w-full rounded-2xl border border-white/12 bg-[#1a1a1a] px-4 py-3 text-sm text-white appearance-none transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+              >
+                {(
+                  Object.entries(MUSCLE_GROUPS) as [
+                    string,
+                    { icon: string; label: string },
+                  ][]
+                ).map(([key, val]) => (
+                  <option key={key} value={key} className="bg-[#1a1a1a]">
+                    {val.icon} {val.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/50">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           <Input
@@ -225,19 +210,26 @@ export function ExerciseDictionaryList() {
             type="url"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
+            icon={<Video className="w-4 h-4" />}
           />
 
-          <div className="flex gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <div className="flex gap-3 pt-6 border-t border-white/5">
             <Button
               type="button"
               variant="ghost"
               fullWidth
               onClick={() => setIsModalOpen(false)}
+              className="font-condensed uppercase font-bold tracking-wider"
             >
               Cancelar
             </Button>
-            <Button type="submit" fullWidth loading={saving}>
-              Guardar ejercicio
+            <Button 
+              type="submit" 
+              fullWidth 
+              loading={saving}
+              className="font-condensed uppercase font-bold tracking-wider"
+            >
+              Guardar
             </Button>
           </div>
         </form>

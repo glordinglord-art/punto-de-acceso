@@ -148,7 +148,7 @@ export function MealDetail({ meal, onClose, onDelete }: MealDetailProps) {
           </h3>
         </div>
         <div className="grid grid-cols-3 gap-px bg-neutral-200 dark:bg-white/5">
-          {macros.map((macro, i) => (
+          {macros.map((macro) => (
             <div
               key={macro.label}
               className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-900/80 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 transition-colors"

@@ -56,14 +56,11 @@ export function OnboardingSurveyModal() {
 
       // Actualizamos el usuario en el contexto
       const updatedUser: User = res.data;
+      // Al actualizar parcialmente, necesitamos el token que ya estaba,
+      // como useAuth guarda authData en localStorage y login lo sobreescribe,
+      // necesitamos recrear el objeto completo pero eso no es posible sin el accessToken.
+      // Simularemos un recargado en AppLayout
 
-      const authData = {
-        user: updatedUser,
-        // Al actualizar parcialmente, necesitamos el token que ya estaba,
-        // como useAuth guarda authData en localStorage y login lo sobreescribe,
-        // necesitamos recrear el objeto completo pero eso no es posible sin el accessToken.
-        // Simularemos un recargado en AppLayout
-      };
 
       // La forma más segura en este contexto es actualizar Storage y recargar o actualizar via props
       // Como useAuth exporta 'login', pasaremos todo el payload que espera.

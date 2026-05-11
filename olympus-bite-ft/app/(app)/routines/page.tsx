@@ -23,7 +23,7 @@ type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRout
 type OverviewTab = "cards" | "calendar";
 
 export default function RoutinesPage() {
-  const { user, isTrainer } = useAuth();
+  const { isTrainer } = useAuth();
 
   if (!isTrainer) {
     return <ClientRoutinesView />;
@@ -133,35 +133,6 @@ function TrainerRoutinesPage() {
       );
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error evaluando rutina");
-    }
-  };
-
-  const handleLogSave = async (
-    exerciseId: string,
-    weekNumber: number,
-    weight: number | null,
-    repsDone: string | null,
-  ) => {
-    if (!user || !selectedRoutine) return;
-    try {
-      await routinesService.logWorkout(
-        selectedRoutine.id,
-        selectedRoutine.clientId,
-        {
-          exerciseId,
-          weekNumber,
-          weight: weight ?? undefined,
-          repsDone: repsDone ?? undefined,
-        },
-      );
-      // Reload logs
-      const res = await routinesService.getWorkoutLogs(
-        selectedRoutine.id,
-        selectedRoutine.clientId,
-      );
-      setLogs(res.data ?? []);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error guardando registro");
     }
   };
 

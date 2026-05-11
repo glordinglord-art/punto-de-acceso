@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Card } from "@/shared/components/ui/Card";
-import { Badge } from "@/shared/components/ui/Badge";
 import { mealsService } from "@/features/meals/services/meals.service";
 import { MEAL_TYPES } from "@/shared/lib/constants";
 import { FITNESS_GOALS, GOAL_RATING_CONFIG } from "../types/meals.types";
@@ -15,7 +14,6 @@ import { getLocalDateString, localDateToISO } from "@/shared/lib/utils";
 interface FoodScannerProps {
   userId: string;
   onMealSaved: () => void;
-  onClose: () => void;
 }
 
 type Mode = "choose" | "scan" | "manual";
@@ -23,7 +21,6 @@ type Mode = "choose" | "scan" | "manual";
 export function FoodScanner({
   userId,
   onMealSaved,
-  onClose,
 }: FoodScannerProps) {
   const [mode, setMode] = useState<Mode>("choose");
 

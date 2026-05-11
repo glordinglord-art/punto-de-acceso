@@ -298,7 +298,6 @@ export default function MealsPage() {
           <FoodScanner
             userId={user.id}
             onMealSaved={handleMealSaved}
-            onClose={() => setShowScanner(false)}
           />
         )}
       </Modal>

@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Card } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
-import { MUSCLE_GROUPS } from '@/shared/lib/constants';
 import type { Routine, RoutineDay } from '../types/routines.types';
 
 interface RoutineCardProps {
@@ -47,8 +45,6 @@ function DayPreview({ day }: { day: RoutineDay }) {
 
 export function RoutineCard({ routine, onClick }: RoutineCardProps) {
   const trainingDays = routine.days.filter((d) => !d.isRestDay);
-  const restDays = routine.days.filter((d) => d.isRestDay);
-
   return (
     <Card hover className="cursor-pointer" onClick={onClick}>
       <div className="mb-4 flex items-start justify-between">
