@@ -88,35 +88,35 @@ export function NotificationPrompt() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-[24px] border border-primary-400/25 bg-slate-950/95 p-4 text-left shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl transition hover:border-primary-300/50"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-[24px] border border-primary-400/30 bg-white/95 p-4 text-left shadow-[0_24px_80px_rgba(15,23,42,0.16)] backdrop-blur-xl transition hover:border-primary-300/60 dark:bg-slate-950/95 dark:shadow-[0_24px_80px_rgba(2,6,23,0.45)]"
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-400/15 text-primary-300">
             <BellRing className="h-5 w-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold text-white">Activar recordatorios</span>
-            <span className="block text-xs text-slate-400">Comidas y rutina directo al celular.</span>
+            <span className="block text-sm font-bold text-slate-950 dark:text-white">Activar recordatorios</span>
+            <span className="block text-xs text-slate-600 dark:text-slate-400">Comidas y rutina directo al celular.</span>
           </span>
         </button>
       ) : (
-        <div className="rounded-[28px] border border-white/10 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(2,6,23,0.5)] backdrop-blur-xl">
+        <div className="rounded-[28px] border border-slate-200/90 bg-white/95 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_24px_80px_rgba(2,6,23,0.5)]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-400/15 text-primary-300">
                 <Bell className="h-5 w-5" />
               </span>
               <div>
-                <p className="font-display text-lg font-bold uppercase text-white">Notificaciones</p>
-                <p className="text-xs text-slate-400">Desayuno, comida, cena y rutina.</p>
+                <p className="font-display text-lg font-bold uppercase text-slate-950 dark:text-white">Notificaciones</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Desayuno, comida, cena y rutina.</p>
               </div>
             </div>
-            <button type="button" onClick={() => setIsOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-white/10 hover:text-white">
+            <button type="button" onClick={() => setIsOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-white/10 dark:hover:text-white">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {config && !config.configured && (
-            <div className="mt-4 flex gap-2 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
+            <div className="mt-4 flex gap-2 rounded-2xl border border-amber-400/30 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
               <ShieldAlert className="h-4 w-4 shrink-0" />
               Configura VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en backend para enviar push real.
             </div>
@@ -134,15 +134,15 @@ export function NotificationPrompt() {
                 ['dinnerTime', 'Cena'],
                 ['workoutTime', 'Rutina'],
               ].map(([field, label]) => (
-                <label key={field} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                  <span className="flex items-center gap-2 text-sm text-slate-300">
+                <label key={field} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+                  <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <Clock className="h-4 w-4 text-primary-300" /> {label}
                   </span>
                   <input
                     type="time"
                     value={prefs[field as keyof NotificationPreferences] as string}
                     onChange={(e) => updateTime(field as keyof Pick<NotificationPreferences, 'breakfastTime' | 'lunchTime' | 'dinnerTime' | 'workoutTime'>, e.target.value)}
-                    className="rounded-xl border border-white/10 bg-slate-950 px-2 py-1 text-sm text-white outline-none focus:border-primary-400"
+                    className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-sm text-slate-950 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950 dark:text-white"
                   />
                 </label>
               ))}
@@ -152,7 +152,7 @@ export function NotificationPrompt() {
             </div>
           )}
 
-          {message && <p className="mt-3 text-xs text-slate-300">{message}</p>}
+          {message && <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">{message}</p>}
         </div>
       )}
     </div>

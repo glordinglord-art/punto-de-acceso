@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-neutral-50/50 dark:bg-neutral-950 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-slate-100/35 text-slate-950 dark:bg-neutral-950 dark:text-white">
       <Sidebar />
       <main
         className={cn(

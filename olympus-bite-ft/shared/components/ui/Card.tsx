@@ -22,8 +22,8 @@ export function Card({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[28px] border border-white/10 bg-white/6 backdrop-blur-md shadow-[0_24px_80px_rgba(2,6,23,0.28)] dark:border-white/8 dark:bg-white/5',
-        hover && 'transition-all duration-200 hover:border-white/16 hover:shadow-[0_28px_90px_rgba(2,6,23,0.38)]',
+        'overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/90 text-slate-950 backdrop-blur-md shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:border-white/8 dark:bg-white/5 dark:text-white dark:shadow-[0_24px_80px_rgba(2,6,23,0.28)]',
+        hover && 'transition-all duration-200 hover:border-slate-300 hover:shadow-[0_28px_90px_rgba(15,23,42,0.16)] dark:hover:border-white/16 dark:hover:shadow-[0_28px_90px_rgba(2,6,23,0.38)]',
         paddingStyles[padding],
         className,
       )}
@@ -45,7 +45,7 @@ export function CardHeader({ className, children, ...props }: HTMLAttributes<HTM
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn('font-display text-xl font-semibold uppercase tracking-[0.04em] text-white', className)}
+      className={cn('font-display text-xl font-semibold uppercase tracking-[0.04em] text-slate-950 dark:text-white', className)}
       {...props}
     >
       {children}
@@ -56,7 +56,7 @@ export function CardTitle({ className, children, ...props }: HTMLAttributes<HTML
 export function CardDescription({ className, children, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn('text-sm text-slate-300/72', className)}
+      className={cn('text-sm text-slate-600 dark:text-slate-300/72', className)}
       {...props}
     >
       {children}

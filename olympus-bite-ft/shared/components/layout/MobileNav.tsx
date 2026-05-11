@@ -90,7 +90,7 @@ export function MobileNav() {
   const navItems = allNavItems.filter((item) => !item.trainerOnly || isTrainer);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0f1115]/90 backdrop-blur-xl border-t border-white/10 lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 shadow-[0_-10px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-[#0f1115]/90 dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
       <div className="flex items-center overflow-x-auto scrollbar-hide px-2 py-3 gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -102,7 +102,7 @@ export function MobileNav() {
                 "flex flex-col items-center justify-center gap-1.5 rounded-2xl min-w-[72px] px-2 py-2 transition-all duration-300 relative",
                 isActive
                   ? "text-primary-500"
-                  : "text-slate-500 hover:text-slate-300"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
               )}
             >
               {/* Background glow when active */}

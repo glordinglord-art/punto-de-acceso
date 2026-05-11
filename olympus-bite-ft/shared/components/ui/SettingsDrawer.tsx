@@ -36,7 +36,7 @@ const Section = ({
 }) => (
   <div className="space-y-4">
     <p className="text-[11px] font-condensed font-bold text-neutral-500 uppercase tracking-widest flex items-center gap-2">
-      {title} <span className="flex-1 h-px bg-white/5" />
+      {title} <span className="flex-1 h-px bg-slate-200 dark:bg-white/5" />
     </p>
     {children}
   </div>
@@ -84,7 +84,7 @@ export function SettingsDrawer({
           "bottom-0 left-0 right-0 h-[88vh] rounded-t-[32px]",
           // desktop: right sidebar
           "lg:top-0 lg:bottom-auto lg:left-auto lg:right-0 lg:h-full lg:w-80 lg:rounded-none",
-          "bg-[#0a0a0a] border-t lg:border-t-0 lg:border-l border-white/10 shadow-2xl",
+          "border-t border-slate-200 bg-white text-slate-950 shadow-2xl lg:border-t-0 lg:border-l dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white",
           "transform transition-transform duration-300 ease-in-out",
           isOpen
             ? "translate-y-0 lg:translate-x-0"
@@ -93,21 +93,21 @@ export function SettingsDrawer({
       >
         {/* Drag handle — only on mobile */}
         <div className="flex justify-center pt-3 pb-1 lg:hidden shrink-0">
-          <div className="h-1.5 w-12 rounded-full bg-white/10" />
+          <div className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-white/10" />
         </div>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200 shrink-0 dark:border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center border border-primary-500/20">
               <Settings2 className="w-4 h-4 text-primary-500" />
             </div>
-            <h2 className="text-xl font-condensed font-bold uppercase tracking-wide text-white leading-none">
+            <h2 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-950 leading-none dark:text-white">
               Personalización
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors text-neutral-400 hover:text-white"
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-neutral-500 hover:text-slate-950 dark:hover:bg-white/10 dark:text-neutral-400 dark:hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -117,7 +117,7 @@ export function SettingsDrawer({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
           {/* MODE */}
           <Section title="Apariencia">
-            <div className="grid grid-cols-3 gap-2 p-1.5 bg-[#1a1a1a] rounded-2xl border border-white/5">
+            <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 dark:bg-[#1a1a1a] dark:border-white/5">
               {[
                 { id: "light", label: "Claro", icon: Sun },
                 { id: "dark", label: "Oscuro", icon: Moon },
@@ -129,8 +129,8 @@ export function SettingsDrawer({
                   className={cn(
                     "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-condensed font-bold uppercase tracking-wide transition-all",
                     theme === id
-                      ? "bg-[#2a2a2a] text-white shadow-md border border-white/10"
-                      : "text-neutral-500 hover:text-neutral-300 hover:bg-white/5",
+                      ? "bg-white text-slate-950 shadow-md border border-slate-200 dark:bg-[#2a2a2a] dark:text-white dark:border-white/10"
+                      : "text-neutral-500 hover:text-slate-900 hover:bg-white dark:hover:text-neutral-300 dark:hover:bg-white/5",
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -151,7 +151,7 @@ export function SettingsDrawer({
                   className={cn(
                     "relative flex-1 h-12 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95",
                     colorPreset === id
-                      ? "ring-2 ring-white/20 scale-105 shadow-lg shadow-black/50"
+                      ? "ring-2 ring-slate-900/20 scale-105 shadow-lg shadow-slate-900/15 dark:ring-white/20 dark:shadow-black/50"
                       : "opacity-40 hover:opacity-100",
                   )}
                   style={{ backgroundColor: color }}
@@ -173,7 +173,7 @@ export function SettingsDrawer({
                   "flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all group overflow-hidden relative",
                   layout === "vertical"
                     ? "border-primary-500 bg-primary-500/10"
-                    : "border-white/5 bg-[#1a1a1a] hover:border-white/20 hover:bg-[#222]",
+                    : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white dark:border-white/5 dark:bg-[#1a1a1a] dark:hover:border-white/20 dark:hover:bg-[#222]",
                 )}
               >
                 {layout === "vertical" && <div className="absolute inset-0 bg-primary-500/5" />}
@@ -239,7 +239,7 @@ export function SettingsDrawer({
                   "flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all group overflow-hidden relative",
                   layout === "mini"
                     ? "border-primary-500 bg-primary-500/10"
-                    : "border-white/5 bg-[#1a1a1a] hover:border-white/20 hover:bg-[#222]",
+                    : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white dark:border-white/5 dark:bg-[#1a1a1a] dark:hover:border-white/20 dark:hover:bg-[#222]",
                 )}
               >
                 {layout === "mini" && <div className="absolute inset-0 bg-primary-500/5" />}
@@ -301,7 +301,7 @@ export function SettingsDrawer({
                     "w-full flex items-center justify-between px-5 py-4 rounded-xl border text-sm transition-all text-left group",
                     fontFamily === id
                       ? "border-primary-500 bg-primary-500/10 text-primary-400 font-bold"
-                      : "border-white/5 bg-[#1a1a1a] text-neutral-400 hover:border-white/20 hover:bg-[#222] font-medium",
+                      : "border-slate-200 bg-slate-50 text-neutral-600 hover:border-slate-300 hover:bg-white font-medium dark:border-white/5 dark:bg-[#1a1a1a] dark:text-neutral-400 dark:hover:border-white/20 dark:hover:bg-[#222]",
                   )}
                 >
                   <span className="font-condensed uppercase tracking-wider">{label}</span>

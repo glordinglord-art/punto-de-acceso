@@ -127,8 +127,8 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               className={cn(
                 "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(234,88,12,0.4)]"
-                  : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white"
+                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(16,185,129,0.28)]"
+                  : "bg-slate-900/5 text-slate-600 border-slate-200/80 hover:bg-slate-900/10 hover:text-slate-950 dark:bg-white/5 dark:text-slate-400 dark:border-white/5 dark:hover:bg-white/10 dark:hover:text-white"
               )}
             >
               <div className="w-5 h-5">{item.icon}</div>
@@ -143,7 +143,7 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
     <div className="mb-6 last:mb-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+        className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-slate-950 dark:hover:text-white"
       >
         <span>{group.title}</span>
         <svg
@@ -171,8 +171,8 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(234,88,12,0.4)]"
-                  : "bg-transparent text-slate-400 border-transparent hover:bg-white/5 hover:text-white"
+                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(16,185,129,0.28)]"
+                  : "bg-transparent text-slate-600 border-transparent hover:bg-slate-900/5 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               )}
             >
               <div className="w-5 h-5">{item.icon}</div>
@@ -201,10 +201,10 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:bg-[#0f1115] lg:transition-all lg:z-30 lg:flex",
+        "hidden lg:bg-white/90 lg:text-slate-950 lg:backdrop-blur-xl lg:transition-all lg:z-30 lg:flex dark:lg:bg-[#0f1115] dark:lg:text-white",
         layout === "mini"
-          ? "flex-row items-center fixed top-0 left-0 w-full h-20 px-6 border-b border-white/5"
-          : "flex-col w-72 fixed inset-y-0 border-r border-white/5"
+          ? "flex-row items-center fixed top-0 left-0 w-full h-20 px-6 border-b border-slate-200/80 dark:border-white/5"
+          : "flex-col w-72 fixed inset-y-0 border-r border-slate-200/80 dark:border-white/5"
       )}
     >
       {/* Logo */}
@@ -212,15 +212,15 @@ export function Sidebar() {
         className={cn(
           "flex items-center gap-4",
           layout === "mini"
-            ? "h-full border-none pr-8 border-r border-white/5"
-            : "h-24 px-6 border-b border-white/5"
+            ? "h-full border-none pr-8 border-r border-slate-200/80 dark:border-white/5"
+            : "h-24 px-6 border-b border-slate-200/80 dark:border-white/5"
         )}
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500 text-slate-950 shadow-[0_0_20px_rgba(234,88,12,0.4)]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.32)]">
           <span className="text-xl font-black italic tracking-tighter">OB</span>
         </div>
         <div>
-          <h1 className="text-lg font-black italic text-white tracking-tight uppercase leading-none">
+          <h1 className="text-lg font-black italic text-slate-950 tracking-tight uppercase leading-none dark:text-white">
             OLYMPUS
             <span className="block text-primary-500">BITE</span>
           </h1>
@@ -250,13 +250,13 @@ export function Sidebar() {
         className={cn(
           "flex items-center gap-4",
           layout === "mini"
-            ? "pr-6 border-l border-white/5 pl-8"
-            : "border-t border-white/5 p-6 flex-col"
+            ? "pr-6 border-l border-slate-200/80 pl-8 dark:border-white/5"
+            : "border-t border-slate-200/80 p-6 flex-col dark:border-white/5"
         )}
       >
         {user && layout !== "mini" && (
           <div className="mb-4 px-2 w-full text-center">
-            <p className="text-sm font-bold uppercase tracking-wider text-white truncate">
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-950 truncate dark:text-white">
               {user.name}
             </p>
             <p className="text-xs font-semibold text-slate-500 truncate mt-1">{user.email}</p>
@@ -266,8 +266,8 @@ export function Sidebar() {
           className={cn(
             "flex items-center justify-center gap-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all border",
             layout === "mini"
-              ? "p-3 text-slate-400 bg-white/5 border-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
-              : "w-full py-3.5 text-slate-400 bg-white/5 border-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
+              ? "p-3 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
+              : "w-full py-3.5 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
           )}
           onClick={logout}
           title="Cerrar sesión"
