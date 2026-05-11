@@ -1,4 +1,10 @@
-import { useState, useEffect } from "react";
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, 'olympus-bite-ft/features/clients/components/ClientProfileModal.tsx');
+let content = fs.readFileSync(filePath, 'utf8');
+
+const newContent = `import { useState, useEffect } from "react";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/Button";
 import { Avatar } from "@/shared/components/ui/Avatar";
@@ -60,7 +66,7 @@ export function ClientProfileModal({
       onClose={onClose}
       title=""
       size="lg"
-      
+      className="p-0 overflow-hidden bg-white dark:bg-neutral-900 border-none sm:rounded-3xl"
     >
       <div className="relative">
         {/* Banner with gradient */}
@@ -161,7 +167,7 @@ export function ClientProfileModal({
                           Peso
                         </span>
                         <span className="font-bold text-neutral-900 dark:text-white">
-                          {client.weight ? `${client.weight} kg` : "--"}
+                          {client.weight ? \`\${client.weight} kg\` : "--"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center p-2 rounded-lg bg-white dark:bg-black/20 border border-neutral-100 dark:border-white/5">
@@ -169,7 +175,7 @@ export function ClientProfileModal({
                           Estatura
                         </span>
                         <span className="font-bold text-neutral-900 dark:text-white">
-                          {client.height ? `${client.height} cm` : "--"}
+                          {client.height ? \`\${client.height} cm\` : "--"}
                         </span>
                       </div>
                     </div>
@@ -309,3 +315,7 @@ export function ClientProfileModal({
     </Modal>
   );
 }
+`;
+
+fs.writeFileSync(filePath, newContent);
+console.log('Done replacing ClientProfileModal.tsx');
