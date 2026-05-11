@@ -1,4 +1,10 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, 'olympus-bite-ft/shared/components/ui/Modal.tsx');
+let content = fs.readFileSync(filePath, 'utf8');
+
+const newContent = `'use client';
 
 import { cn } from '../../lib/utils';
 import { useEffect, useRef } from 'react';
@@ -101,3 +107,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
     </div>
   );
 }
+`;
+
+fs.writeFileSync(filePath, newContent);
+console.log('Done replacing Modal.tsx');
