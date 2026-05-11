@@ -99,8 +99,9 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
 
   async findByClientId(clientId: string): Promise<Routine[]> {
     const rows = await this.prisma.routine.findMany({
-      where: { clientId, isActive: true },
+      where: { clientId },
       include: this.includeAll,
+      orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
     });
     return rows.map((r) => this.toDomain(r));
   }

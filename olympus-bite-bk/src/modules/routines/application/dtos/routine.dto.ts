@@ -98,7 +98,13 @@ export class LogWorkoutDto {
 
   @IsArray()
   @IsOptional()
-  setsData?: { set: number; weight: number | null; reps: number | null; rest: number | null; completed: boolean }[];
+  setsData?: {
+    set: number;
+    weight: number | null;
+    reps: number | null;
+    rest: number | null;
+    completed: boolean;
+  }[];
 
   @IsNumber()
   @IsOptional()

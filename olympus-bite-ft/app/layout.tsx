@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   title: "Punto de Inflexión — Nutrición & Entrenamiento",
   description:
     "La plataforma de tu entrenador personal para controlar tu alimentación y rutinas de gym",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

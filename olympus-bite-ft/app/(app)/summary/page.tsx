@@ -20,7 +20,7 @@ import type { User } from '@/shared/types/common.types';
 import type { ClientDashboard } from '@/features/dashboard/types/dashboard.types';
 import type { DailyTask, TaskLog } from '@/features/tasks/types/tasks.types';
 import type { Routine, WorkoutLog } from '@/features/routines/types/routines.types';
-import { Users, Search, Target, Dumbbell, Activity, CalendarDays, Zap, Utensils, Award, CheckCircle2, ChevronRight, ShieldAlert, Apple } from 'lucide-react';
+import { Users, Search, Target, Dumbbell, Activity, Zap, Utensils, CheckCircle2, ChevronRight, ShieldAlert, Apple } from 'lucide-react';
 
 /* ─── Types ──────────────────────────── */
 

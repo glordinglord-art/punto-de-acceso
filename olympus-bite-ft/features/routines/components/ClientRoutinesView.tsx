@@ -12,6 +12,7 @@ import type {
   Routine,
   WorkoutLog,
   Exercise,
+  RoutineDay,
   SetLogData,
 } from "@/features/routines/types/routines.types";
 
@@ -26,18 +27,18 @@ const DAY_NAMES = [
   "Domingo",
 ];
 
-const MUSCLE_EMOJIS: Record<string, string> = {
-  chest: "🫁",
-  back: "🔙",
-  shoulders: "💪",
-  biceps: "💪",
-  triceps: "💪",
-  legs: "🦵",
-  glutes: "🍑",
-  abs: "🎯",
-  cardio: "🏃",
-  full_body: "🏋️",
-  other: "⭐",
+const MUSCLE_LABELS: Record<string, string> = {
+  chest: "Pecho",
+  back: "Espalda",
+  shoulders: "Hombros",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  legs: "Piernas",
+  glutes: "Gluteos",
+  abs: "Abdomen",
+  cardio: "Cardio",
+  full_body: "Full body",
+  other: "General",
 };
 
 const WEEKDAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
@@ -508,6 +509,232 @@ function ExerciseTrackingCard({
   return null;
 }
 
+function GuidedRoutineSession({
+  routine,
+  day,
+  weekNumber,
+  logs,
+  isSaving,
+  onBack,
+  onSaveSet,
+}: {
+  routine: Routine;
+  day: RoutineDay;
+  weekNumber: number;
+  logs: WorkoutLog[];
+  isSaving: boolean;
+  onBack: () => void;
+  onSaveSet: (
+    exercise: Exercise,
+    setNumber: number,
+    weight: number | null,
+    reps: number | null,
+  ) => Promise<void>;
+}) {
+  const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [setIndex, setSetIndex] = useState(0);
+  const [restRemaining, setRestRemaining] = useState(0);
+
+  const exercise = day.exercises[exerciseIndex];
+  const totalSets = exercise?.sets ?? 0;
+  const totalSteps = day.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+  const completedSteps = day.exercises.reduce((sum, ex) => {
+    const log = logs.find((l) => l.exerciseId === ex.id && l.weekNumber === weekNumber);
+    return sum + (log?.setsData?.filter((set) => set.completed).length ?? 0);
+  }, 0);
+  const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+  useEffect(() => {
+    if (restRemaining <= 0) return;
+    const timer = window.setInterval(() => {
+      setRestRemaining((current) => Math.max(current - 1, 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [restRemaining]);
+
+  if (!exercise) {
+    return (
+      <Card className="text-center">
+        <p className="text-lg font-bold text-white">No hay ejercicios para este día.</p>
+        <Button className="mt-4" variant="secondary" onClick={onBack}>Volver</Button>
+      </Card>
+    );
+  }
+
+  const isLastSet = setIndex + 1 >= totalSets;
+  const isLastExercise = exerciseIndex + 1 >= day.exercises.length;
+  const nextLabel = isLastSet
+    ? isLastExercise
+      ? "Finalizar rutina"
+      : "Siguiente ejercicio"
+    : "Guardar serie y descansar";
+
+  const handleSave = async (weight: number | null, reps: number | null) => {
+    await onSaveSet(
+      exercise,
+      setIndex + 1,
+      weight,
+      reps,
+    );
+
+    if (isLastSet) {
+      if (isLastExercise) {
+        onBack();
+        return;
+      }
+      setExerciseIndex((current) => current + 1);
+      setSetIndex(0);
+      setRestRemaining(exercise.restSeconds);
+      return;
+    }
+
+    setSetIndex((current) => current + 1);
+    setRestRemaining(exercise.restSeconds);
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card className="relative overflow-hidden border-primary-400/20 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-300/70 to-transparent" />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-300">Sesión guiada</p>
+            <h2 className="mt-2 font-display text-3xl font-black uppercase leading-none text-white sm:text-5xl">
+              {day.focusArea}
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              {routine.name} · Semana {weekNumber} · {DAY_NAMES[day.dayNumber]}
+            </p>
+          </div>
+          <Button variant="ghost" onClick={onBack}>Salir</Button>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+              Ejercicio {exerciseIndex + 1}/{day.exercises.length}
+            </p>
+            <h3 className="mt-2 text-3xl font-black uppercase text-white sm:text-5xl">
+              {exercise.name}
+            </h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant="info">{exercise.muscleGroup}</Badge>
+              <Badge variant="default">{exercise.sets} series</Badge>
+              <Badge variant="default">{exercise.reps} reps objetivo</Badge>
+              <Badge variant="default">{formatRest(exercise.restSeconds)} descanso</Badge>
+            </div>
+            {exercise.observations && (
+              <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                {exercise.observations}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 text-center">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Serie actual</p>
+            <p className="mt-2 font-display text-7xl font-black text-white">{setIndex + 1}</p>
+            <p className="text-sm text-slate-400">de {totalSets}</p>
+            {restRemaining > 0 && (
+              <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Descanso</p>
+                <p className="mt-1 text-3xl font-black text-cyan-100">{formatRest(restRemaining)}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-300 transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-slate-500">{completedSteps}/{totalSteps} series registradas</p>
+      </Card>
+
+      <GuidedSetForm
+        key={`${exercise.id}-${weekNumber}-${setIndex}`}
+        exercise={exercise}
+        initialSet={logs
+          .find((l) => l.exerciseId === exercise.id && l.weekNumber === weekNumber)
+          ?.setsData?.find((set) => set.set === setIndex + 1)}
+        isSaving={isSaving}
+        nextLabel={nextLabel}
+        restRemaining={restRemaining}
+        onSkipRest={() => setRestRemaining(0)}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}
+
+function GuidedSetForm({
+  exercise,
+  initialSet,
+  isSaving,
+  nextLabel,
+  restRemaining,
+  onSkipRest,
+  onSave,
+}: {
+  exercise: Exercise;
+  initialSet?: SetLogData;
+  isSaving: boolean;
+  nextLabel: string;
+  restRemaining: number;
+  onSkipRest: () => void;
+  onSave: (weight: number | null, reps: number | null) => void;
+}) {
+  const [weight, setWeight] = useState(initialSet?.weight != null ? String(initialSet.weight) : "");
+  const [reps, setReps] = useState(initialSet?.reps != null ? String(initialSet.reps) : "");
+
+  return (
+    <Card>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Peso usado</span>
+          <div className="relative mt-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-2xl font-bold text-white outline-none focus:border-primary-400"
+              placeholder="0"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">kg</span>
+          </div>
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Reps hechas</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-2xl font-bold text-white outline-none focus:border-primary-400"
+            placeholder={exercise.reps}
+          />
+        </label>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+        <Button
+          size="lg"
+          fullWidth
+          onClick={() => onSave(weight === "" ? null : Number(weight), reps === "" ? null : Number(reps))}
+          loading={isSaving}
+        >
+          {nextLabel}
+        </Button>
+        {restRemaining > 0 && (
+          <Button size="lg" variant="secondary" onClick={onSkipRest}>
+            Saltar descanso
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function ClientRoutinesView() {
   const { user } = useAuth();
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -516,9 +743,10 @@ export function ClientRoutinesView() {
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [savingLog, setSavingLog] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "detail" | "tracking" | "calendar">(
+  const [view, setView] = useState<"list" | "detail" | "tracking" | "calendar" | "session">(
     "list",
   );
+  const [sessionDay, setSessionDay] = useState<RoutineDay | null>(null);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date | null>(null);
@@ -653,6 +881,47 @@ export function ClientRoutinesView() {
   const getExerciseLog = (exerciseId: string, weekNumber: number) => {
     return logs.find(
       (l) => l.exerciseId === exerciseId && l.weekNumber === weekNumber,
+    );
+  };
+
+  const startGuidedSession = (day: RoutineDay, weekNumber: number) => {
+    setSessionDay(day);
+    setCurrentWeek(weekNumber);
+    setView("session");
+  };
+
+  const handleSessionSaveSet = async (
+    exercise: Exercise,
+    setNumber: number,
+    weight: number | null,
+    reps: number | null,
+  ) => {
+    const existing = getExerciseLog(exercise.id, currentWeek);
+    const baseSets = existing?.setsData?.length
+      ? existing.setsData
+      : Array.from({ length: exercise.sets }, (_, i) => ({
+          set: i + 1,
+          weight: null,
+          reps: null,
+          rest: exercise.restSeconds,
+          completed: false,
+        }));
+    const nextSets = baseSets.map((set) =>
+      set.set === setNumber
+        ? {
+            ...set,
+            weight,
+            reps,
+            rest: exercise.restSeconds,
+            completed: true,
+          }
+        : set,
+    );
+    await handleSaveExerciseLog(
+      exercise,
+      currentWeek,
+      nextSets,
+      existing?.observations ?? "",
     );
   };
 
@@ -941,8 +1210,8 @@ export function ClientRoutinesView() {
                         key={ex.id}
                         className="flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5 dark:bg-neutral-800/50"
                       >
-                        <span className="text-sm">
-                          {MUSCLE_EMOJIS[ex.muscleGroup] || "⭐"}
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                          {MUSCLE_LABELS[ex.muscleGroup] || "General"}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
@@ -1105,6 +1374,27 @@ export function ClientRoutinesView() {
     );
   }
 
+  /* ── Guided session view ── */
+  if (view === "session" && selectedRoutine && sessionDay) {
+    return (
+      <>
+        <Header
+          title="Comenzar rutina"
+          subtitle={`${sessionDay.focusArea} · Semana ${currentWeek}`}
+        />
+        <GuidedRoutineSession
+          routine={selectedRoutine}
+          day={sessionDay}
+          weekNumber={currentWeek}
+          logs={logs}
+          isSaving={savingLog !== null}
+          onBack={() => setView("detail")}
+          onSaveSet={handleSessionSaveSet}
+        />
+      </>
+    );
+  }
+
   /* ── Detail view ── */
   if (view === "detail" && selectedRoutine) {
     const totalExercises = selectedRoutine.days.reduce(
@@ -1186,8 +1476,7 @@ export function ClientRoutinesView() {
           <div
             className="mb-5 rounded-2xl bg-linear-to-r from-primary-500 to-primary-600 p-5 text-white cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all"
             onClick={() => {
-              setCurrentWeek(suggestedWeek);
-              setView("tracking");
+              startGuidedSession(todayDay, suggestedWeek);
             }}
           >
             <div className="flex items-center justify-between">
@@ -1261,6 +1550,10 @@ export function ClientRoutinesView() {
           </div>
           <button
             onClick={() => {
+              if (todayIsTraining && todayDay) {
+                startGuidedSession(todayDay, suggestedWeek);
+                return;
+              }
               setCurrentWeek(suggestedWeek);
               setView("tracking");
             }}
@@ -1270,7 +1563,7 @@ export function ClientRoutinesView() {
               ✅
             </p>
             <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-300 dark:text-neutral-500 mt-1">
-              Registrar
+              Comenzar
             </p>
           </button>
         </div>
@@ -1311,7 +1604,7 @@ export function ClientRoutinesView() {
                   isToday && !day.isRestDay
                     ? () => {
                         setCurrentWeek(suggestedWeek);
-                        setView("tracking");
+                        startGuidedSession(day, suggestedWeek);
                       }
                     : undefined
                 }
@@ -1364,8 +1657,8 @@ export function ClientRoutinesView() {
                               : "bg-neutral-50 dark:bg-neutral-800/50",
                           )}
                         >
-                          <span className="text-sm">
-                            {MUSCLE_EMOJIS[ex.muscleGroup] || "⭐"}
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                            {MUSCLE_LABELS[ex.muscleGroup] || "General"}
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">

@@ -99,24 +99,22 @@ export class User extends BaseEntity {
       dietaryPreferences: string | null;
     }>,
   ): void {
-    if (data.name) this.name = data.name as string;
-    if (data.avatarUrl !== undefined)
-      this.avatarUrl = data.avatarUrl as string | null;
-    if (data.phone !== undefined) this.phone = data.phone as string | null;
-    if (data.dietaryGoal !== undefined)
-      this.dietaryGoal = data.dietaryGoal as string | null;
-    if (data.weight !== undefined) this.weight = data.weight as number | null;
-    if (data.height !== undefined) this.height = data.height as number | null;
+    if (data.name) this.name = data.name;
+    if (data.avatarUrl !== undefined) this.avatarUrl = data.avatarUrl;
+    if (data.phone !== undefined) this.phone = data.phone;
+    if (data.dietaryGoal !== undefined) this.dietaryGoal = data.dietaryGoal;
+    if (data.weight !== undefined) this.weight = data.weight;
+    if (data.height !== undefined) this.height = data.height;
     if (data.targetCalories !== undefined)
-      this.targetCalories = data.targetCalories as number | null;
+      this.targetCalories = data.targetCalories;
     if (data.experienceLevel !== undefined)
-      this.experienceLevel = data.experienceLevel as string | null;
+      this.experienceLevel = data.experienceLevel;
     if (data.equipmentAccess !== undefined)
-      this.equipmentAccess = data.equipmentAccess as string | null;
+      this.equipmentAccess = data.equipmentAccess;
     if (data.medicalConditions !== undefined)
-      this.medicalConditions = data.medicalConditions as string | null;
+      this.medicalConditions = data.medicalConditions;
     if (data.dietaryPreferences !== undefined)
-      this.dietaryPreferences = data.dietaryPreferences as string | null;
+      this.dietaryPreferences = data.dietaryPreferences;
     this.markUpdated();
   }
 

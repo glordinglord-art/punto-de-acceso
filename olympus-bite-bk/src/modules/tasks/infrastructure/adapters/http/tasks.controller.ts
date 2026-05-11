@@ -11,8 +11,15 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import { TASK_REPOSITORY, TaskRepositoryPort } from '../../../domain/ports/task.repository.port';
-import { CreateTaskDto, UpdateTaskDto, ToggleTaskLogDto } from '../../../application/dtos/task.dto';
+import {
+  TASK_REPOSITORY,
+  TaskRepositoryPort,
+} from '../../../domain/ports/task.repository.port';
+import {
+  CreateTaskDto,
+  UpdateTaskDto,
+  ToggleTaskLogDto,
+} from '../../../application/dtos/task.dto';
 
 @Controller('tasks')
 export class TasksController {
@@ -79,7 +86,11 @@ export class TasksController {
     @Query('start') start: string,
     @Query('end') end: string,
   ) {
-    const logs = await this.taskRepo.getLogsByUserAndDateRange(userId, start, end);
+    const logs = await this.taskRepo.getLogsByUserAndDateRange(
+      userId,
+      start,
+      end,
+    );
     return { success: true, data: logs };
   }
 

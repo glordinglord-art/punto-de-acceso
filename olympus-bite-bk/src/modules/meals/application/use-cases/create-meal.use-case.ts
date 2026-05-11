@@ -58,13 +58,15 @@ export class CreateMealUseCase {
 
     // Subir imágenes a Supabase Storage si existen
     if (dto.imagesBase64 && dto.imagesBase64.length > 0) {
-      const uploadPromises = dto.imagesBase64.map((base64Image, index) => 
-        this.storageService.uploadImage(base64Image, `meal-${userId}-${index}`)
+      const uploadPromises = dto.imagesBase64.map((base64Image, index) =>
+        this.storageService.uploadImage(base64Image, `meal-${userId}-${index}`),
       );
-      
+
       const uploadedUrls = await Promise.all(uploadPromises);
-      const validUrls = uploadedUrls.filter((url): url is string => url !== null);
-      
+      const validUrls = uploadedUrls.filter(
+        (url): url is string => url !== null,
+      );
+
       if (validUrls.length > 0) {
         imageUrl = validUrls[0];
         imageUrls.push(...validUrls);

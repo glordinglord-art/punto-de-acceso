@@ -7,7 +7,12 @@ import { DailyTask, TaskLog } from '../../../domain/entities/daily-task.entity';
 export class PrismaTaskRepository implements TaskRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createTask(userId: string, title: string, icon: string, order: number): Promise<DailyTask> {
+  async createTask(
+    userId: string,
+    title: string,
+    icon: string,
+    order: number,
+  ): Promise<DailyTask> {
     const task = await this.prisma.dailyTask.create({
       data: { userId, title, icon, order },
     });
@@ -22,7 +27,10 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
     return tasks.map((t) => new DailyTask(t));
   }
 
-  async updateTask(taskId: string, data: { title?: string; icon?: string; order?: number; isActive?: boolean }): Promise<DailyTask> {
+  async updateTask(
+    taskId: string,
+    data: { title?: string; icon?: string; order?: number; isActive?: boolean },
+  ): Promise<DailyTask> {
     const task = await this.prisma.dailyTask.update({
       where: { id: taskId },
       data,
@@ -34,7 +42,11 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
     await this.prisma.dailyTask.delete({ where: { id: taskId } });
   }
 
-  async toggleLog(taskId: string, userId: string, date: string): Promise<TaskLog | null> {
+  async toggleLog(
+    taskId: string,
+    userId: string,
+    date: string,
+  ): Promise<TaskLog | null> {
     // Check if already logged
     const existing = await this.prisma.taskLog.findUnique({
       where: { taskId_date: { taskId, date } },
@@ -51,7 +63,11 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
     return new TaskLog(log);
   }
 
-  async getLogsByUserAndDateRange(userId: string, startDate: string, endDate: string): Promise<TaskLog[]> {
+  async getLogsByUserAndDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<TaskLog[]> {
     const logs = await this.prisma.taskLog.findMany({
       where: {
         userId,

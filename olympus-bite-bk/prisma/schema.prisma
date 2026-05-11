@@ -98,6 +98,8 @@ model User {
   dailyTasks     DailyTask[]
   taskLogs       TaskLog[]
   waterLogs      WaterLog[]
+  pushSubscriptions NotificationSubscription[]
+  notificationPrefs  NotificationPreference?
 
   @@index([trainerId, isActive])
   @@map("users")
@@ -310,5 +312,45 @@ model WaterLog {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("water_logs")
+}
+
+// ─── Browser Push Notifications ────────────────────────
+
+model NotificationSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("notification_subscriptions")
+}
+
+model NotificationPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  enabled         Boolean  @default(true)
+  breakfastTime   String   @default("08:00") @map("breakfast_time")
+  lunchTime       String   @default("13:00") @map("lunch_time")
+  dinnerTime      String   @default("20:00") @map("dinner_time")
+  workoutTime     String   @default("18:00") @map("workout_time")
+  timezoneOffset  Int      @default(0) @map("timezone_offset")
+  lastBreakfastAt String?  @map("last_breakfast_at")
+  lastLunchAt     String?  @map("last_lunch_at")
+  lastDinnerAt    String?  @map("last_dinner_at")
+  lastWorkoutAt   String?  @map("last_workout_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 

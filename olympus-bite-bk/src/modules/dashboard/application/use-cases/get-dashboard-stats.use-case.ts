@@ -11,7 +11,12 @@ export class GetDashboardStatsUseCase {
     const now = new Date();
     const userNow = new Date(now.getTime() - tzOffset * 60_000);
     const todayStart = new Date(
-      Date.UTC(userNow.getUTCFullYear(), userNow.getUTCMonth(), userNow.getUTCDate()) + tzOffset * 60_000,
+      Date.UTC(
+        userNow.getUTCFullYear(),
+        userNow.getUTCMonth(),
+        userNow.getUTCDate(),
+      ) +
+        tzOffset * 60_000,
     );
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
@@ -46,44 +51,40 @@ export class GetDashboardStatsUseCase {
     const allUserIds = [trainerId, ...clientIds];
 
     // ── Queries de datos en paralelo (sin queries redundantes) ──
-    const [
-      totalRoutines,
-      activeRoutines,
-      activeRoutinesByClient,
-      mealsLast30,
-    ] = await Promise.all([
-      this.prisma.routine.count({ where: { trainerId } }),
-      this.prisma.routine.count({ where: { trainerId, isActive: true } }),
-      this.prisma.routine.groupBy({
-        by: ['clientId'],
-        where: { trainerId, isActive: true },
-        _count: true,
-      }),
-      // UNA sola query para: hoy, semanal, trends, tipos, foods, recent
-      this.prisma.meal.findMany({
-        where: {
-          userId: { in: allUserIds },
-          date: { gte: thirtyDaysAgo },
-        },
-        select: {
-          id: true,
-          userId: true,
-          name: true,
-          calories: true,
-          protein: true,
-          carbs: true,
-          fat: true,
-          fiber: true,
-          sugar: true,
-          mealType: true,
-          imageUrl: true,
-          foods: true,
-          date: true,
-          user: { select: { name: true } },
-        },
-        orderBy: { date: 'desc' },
-      }),
-    ]);
+    const [totalRoutines, activeRoutines, activeRoutinesByClient, mealsLast30] =
+      await Promise.all([
+        this.prisma.routine.count({ where: { trainerId } }),
+        this.prisma.routine.count({ where: { trainerId, isActive: true } }),
+        this.prisma.routine.groupBy({
+          by: ['clientId'],
+          where: { trainerId, isActive: true },
+          _count: true,
+        }),
+        // UNA sola query para: hoy, semanal, trends, tipos, foods, recent
+        this.prisma.meal.findMany({
+          where: {
+            userId: { in: allUserIds },
+            date: { gte: thirtyDaysAgo },
+          },
+          select: {
+            id: true,
+            userId: true,
+            name: true,
+            calories: true,
+            protein: true,
+            carbs: true,
+            fat: true,
+            fiber: true,
+            sugar: true,
+            mealType: true,
+            imageUrl: true,
+            foods: true,
+            date: true,
+            user: { select: { name: true } },
+          },
+          orderBy: { date: 'desc' },
+        }),
+      ]);
 
     // ── Procesar todo en memoria (0 queries extra) ──
 

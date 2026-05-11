@@ -96,7 +96,10 @@ export class UsersController {
     @Body() body: { email: string },
   ) {
     const user = await this.userRepository.linkToTrainer(body.email, trainerId);
-    if (!user) throw new NotFoundException('No se encontró ningún usuario con ese email');
+    if (!user)
+      throw new NotFoundException(
+        'No se encontró ningún usuario con ese email',
+      );
     return { success: true, data: UserResponseDto.fromEntity(user) };
   }
 }
