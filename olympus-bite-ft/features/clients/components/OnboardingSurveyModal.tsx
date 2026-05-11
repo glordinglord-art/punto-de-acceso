@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Modal } from "@/shared/components/ui/Modal";

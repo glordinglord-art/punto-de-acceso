@@ -15,13 +15,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100',
+    'bg-linear-to-r from-primary-500 to-primary-400 text-slate-950 shadow-[0_12px_32px_rgba(16,185,129,0.35)] hover:from-primary-400 hover:to-primary-300',
   secondary:
-    'bg-neutral-100 text-neutral-900 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700',
+    'border border-white/12 bg-white/8 text-white hover:bg-white/12',
   ghost:
-    'bg-transparent text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800',
+    'bg-transparent text-slate-300 hover:bg-white/8 hover:text-white',
   danger:
-    'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
+    'bg-red-500 text-white hover:bg-red-400',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -48,7 +48,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+          'inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50',
           variantStyles[variant],
           sizeStyles[size],
           fullWidth && 'w-full',

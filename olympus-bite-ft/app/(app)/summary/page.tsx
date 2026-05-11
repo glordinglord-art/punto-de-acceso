@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -14,7 +15,7 @@ import { mealsService } from '@/features/meals/services/meals.service';
 import { routinesService } from '@/features/routines/services/routines.service';
 import { formatCalories, cn, getLocalDateString, localDateToRange } from '@/shared/lib/utils';
 import { FITNESS_GOALS, GOAL_RATING_CONFIG } from '@/features/meals/types/meals.types';
-import type { GoalRating, Meal } from '@/features/meals/types/meals.types';
+import type { Meal } from '@/features/meals/types/meals.types';
 import type { User } from '@/shared/types/common.types';
 import type { ClientDashboard } from '@/features/dashboard/types/dashboard.types';
 import type { DailyTask, TaskLog } from '@/features/tasks/types/tasks.types';

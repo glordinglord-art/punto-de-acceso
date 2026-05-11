@@ -16,6 +16,7 @@ export class PrismaMealRepository implements MealRepositoryPort {
         name: raw.name,
         description: raw.description,
         imageUrl: raw.imageUrl ?? undefined,
+        imageUrls: raw.imageUrls,
         mealType: raw.mealType as unknown as MealType,
         nutritionalInfo: new NutritionalInfo({
           calories: raw.calories,
@@ -104,6 +105,7 @@ export class PrismaMealRepository implements MealRepositoryPort {
         name: entity.name,
         description: entity.description,
         imageUrl: entity.imageUrl,
+        imageUrls: entity.imageUrls,
         mealType: entity.mealType as string as any,
         calories: entity.nutritionalInfo.calories,
         protein: entity.nutritionalInfo.protein,
@@ -129,6 +131,7 @@ export class PrismaMealRepository implements MealRepositoryPort {
         name: entity.name,
         description: entity.description,
         imageUrl: entity.imageUrl,
+        imageUrls: entity.imageUrls,
         mealType: entity.mealType as string as any,
         calories: entity.nutritionalInfo.calories,
         protein: entity.nutritionalInfo.protein,

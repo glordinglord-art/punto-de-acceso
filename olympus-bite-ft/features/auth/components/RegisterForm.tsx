@@ -33,8 +33,12 @@ export function RegisterForm() {
       });
       login(response.data);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Error al registrarse');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Error al registrarse');
+      }
     } finally {
       setLoading(false);
     }

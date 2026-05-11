@@ -113,6 +113,7 @@ export interface ClientRecentMeal {
 export interface ClientDashboard {
   clientName: string;
   trainerName: string | null;
+  targetCalories: number | null;
   mealsToday: number;
   caloriesToday: number;
   proteinToday: number;

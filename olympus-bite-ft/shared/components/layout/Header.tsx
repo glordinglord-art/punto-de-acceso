@@ -8,13 +8,16 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, action }: HeaderProps) {
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-8">
+    <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
+        <p className="font-display text-xs uppercase tracking-[0.28em] text-primary-300/80">
+          Punto de Inflexion
+        </p>
+        <h1 className="font-display text-4xl font-semibold uppercase tracking-[0.03em] text-white sm:text-5xl">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="mt-1 max-w-2xl text-sm text-slate-300/72 sm:text-base">
             {subtitle}
           </p>
         )}

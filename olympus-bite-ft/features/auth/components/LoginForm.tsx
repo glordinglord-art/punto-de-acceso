@@ -24,8 +24,12 @@ export function LoginForm() {
       const response = await authService.login({ email, password });
       login(response.data);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Error al iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }

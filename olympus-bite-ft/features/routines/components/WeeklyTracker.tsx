@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn, formatRest } from '@/shared/lib/utils';
 import type { RoutineDay, WorkoutLog } from '../types/routines.types';
 
@@ -48,8 +48,14 @@ export function WeeklyTracker({ days, weekCount, logs }: WeeklyTrackerProps) {
   const getLog = (exerciseId: string, week: number) =>
     logs.find((l) => l.exerciseId === exerciseId && l.weekNumber === week);
 
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Ahora mismo';
     if (mins < 60) return `Hace ${mins} min`;

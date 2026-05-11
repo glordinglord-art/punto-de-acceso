@@ -1,6 +1,10 @@
+'use client';
+
+import { motion } from 'framer-motion';
 import { Card, CardTitle } from '@/shared/components/ui/Card';
 import type { MacroAverages, MealTypeCount } from '../types/dashboard.types';
 import { MEAL_TYPE_COLORS } from '../types/dashboard.types';
+import { cn } from '@/shared/lib/utils';
 
 interface MacroChartProps {
   macros: MacroAverages;
@@ -8,15 +12,16 @@ interface MacroChartProps {
 }
 
 const MACRO_CONFIG = [
-  { key: 'protein' as const, label: 'Proteína', unit: 'g', color: 'bg-red-500', lightBg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' },
-  { key: 'carbs' as const, label: 'Carbos', unit: 'g', color: 'bg-blue-500', lightBg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
-  { key: 'fat' as const, label: 'Grasas', unit: 'g', color: 'bg-yellow-500', lightBg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' },
-  { key: 'fiber' as const, label: 'Fibra', unit: 'g', color: 'bg-green-500', lightBg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' },
-  { key: 'sugar' as const, label: 'Azúcar', unit: 'g', color: 'bg-pink-500', lightBg: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-600 dark:text-pink-400' },
+  { key: 'protein' as const, label: 'Proteína', color: '#f87171', glow: '#f8717140' },
+  { key: 'carbs'   as const, label: 'Carbos',   color: '#60a5fa', glow: '#60a5fa40' },
+  { key: 'fat'     as const, label: 'Grasas',   color: '#fbbf24', glow: '#fbbf2440' },
+  { key: 'fiber'   as const, label: 'Fibra',    color: '#34d399', glow: '#34d39940' },
+  { key: 'sugar'   as const, label: 'Azúcar',   color: '#e879f9', glow: '#e879f940' },
 ];
 
 export function MacroChart({ macros, mealTypes }: MacroChartProps) {
-  const maxMacro = Math.max(macros.protein, macros.carbs, macros.fat, macros.fiber, macros.sugar, 1);
+  const values = MACRO_CONFIG.map((m) => macros[m.key]);
+  const maxVal = Math.max(...values, 1);
   const totalMealTypes = mealTypes.reduce((s, m) => s + m.count, 0) || 1;
 
   return (
@@ -24,22 +29,38 @@ export function MacroChart({ macros, mealTypes }: MacroChartProps) {
       <CardTitle>Nutrición promedio hoy</CardTitle>
 
       {/* Macro bars */}
-      <div className="space-y-3 mt-4">
-        {MACRO_CONFIG.map((m) => {
+      <div className="mt-5 space-y-3.5">
+        {MACRO_CONFIG.map((m, i) => {
           const value = macros[m.key];
-          const pct = (value / maxMacro) * 100;
+          const pct = Math.max((value / maxVal) * 100, 2);
+
           return (
-            <div key={m.key}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{m.label}</span>
-                <span className={`text-sm font-bold ${m.text}`}>
-                  {value}{m.unit}
-                </span>
+            <div key={m.key} className="group">
+              <div className="mb-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: m.color, boxShadow: `0 0 6px ${m.glow}` }}
+                  />
+                  <span className="text-sm font-medium text-slate-300">{m.label}</span>
+                </div>
+                <span className="text-sm font-bold text-white">{value}g</span>
               </div>
-              <div className="h-2.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${m.color} transition-all duration-500`}
-                  style={{ width: `${Math.max(pct, 2)}%` }}
+
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/8">
+                <motion.div
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{ backgroundColor: m.color }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 1.1, delay: 0.05 + i * 0.1, ease: 'easeOut' }}
+                />
+                {/* Shimmer */}
+                <motion.div
+                  className="absolute inset-y-0 w-8 rounded-full bg-white/20 blur-sm"
+                  initial={{ left: '-10%' }}
+                  animate={{ left: `${pct}%` }}
+                  transition={{ duration: 1.1, delay: 0.05 + i * 0.1, ease: 'easeOut' }}
                 />
               </div>
             </div>
@@ -49,38 +70,44 @@ export function MacroChart({ macros, mealTypes }: MacroChartProps) {
 
       {/* Meal type distribution */}
       {mealTypes.length > 0 && (
-        <div className="mt-6 pt-5 border-t border-neutral-100 dark:border-neutral-800">
-          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">
-            Distribución por tipo
-          </p>
+        <div className="mt-6 border-t border-white/8 pt-5">
+          <p className="mb-3 text-sm font-semibold text-slate-300">Distribución por tipo</p>
 
           {/* Stacked bar */}
-          <div className="flex h-4 rounded-full overflow-hidden mb-3">
-            {mealTypes.map((mt) => {
+          <div className="flex h-4 overflow-hidden rounded-full">
+            {mealTypes.map((mt, i) => {
               const pct = (mt.count / totalMealTypes) * 100;
               const color = MEAL_TYPE_COLORS[mt.type]?.ring || '#9ca3af';
               return (
-                <div
+                <motion.div
                   key={mt.type}
-                  className="transition-all duration-500"
-                  style={{ width: `${pct}%`, backgroundColor: color }}
+                  style={{ backgroundColor: color }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.9, delay: 0.3 + i * 0.08 }}
                 />
               );
             })}
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             {mealTypes.map((mt) => {
-              const config = MEAL_TYPE_COLORS[mt.type];
+              const cfg = MEAL_TYPE_COLORS[mt.type];
               return (
                 <div
                   key={mt.type}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium ${
-                    config?.bg || 'bg-neutral-100'
-                  } ${config?.text || 'text-neutral-600'}`}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold',
+                    cfg?.bg ?? 'bg-white/8',
+                    cfg?.text ?? 'text-white',
+                  )}
                 >
                   {mt.type}
-                  <span className="font-bold">{mt.count}</span>
+                  <span
+                    className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold"
+                  >
+                    {mt.count}
+                  </span>
                 </div>
               );
             })}

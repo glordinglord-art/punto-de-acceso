@@ -27,6 +27,7 @@ export class CreateMealUseCase {
     let foods = dto.foods ?? [];
     let description = dto.description ?? '';
     let imageUrl: string | undefined;
+    const imageUrls: string[] = [];
 
     // Si se envían datos nutricionales manuales, usarlos directamente
     if (dto.calories !== undefined) {
@@ -39,7 +40,7 @@ export class CreateMealUseCase {
         sugar: dto.sugar ?? 0,
       });
     } else if (dto.imagesBase64 && dto.imagesBase64.length > 0) {
-      // Analizar imagen con IA (mock por ahora)
+      // Analizar imagen con IA
       const analysis = await this.foodRecognition.analyzeImages(
         dto.imagesBase64,
       );
@@ -55,14 +56,18 @@ export class CreateMealUseCase {
       });
     }
 
-    // Subir imagen a Supabase Storage si existe
+    // Subir imágenes a Supabase Storage si existen
     if (dto.imagesBase64 && dto.imagesBase64.length > 0) {
-      const uploadedUrl = await this.storageService.uploadImage(
-        dto.imagesBase64[0],
-        `meal-${userId}`,
+      const uploadPromises = dto.imagesBase64.map((base64Image, index) => 
+        this.storageService.uploadImage(base64Image, `meal-${userId}-${index}`)
       );
-      if (uploadedUrl) {
-        imageUrl = uploadedUrl;
+      
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter((url): url is string => url !== null);
+      
+      if (validUrls.length > 0) {
+        imageUrl = validUrls[0];
+        imageUrls.push(...validUrls);
       }
     }
 
@@ -76,6 +81,7 @@ export class CreateMealUseCase {
       recommendation: dto.recommendation,
       goalRating: dto.goalRating,
       imageUrl,
+      imageUrls,
       date: dto.date ? new Date(dto.date) : undefined,
     });
 

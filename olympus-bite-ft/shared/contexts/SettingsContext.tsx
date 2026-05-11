@@ -82,6 +82,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // Load from localStorage on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
     const savedColor = localStorage.getItem("ob-color") as ColorPreset;
     const savedLayout = localStorage.getItem("ob-layout") as LayoutType;

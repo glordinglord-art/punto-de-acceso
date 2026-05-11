@@ -31,6 +31,7 @@ function getColorFromName(name: string): string {
   return colorPalette[index % colorPalette.length];
 }
 
+/* eslint-disable @next/next/no-img-element */
 export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
   if (src) {
     return (

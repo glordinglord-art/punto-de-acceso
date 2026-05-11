@@ -1,3 +1,123 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, animate } from 'framer-motion';
+import { Users, Utensils, Dumbbell, Flame, TrendingUp, TrendingDown } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { cn } from '@/shared/lib/utils';
+
+// ─────────────────────────────────────────────────────────
+// Animated counter
+// ─────────────────────────────────────────────────────────
+function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    const controls = animate(0, value, {
+      duration: 1.3,
+      ease: 'easeOut',
+      onUpdate: (v) => setDisplay(Math.floor(v)),
+    });
+    return () => controls.stop();
+  }, [value]);
+
+  return <>{display.toLocaleString('es')}{suffix}</>;
+}
+
+// ─────────────────────────────────────────────────────────
+// Single stat card
+// ─────────────────────────────────────────────────────────
+interface StatCardProps {
+  index: number;
+  title: string;
+  value: number;
+  suffix?: string;
+  extra?: string | null;
+  icon: ComponentType<{ className?: string }>;
+  iconColor: string;
+  gradientFrom: string;
+  gradientTo: string;
+  trend?: number | null;
+}
+
+function StatCard({
+  index,
+  title,
+  value,
+  suffix,
+  extra,
+  icon: Icon,
+  iconColor,
+  gradientFrom,
+  gradientTo,
+  trend,
+}: StatCardProps) {
+  const isPositive = trend != null && trend >= 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      className="group relative min-w-0 overflow-hidden rounded-[24px] border border-white/8 bg-white/5 backdrop-blur-md transition-all hover:border-white/14 hover:bg-white/7"
+    >
+      {/* Gradient top border */}
+      <div
+        className="absolute inset-x-0 top-0 h-[2px]"
+        style={{ background: `linear-gradient(to right, ${gradientFrom}, ${gradientTo})` }}
+      />
+
+      {/* Ambient glow orb */}
+      <div
+        className="pointer-events-none absolute -bottom-10 -right-10 h-36 w-36 rounded-full opacity-15 blur-3xl transition-opacity duration-300 group-hover:opacity-25"
+        style={{ background: `radial-gradient(circle, ${gradientFrom}, ${gradientTo})` }}
+      />
+
+      <div className="relative p-5">
+        {/* Icon + Trend */}
+        <div className="flex items-start justify-between">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110"
+            style={{
+              backgroundColor: `${iconColor}22`,
+              boxShadow: `0 0 18px ${iconColor}28`,
+              color: iconColor,
+            }}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+
+          {trend != null && (
+            <div
+              className={cn(
+                'flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] uppercase font-bold tracking-widest',
+                isPositive ? 'bg-emerald-500/12 text-emerald-400' : 'bg-rose-500/12 text-rose-400',
+              )}
+            >
+              {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              {Math.abs(trend)}%
+            </div>
+          )}
+        </div>
+
+        {/* Value */}
+        <div className="mt-4">
+          <p className="font-display text-4xl font-bold tracking-tight text-white">
+            <AnimatedCounter value={value} suffix={suffix} />
+          </p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">{title}</p>
+          {extra && (
+            <p className="mt-0.5 truncate text-[10px] text-slate-500">{extra}</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// Main export
+// ─────────────────────────────────────────────────────────
 interface StatsOverviewProps {
   totalClients: number;
   activeMealsToday: number;
@@ -9,79 +129,59 @@ interface StatsOverviewProps {
 }
 
 export function StatsOverview(props: StatsOverviewProps) {
-  const weekDiff = props.mealsLastWeek > 0
-    ? Math.round(((props.mealsThisWeek - props.mealsLastWeek) / props.mealsLastWeek) * 100)
-    : props.mealsThisWeek > 0 ? 100 : 0;
+  const weekDiff =
+    props.mealsLastWeek > 0
+      ? Math.round(((props.mealsThisWeek - props.mealsLastWeek) / props.mealsLastWeek) * 100)
+      : props.mealsThisWeek > 0
+        ? 100
+        : 0;
 
-  const cards = [
+  const cards: Omit<StatCardProps, 'index'>[] = [
     {
-      label: 'Clientes activos',
+      title: 'Clientes activos',
       value: props.totalClients,
-      icon: '👥',
-      gradient: 'from-blue-600 to-blue-400',
-      lightBg: 'bg-blue-50 dark:bg-blue-950/40',
-      extra: null,
+      icon: Users,
+      iconColor: '#3b82f6',
+      gradientFrom: '#3b82f6',
+      gradientTo: '#60a5fa',
+      extra: props.totalClients === 1 ? '1 cliente en total' : `${props.totalClients} en total`,
     },
     {
-      label: 'Comidas hoy',
+      title: 'Comidas hoy',
       value: props.activeMealsToday,
-      icon: '🍽️',
-      gradient: 'from-primary-600 to-primary-400',
-      lightBg: 'bg-primary-50 dark:bg-primary-950/40',
-      extra: weekDiff !== 0 ? `${weekDiff > 0 ? '+' : ''}${weekDiff}% vs sem. pasada` : null,
-      extraPositive: weekDiff >= 0,
+      icon: Utensils,
+      iconColor: '#10b981',
+      gradientFrom: '#10b981',
+      gradientTo: '#34d399',
+      trend: weekDiff,
+      extra: weekDiff !== 0
+        ? `${weekDiff > 0 ? '+' : ''}${weekDiff}% vs semana pasada`
+        : 'igual que la semana pasada',
     },
     {
-      label: 'Rutinas activas',
+      title: 'Rutinas activas',
       value: props.activeRoutines,
-      icon: '💪',
-      gradient: 'from-purple-600 to-purple-400',
-      lightBg: 'bg-purple-50 dark:bg-purple-950/40',
-      extra: props.totalRoutines > 0 ? `${props.totalRoutines} total creadas` : null,
+      icon: Dumbbell,
+      iconColor: '#a855f7',
+      gradientFrom: '#a855f7',
+      gradientTo: '#c084fc',
+      extra: props.totalRoutines > 0 ? `${props.totalRoutines} creadas en total` : null,
     },
     {
-      label: 'Promedio kcal',
+      title: 'Promedio kcal',
       value: props.avgCaloriesToday,
-      icon: '🔥',
-      gradient: 'from-amber-500 to-orange-400',
-      lightBg: 'bg-amber-50 dark:bg-amber-950/40',
-      extra: props.activeMealsToday > 0 ? 'promedio hoy' : 'sin datos hoy',
+      icon: Flame,
+      iconColor: '#f59e0b',
+      gradientFrom: '#f59e0b',
+      gradientTo: '#fbbf24',
+      extra: props.activeMealsToday > 0 ? 'promedio entre clientes hoy' : 'sin datos hoy',
     },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-      {cards.map((card) => (
-        <div
-          key={card.label}
-          className={`relative overflow-hidden rounded-2xl min-w-0 ${card.lightBg} border border-neutral-100 dark:border-neutral-800 p-5 transition-all hover:scale-[1.02] hover:shadow-lg`}
-        >
-          {/* Gradient accent bar */}
-          <div className={`absolute top-0 left-0 right-0 h-1 bg-linear-to-r ${card.gradient}`} />
-
-          <div className="flex items-start justify-between mb-3">
-            <span className="text-2xl">{card.icon}</span>
-          </div>
-
-          <p className="text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
-            {card.value.toLocaleString()}
-          </p>
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">
-            {card.label}
-          </p>
-
-          {card.extra && (
-            <p className={`text-xs mt-2 font-medium truncate ${
-              'extraPositive' in card
-                ? card.extraPositive
-                  ? 'text-primary-600 dark:text-primary-400'
-                  : 'text-red-500 dark:text-red-400'
-                : 'text-neutral-400'
-            }`}>
-              {card.extra}
-            </p>
-          )}
-        </div>
+      {cards.map((card, i) => (
+        <StatCard key={card.title} index={i} {...card} />
       ))}
     </div>
   );

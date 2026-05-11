@@ -26,8 +26,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedUser = localStorage.getItem('ob_user');
     if (savedToken && savedUser && savedUser !== 'undefined') {
       try {
+        const parsedUser = JSON.parse(savedUser);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        setUser(parsedUser);
       } catch {
         localStorage.removeItem('ob_token');
         localStorage.removeItem('ob_user');
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('ob_token');
     localStorage.removeItem('ob_user');
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   return (

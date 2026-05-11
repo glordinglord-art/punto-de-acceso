@@ -1,3 +1,6 @@
+'use client';
+
+import { motion } from 'framer-motion';
 import { Card, CardTitle } from '@/shared/components/ui/Card';
 import { Avatar } from '@/shared/components/ui/Avatar';
 import { Badge } from '@/shared/components/ui/Badge';
@@ -8,104 +11,100 @@ interface ClientsListProps {
   clients: ClientOverview[];
 }
 
+function getTimeAgo(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays > 0) return `hace ${diffDays}d`;
+  if (diffHours > 0) return `hace ${diffHours}h`;
+  return diffMin > 0 ? `hace ${diffMin}min` : 'ahora';
+}
+
 export function ClientsList({ clients }: ClientsListProps) {
   if (clients.length === 0) {
     return (
-      <Card>
+      <Card className="flex h-full flex-col">
         <CardTitle>Clientes</CardTitle>
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <span className="text-4xl mb-3">👥</span>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            No tienes clientes aún
-          </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Comparte tu código de invitación para empezar
-          </p>
+        <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+          <p className="font-display text-3xl uppercase text-white/30">0 clientes</p>
+          <p className="mt-3 text-sm text-slate-400">Comparte tu código de invitación para empezar</p>
         </div>
       </Card>
     );
   }
 
-  // Ordenar: más comidas hoy primero
-  const sorted = [...clients].sort((a, b) => b.mealsToday - a.mealsToday || b.caloriesToday - a.caloriesToday);
+  const sorted = [...clients].sort(
+    (a, b) => b.mealsToday - a.mealsToday || b.caloriesToday - a.caloriesToday,
+  );
 
   return (
-    <Card padding="sm">
-      <div className="px-2 pt-2 pb-1 flex items-center justify-between">
+    <Card className="flex h-full flex-col">
+      <div className="flex items-center justify-between pb-4">
         <CardTitle>Resumen de clientes</CardTitle>
-        <span className="text-xs text-neutral-400 font-medium shrink-0">{clients.length} activos</span>
+        <span className="shrink-0 rounded-full border border-white/8 bg-white/5 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+          {clients.length} activos
+        </span>
       </div>
 
-      <div className="mt-2 divide-y divide-neutral-50 dark:divide-neutral-800">
-        {sorted.map((client) => {
+      <div className="mt-2 divide-y divide-white/5 overflow-y-auto max-h-[420px] pr-2">
+        {sorted.map((client, i) => {
           const hasActivity = client.mealsToday > 0;
-          const timeSinceLastMeal = client.lastMealTime
-            ? getTimeAgo(new Date(client.lastMealTime))
-            : null;
+          const timeAgo = client.lastMealTime ? getTimeAgo(new Date(client.lastMealTime)) : null;
 
           return (
-            <div
-              key={client.id}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-neutral-50 transition-colors dark:hover:bg-neutral-800/50"
-            >
-              <div className="relative">
+              <motion.div
+                key={client.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="flex items-center gap-3 rounded-[20px] px-3 py-3 transition-colors hover:bg-white/4 border border-transparent hover:border-white/8"
+              >
+              {/* Avatar + activity dot */}
+              <div className="relative shrink-0">
                 <Avatar name={client.name} src={client.avatarUrl} />
-                {/* Activity indicator dot */}
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-neutral-900 ${
-                    hasActivity ? 'bg-primary-400' : 'bg-neutral-300 dark:bg-neutral-600'
+                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-950 ${
+                    hasActivity ? 'bg-primary-400' : 'bg-slate-600'
                   }`}
                 />
               </div>
 
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                  {client.name}
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              {/* Info */}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="truncate text-sm font-semibold text-white">{client.name}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
                   {hasActivity ? (
                     <>
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                      <span className="text-xs text-slate-400">
                         {client.mealsToday} comida{client.mealsToday > 1 ? 's' : ''}
                       </span>
-                      <span className="text-neutral-300 dark:text-neutral-600">·</span>
-                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                      <span className="text-slate-600">·</span>
+                      <span className="text-xs font-semibold text-amber-300">
                         {formatCalories(client.caloriesToday)}
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs text-neutral-400">
-                      {timeSinceLastMeal ? `Última ${timeSinceLastMeal}` : 'Sin actividad'}
+                    <span className="text-xs text-slate-500">
+                      {timeAgo ? `Última actividad ${timeAgo}` : 'Sin actividad hoy'}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1 shrink-0">
+              {/* Right side */}
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
                 {client.hasActiveRoutine ? (
                   <Badge variant="success">Rutina ✓</Badge>
                 ) : (
                   <Badge variant="warning">Sin rutina</Badge>
                 )}
-                <span className="text-[10px] text-neutral-400 whitespace-nowrap">
-                  {client.mealsThisWeek} sem.
-                </span>
+                <span className="text-[10px] text-slate-500">{client.mealsThisWeek} esta sem.</span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
     </Card>
   );
-}
-
-function getTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays > 0) return `hace ${diffDays}d`;
-  if (diffHours > 0) return `hace ${diffHours}h`;
-  const diffMin = Math.floor(diffMs / 60000);
-  return diffMin > 0 ? `hace ${diffMin}min` : 'ahora';
 }

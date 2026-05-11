@@ -318,27 +318,6 @@ export default function MealsPage() {
         onClose={() => setSelectedMeal(null)}
         title={selectedMeal?.name || "Detalle de comida"}
         size="lg"
-        footer={
-          selectedMeal && (
-            <div className="flex gap-3">
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => setSelectedMeal(null)}
-              >
-                Cerrar
-              </Button>
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => handleDeleteMeal(selectedMeal.id)}
-                className="text-red-500!"
-              >
-                🗑️ Eliminar
-              </Button>
-            </div>
-          )
-        }
       >
         {selectedMeal && (
           <MealDetail

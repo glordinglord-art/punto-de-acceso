@@ -284,13 +284,13 @@ date: localDateToISO(scanDate),
           onClick={() => fileInputRef.current?.click()}
           className="w-full rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50/50 p-12 text-center transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/50 dark:hover:border-neutral-600"
         >
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-700">
-            <span className="text-2xl">📸</span>
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 border border-white/5 shadow-inner">
+            <span className="text-4xl drop-shadow-md">📸</span>
           </div>
-          <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+          <p className="text-base font-bold font-condensed tracking-wide uppercase text-neutral-800 dark:text-neutral-200">
             Toma fotos de tu comida
           </p>
-          <p className="text-xs text-neutral-400 mt-1">
+          <p className="text-xs font-semibold text-neutral-400 mt-1.5 uppercase tracking-wider">
             Sube hasta 4 fotos para mayor precisión
           </p>
         </button>
@@ -339,15 +339,15 @@ date: localDateToISO(scanDate),
 
           {!analysis && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                📝 Describe los ingredientes (Opcional)
+              <label className="block text-sm font-bold font-condensed tracking-widest uppercase text-neutral-800 dark:text-neutral-200">
+                📝 Describe los ingredientes <span className="opacity-60">(Opcional)</span>
               </label>
               <textarea
                 value={userDescription}
                 onChange={(e) => setUserDescription(e.target.value)}
-                placeholder="Ayuda a la IA a ser más precisa..."
-                className="w-full rounded-xl border-neutral-200 bg-white px-4 py-3 text-sm focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white mt-1"
-                rows={2}
+                placeholder="Ayuda a la IA a ser más precisa (ej: 'Pollo con arroz y brócoli')..."
+                className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-white/5 dark:text-white mt-1 backdrop-blur-md transition-colors placeholder:text-neutral-400"
+                rows={3}
               />
             </div>
           )}
@@ -369,11 +369,11 @@ date: localDateToISO(scanDate),
         <>
           {/* Fitness Goal Display */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <label className="block text-sm font-bold font-condensed tracking-widest uppercase text-neutral-800 dark:text-neutral-200">
               🎯 Objetivo actual
             </label>
-            <div className="flex items-center gap-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 px-4 py-3 border border-neutral-200 dark:border-neutral-700">
-              <span className="text-2xl">
+            <div className="flex items-center gap-3 rounded-xl bg-white/50 dark:bg-white/5 px-4 py-3 border border-neutral-200 dark:border-white/10 backdrop-blur-md">
+              <span className="text-3xl drop-shadow-md">
                 {user?.dietaryGoal
                   ? FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.icon || "🎯"
                   : "🎯"}
@@ -430,130 +430,142 @@ date: localDateToISO(scanDate),
 
       {/* Analysis Result */}
       {analysis && (
-        <>
-          <Card className="border-primary-100 bg-primary-50/30 dark:border-primary-900/30 dark:bg-primary-900/10">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-primary-600 text-lg">✨</span>
-              <h3 className="font-semibold text-neutral-900 dark:text-white">
-                Análisis completado
-              </h3>
-              <span className="ml-auto text-xs text-neutral-400">
-                {Math.round(analysis.confidence * 100)}% confianza
-              </span>
-            </div>
-
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">
-              {analysis.description}
-            </p>
-
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-neutral-900 dark:text-white">
-                  {analysis.nutritionalInfo.calories}
-                </p>
-                <p className="text-[11px] text-neutral-400">kcal</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-blue-600">
-                  {analysis.nutritionalInfo.protein}g
-                </p>
-                <p className="text-[11px] text-neutral-400">proteína</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-amber-600">
-                  {analysis.nutritionalInfo.carbs}g
-                </p>
-                <p className="text-[11px] text-neutral-400">carbos</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-rose-600">
-                  {analysis.nutritionalInfo.fat}g
-                </p>
-                <p className="text-[11px] text-neutral-400">grasas</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-green-600">
-                  {analysis.nutritionalInfo.fiber}g
-                </p>
-                <p className="text-[11px] text-neutral-400">fibra</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-purple-600">
-                  {analysis.nutritionalInfo.sugar}g
-                </p>
-                <p className="text-[11px] text-neutral-400">azúcar</p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {analysis.foods.map((food, i) => (
-                <span
-                  key={i}
-                  className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 shadow-sm dark:bg-neutral-800 dark:text-neutral-300"
-                >
-                  {food}
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="border-primary-500/20 bg-primary-500/5 backdrop-blur-md shadow-lg shadow-primary-500/5 overflow-hidden relative">
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 opacity-5 text-9xl">✨</div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4 border-b border-primary-500/10 pb-3">
+                <span className="text-primary-400 text-2xl drop-shadow-md">✨</span>
+                <h3 className="font-bold text-lg text-neutral-900 dark:text-white uppercase tracking-wider font-condensed">
+                  Análisis completado
+                </h3>
+                <span className="ml-auto text-xs font-semibold text-primary-500/80 uppercase tracking-widest bg-primary-500/10 px-2 py-1 rounded-full">
+                  {Math.round(analysis.confidence * 100)}% certeza
                 </span>
-              ))}
+              </div>
+
+              <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300 mb-5 leading-relaxed bg-white/5 p-3 rounded-xl border border-white/5 italic">
+                &quot;{analysis.description}&quot;
+              </p>
+
+              <div className="grid grid-cols-3 gap-2 mb-5 bg-black/20 p-2 rounded-2xl border border-white/5">
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-neutral-900 dark:text-white drop-shadow-md">
+                    {analysis.nutritionalInfo.calories}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">kcal</p>
+                </div>
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-blue-500 drop-shadow-md">
+                    {analysis.nutritionalInfo.protein}g
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">proteína</p>
+                </div>
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-amber-500 drop-shadow-md">
+                    {analysis.nutritionalInfo.carbs}g
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">carbos</p>
+                </div>
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-rose-500 drop-shadow-md">
+                    {analysis.nutritionalInfo.fat}g
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">grasas</p>
+                </div>
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-green-500 drop-shadow-md">
+                    {analysis.nutritionalInfo.fiber}g
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">fibra</p>
+                </div>
+                <div className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
+                  <p className="text-2xl font-black font-condensed tracking-tight text-purple-500 drop-shadow-md">
+                    {analysis.nutritionalInfo.sugar}g
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mt-1">azúcar</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {analysis.foods.map((food, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white shadow-md border border-white/10"
+                  >
+                    {food}
+                  </span>
+                ))}
+              </div>
             </div>
           </Card>
 
           {/* AI Recommendation Card */}
           {analysis.recommendation && (
             <Card
-              className={`${GOAL_RATING_CONFIG[analysis.goalRating || "buena"].bgColor} border-transparent`}
+              className={`relative overflow-hidden ${GOAL_RATING_CONFIG[analysis.goalRating || "buena"].bgColor} border border-white/10 shadow-xl`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">
-                  {GOAL_RATING_CONFIG[analysis.goalRating || "buena"].icon}
-                </span>
-                <h3
-                  className={`text-sm font-semibold ${GOAL_RATING_CONFIG[analysis.goalRating || "buena"].color}`}
-                >
-                  Para tu objetivo (
-                  {user?.dietaryGoal
-                    ? FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.label ||
-                      user.dietaryGoal
-                    : "No especificado"}
-                  ): {GOAL_RATING_CONFIG[analysis.goalRating || "buena"].label}
-                </h3>
+              <div className="absolute top-0 right-0 -mr-4 -mt-4 opacity-10 text-8xl">
+                {GOAL_RATING_CONFIG[analysis.goalRating || "buena"].icon}
               </div>
-              <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                {analysis.recommendation}
-              </p>
-              <div className="mt-2 text-[11px] text-neutral-400 flex items-center gap-1">
-                <span>🤖</span> Recomendación generada por IA
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-2xl drop-shadow-md">
+                    {GOAL_RATING_CONFIG[analysis.goalRating || "buena"].icon}
+                  </span>
+                  <h3
+                    className={`text-sm font-bold uppercase tracking-wider ${GOAL_RATING_CONFIG[analysis.goalRating || "buena"].color}`}
+                  >
+                    Para tu objetivo (
+                    {user?.dietaryGoal
+                      ? FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.label ||
+                        user.dietaryGoal
+                      : "No especificado"}
+                    ): {GOAL_RATING_CONFIG[analysis.goalRating || "buena"].label}
+                  </h3>
+                </div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200 leading-relaxed">
+                  {analysis.recommendation}
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 opacity-80">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  <span>Recomendación por IA</span>
+                </div>
               </div>
             </Card>
           )}
 
-          {/* Sticky save form - always visible at bottom */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 mt-3 border-t border-neutral-100 bg-white px-6 pt-4 pb-5 dark:border-neutral-800 dark:bg-neutral-900 space-y-3">
+          {/* Save form */}
+          <div className="mt-6 border-t border-white/10 pt-5 space-y-4">
             <Input
               label="Fecha de la comida"
               type="date"
               value={scanDate}
               onChange={(e) => setScanDate(e.target.value)}
+              className="bg-white/5 border-white/10 text-white"
             />
             <Input
               label="Nombre de la comida"
               placeholder="Ej: Pollo con arroz"
               value={scanName}
               onChange={(e) => setScanName(e.target.value)}
+              className="bg-white/5 border-white/10 text-white"
             />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="space-y-2">
+              <label className="block text-sm font-bold font-condensed tracking-widest uppercase text-neutral-800 dark:text-neutral-200">
                 Tipo de comida
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 {Object.entries(MEAL_TYPES).map(([key, val]) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => setScanMealType(key)}
-                    className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-all ${
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all border ${
                       scanMealType === key
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
+                        ? "bg-primary-500/20 text-primary-300 border-primary-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                        : "bg-white/5 text-neutral-400 border-white/5 hover:bg-white/10 hover:border-white/10"
                     }`}
                   >
                     {val.icon} {val.label}
@@ -562,21 +574,22 @@ date: localDateToISO(scanDate),
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm font-semibold text-red-500 mt-2">{error}</p>}
 
             <Button
               fullWidth
               loading={savingFromScan}
               onClick={handleSaveFromScan}
               size="lg"
+              className="mt-4 font-condensed font-bold tracking-widest uppercase shadow-lg shadow-primary-500/20"
             >
               💾 Guardar comida
             </Button>
           </div>
-        </>
+        </div>
       )}
 
-      {error && !analysis && <p className="text-sm text-red-500">{error}</p>}
+      {error && !analysis && <p className="text-sm font-semibold text-red-500">{error}</p>}
     </div>
   );
 }

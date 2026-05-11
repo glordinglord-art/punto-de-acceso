@@ -16,16 +16,16 @@ import type { Routine } from "@/features/routines/types/routines.types";
 
 /* ─── Types ───────────────────────────────────── */
 
-interface ExerciseForm {
+export interface ExerciseForm {
   name: string;
   muscleGroup: string;
-  sets: number;
+  sets: number | string;
   reps: string;
-  restSeconds: number;
+  restSeconds: number | string;
   observations: string;
 }
 
-interface DayForm {
+export interface DayForm {
   dayNumber: number;
   focusArea: string;
   isRestDay: boolean;
@@ -33,7 +33,7 @@ interface DayForm {
   exercises: ExerciseForm[];
 }
 
-interface RoutineForm {
+export interface RoutineForm {
   name: string;
   description: string;
   clientId: string;
@@ -229,7 +229,7 @@ export function RoutineBuilder({
     return (
       <div className="space-y-6">
         <Card>
-          <CardTitle>{isEditing ? "Editar rutina" : "Nueva rutina"}</CardTitle>
+          <CardTitle className="uppercase tracking-wider text-xl mb-4">{isEditing ? "Editar rutina" : "Nueva rutina"}</CardTitle>
           <div className="mt-4 space-y-4">
             <Input
               label="Nombre de la rutina"
@@ -238,7 +238,7 @@ export function RoutineBuilder({
               onChange={(e) => updateField("name", e.target.value)}
             />
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
                 Descripción
               </label>
               <textarea
@@ -246,17 +246,17 @@ export function RoutineBuilder({
                 placeholder="Descripción de la rutina (opcional)"
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition-all duration-200 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-500 dark:focus:ring-neutral-700"
+                className="w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-white placeholder:text-slate-400 transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
                 Cliente
               </label>
               <select
                 value={form.clientId}
                 onChange={(e) => updateField("clientId", e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 transition-all duration-200 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-700"
+                className="w-full rounded-2xl border border-white/12 bg-[#1a1c23] px-4 py-3 text-sm text-white transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 appearance-none"
               >
                 <option value="">Selecciona un cliente</option>
                 {trainerId && (
@@ -269,27 +269,26 @@ export function RoutineBuilder({
                 ))}
               </select>
               {clients.length === 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  No hay clientes registrados. Genera un código de invitación
-                  primero.
+                <p className="text-xs text-amber-500 mt-2 font-medium">
+                  No hay clientes registrados. Genera un código de invitación primero.
                 </p>
               )}
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
                 Semanas de duración
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {[4, 6, 8, 12].map((w) => (
                   <button
                     key={w}
                     type="button"
                     onClick={() => updateField("weekCount", w)}
                     className={cn(
-                      "rounded-xl px-4 py-2 text-sm font-medium transition-all",
+                      "rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wider transition-all border",
                       form.weekCount === w
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400",
+                        ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(234,88,12,0.4)]"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white",
                     )}
                   >
                     {w} sem
@@ -301,7 +300,7 @@ export function RoutineBuilder({
         </Card>
 
         <div className="flex justify-between">
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             Cancelar
           </Button>
           <Button disabled={!canProceed} onClick={() => setStep("days")}>
@@ -317,21 +316,21 @@ export function RoutineBuilder({
   const day = form.days[activeDayIdx];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Day pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide">
         {form.days.map((d, i) => (
           <button
             key={i}
             type="button"
             onClick={() => setActiveDayIdx(i)}
             className={cn(
-              "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+              "shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wider transition-all border",
               activeDayIdx === i
-                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(234,88,12,0.4)]"
                 : d.isRestDay
-                  ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
-                  : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+                  ? "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
+                  : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10 hover:text-white",
             )}
           >
             Día {d.dayNumber}
@@ -341,7 +340,7 @@ export function RoutineBuilder({
         <button
           type="button"
           onClick={addDay}
-          className="shrink-0 rounded-full border-2 border-dashed border-neutral-300 px-4 py-1.5 text-sm text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 dark:border-neutral-600 dark:hover:border-neutral-500"
+          className="shrink-0 rounded-xl border border-dashed border-white/20 bg-transparent px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-400 hover:border-white/40 hover:text-white transition-all"
         >
           + Día
         </button>
@@ -350,19 +349,19 @@ export function RoutineBuilder({
       {/* Active day config */}
       {day && (
         <Card>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle>Día {day.dayNumber}</CardTitle>
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <CardTitle className="uppercase tracking-wider text-xl">Día {day.dayNumber}</CardTitle>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={day.isRestDay}
                   onChange={(e) =>
                     updateDay(activeDayIdx, { isRestDay: e.target.checked })
                   }
-                  className="rounded"
+                  className="rounded border-white/20 bg-white/5 text-primary-500 focus:ring-primary-500/30 w-5 h-5 cursor-pointer"
                 />
-                <span className="text-neutral-600 dark:text-neutral-400">
+                <span className="font-semibold uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">
                   Día de descanso
                 </span>
               </label>
@@ -391,7 +390,7 @@ export function RoutineBuilder({
               }
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <Input
                 label="Enfoque del día"
                 placeholder="Ej: Pecho y Tríceps, Piernas – Cuádriceps"
@@ -402,9 +401,9 @@ export function RoutineBuilder({
               />
 
               {/* Exercises */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-300">
                     Ejercicios ({day.exercises.length})
                   </h4>
                 </div>
@@ -412,22 +411,22 @@ export function RoutineBuilder({
                 {day.exercises.map((ex, exIdx) => (
                   <div
                     key={exIdx}
-                    className="rounded-xl border border-neutral-100 p-4 space-y-3 dark:border-neutral-800"
+                    className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4 transition-all hover:bg-white/[0.04]"
                   >
                     <div className="flex items-center justify-between">
-                      <Badge variant="default">#{exIdx + 1}</Badge>
+                      <Badge variant="default" className="text-sm px-3 py-1 bg-white/10 text-white">#{exIdx + 1}</Badge>
                       {day.exercises.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeExercise(activeDayIdx, exIdx)}
-                          className="text-xs text-red-500 hover:text-red-700"
+                          className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
                         >
                           Eliminar
                         </button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Input
                         label="Nombre"
                         placeholder="Ej: Press banca plano"
@@ -447,25 +446,19 @@ export function RoutineBuilder({
                         }}
                       />
                       <div className="space-y-1.5 flex flex-col justify-end">
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                        <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
                           Grupo muscular
                         </label>
                         {dictionary.some(
                           (d) => d.name.toLowerCase() === ex.name.toLowerCase(),
                         ) ? (
                           <div
-                            className="w-full rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-sm text-neutral-500 cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 flex items-center justify-between"
+                            className="w-full rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-slate-400 cursor-not-allowed flex items-center justify-between"
                             title="El grupo muscular se asigna automáticamente al seleccionar un ejercicio del diccionario."
                           >
-                            <span>
-                              {
-                                MUSCLE_GROUPS[
-                                  ex.muscleGroup as keyof typeof MUSCLE_GROUPS
-                                ]?.icon
-                              }{" "}
-                              {MUSCLE_GROUPS[
-                                ex.muscleGroup as keyof typeof MUSCLE_GROUPS
-                              ]?.label || "No definido"}
+                            <span className="flex items-center gap-2 font-semibold tracking-wide">
+                              <span className="text-lg">{MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS]?.icon}</span>
+                              {MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS]?.label || "No definido"}
                             </span>
                             <svg
                               className="h-4 w-4 opacity-50"
@@ -490,7 +483,7 @@ export function RoutineBuilder({
                               })
                             }
                             title="Selecciona el grupo muscular ya que este ejercicio no está en el diccionario."
-                            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-700"
+                            className="w-full rounded-2xl border border-white/12 bg-[#1a1c23] px-4 py-3 text-sm text-white transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 appearance-none font-semibold tracking-wide"
                           >
                             {Object.entries(MUSCLE_GROUPS).map(([key, val]) => (
                               <option key={key} value={key}>
@@ -502,20 +495,20 @@ export function RoutineBuilder({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Input
                         label="Series"
                         type="number"
                         min={1}
-                        value={ex.sets as any}
+                        value={ex.sets}
                         onChange={(e) => {
                           const val = e.target.value;
                           updateExercise(activeDayIdx, exIdx, {
-                            sets: val === "" ? ("" as any) : Number(val),
+                            sets: val === "" ? "" : Number(val),
                           });
                         }}
                         onBlur={() => {
-                          if (ex.sets === ("" as any)) {
+                          if (ex.sets === "") {
                             updateExercise(activeDayIdx, exIdx, { sets: 1 });
                           }
                         }}
@@ -530,18 +523,19 @@ export function RoutineBuilder({
                           })
                         }
                       />
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
                           Descanso
                         </label>
                         <div className="flex items-center gap-2">
-                          <Input
+                          <input
                             type="number"
                             min={0}
                             max={59}
                             placeholder="0"
+                            className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
                             value={
-                              ex.restSeconds === ("" as any)
+                              ex.restSeconds === ""
                                 ? ""
                                 : Math.floor(Number(ex.restSeconds) / 60) || ""
                             }
@@ -551,7 +545,7 @@ export function RoutineBuilder({
                                   ? 0
                                   : parseInt(e.target.value, 10);
                               const currentSecs =
-                                ex.restSeconds === ("" as any)
+                                ex.restSeconds === ""
                                   ? 0
                                   : Number(ex.restSeconds) % 60;
                               updateExercise(activeDayIdx, exIdx, {
@@ -559,16 +553,17 @@ export function RoutineBuilder({
                               });
                             }}
                           />
-                          <span className="text-sm text-neutral-400 shrink-0">
+                          <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
                             min
                           </span>
-                          <Input
+                          <input
                             type="number"
                             min={0}
                             max={59}
                             placeholder="0"
+                            className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
                             value={
-                              ex.restSeconds === ("" as any)
+                              ex.restSeconds === ""
                                 ? ""
                                 : Number(ex.restSeconds) % 60 || ""
                             }
@@ -581,7 +576,7 @@ export function RoutineBuilder({
                                       parseInt(e.target.value, 10),
                                     );
                               const currentMins =
-                                ex.restSeconds === ("" as any)
+                                ex.restSeconds === ""
                                   ? 0
                                   : Math.floor(Number(ex.restSeconds) / 60);
                               updateExercise(activeDayIdx, exIdx, {
@@ -589,14 +584,14 @@ export function RoutineBuilder({
                               });
                             }}
                             onBlur={() => {
-                              if (ex.restSeconds === ("" as any)) {
+                              if (ex.restSeconds === "") {
                                 updateExercise(activeDayIdx, exIdx, {
                                   restSeconds: 0,
                                 });
                               }
                             }}
                           />
-                          <span className="text-sm text-neutral-400 shrink-0">
+                          <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
                             seg
                           </span>
                         </div>
@@ -619,7 +614,7 @@ export function RoutineBuilder({
                 <button
                   type="button"
                   onClick={() => addExercise(activeDayIdx)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-200 py-3 text-sm text-neutral-500 hover:border-neutral-400 hover:text-neutral-700 transition-colors dark:border-neutral-700 dark:hover:border-neutral-500"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 hover:border-white/40 hover:text-white hover:bg-white/5 transition-all mt-4"
                 >
                   + Agregar ejercicio
                 </button>
@@ -630,12 +625,12 @@ export function RoutineBuilder({
       )}
 
       {/* Actions */}
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={() => setStep("info")}>
+      <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 pt-4 border-t border-white/10">
+        <Button variant="secondary" onClick={() => setStep("info")}>
           ← Volver
         </Button>
         <Button loading={saving} onClick={handleSubmit}>
-          💾 {isEditing ? "Actualizar rutina" : "Guardar rutina"}
+          {isEditing ? "Actualizar rutina" : "Guardar rutina"}
         </Button>
       </div>
 

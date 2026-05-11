@@ -1,0 +1,16 @@
+Navigation groups idea:
+
+Group: "Principal"
+- Dashboard
+- Perfil
+
+Group: "Gestión" (Collapsible, open by default)
+- Rutinas
+- Comidas
+- Tareas
+
+Group: "Entrenador" (Collapsible, open by default, trainer only)
+- Clientes
+- Ejercicios
+- Resumen
+

@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { RoutineCard } from "@/features/routines/components/RoutineCard";
 import { RoutineDayDetail } from "@/features/routines/components/RoutineDayDetail";
 import { WeeklyTracker } from "@/features/routines/components/WeeklyTracker";
-import { RoutineBuilder } from "@/features/routines/components/RoutineBuilder";
+import { RoutineBuilder, RoutineForm } from "@/features/routines/components/RoutineBuilder";
 import { RoutineCalendar } from "@/features/routines/components/RoutineCalendar";
 import { ClientRoutinesView } from "@/features/routines/components/ClientRoutinesView";
 import { routinesService } from "@/features/routines/services/routines.service";
@@ -82,26 +82,7 @@ function TrainerRoutinesPage() {
     }
   };
 
-  const handleCreateRoutine = async (data: {
-    name: string;
-    description: string;
-    clientId: string;
-    weekCount: number;
-    days: {
-      dayNumber: number;
-      focusArea: string;
-      isRestDay: boolean;
-      restDayNote: string;
-      exercises: {
-        name: string;
-        muscleGroup: string;
-        sets: number;
-        reps: string;
-        restSeconds: number;
-        observations: string;
-      }[];
-    }[];
-  }) => {
+  const handleCreateRoutine = async (data: RoutineForm) => {
     if (!user) return;
     try {
       await routinesService.create(user.id, data);
@@ -112,26 +93,7 @@ function TrainerRoutinesPage() {
     }
   };
 
-  const handleUpdateRoutine = async (data: {
-    name: string;
-    description: string;
-    clientId: string;
-    weekCount: number;
-    days: {
-      dayNumber: number;
-      focusArea: string;
-      isRestDay: boolean;
-      restDayNote: string;
-      exercises: {
-        name: string;
-        muscleGroup: string;
-        sets: number;
-        reps: string;
-        restSeconds: number;
-        observations: string;
-      }[];
-    }[];
-  }) => {
+  const handleUpdateRoutine = async (data: RoutineForm) => {
     if (!selectedRoutine) return;
     try {
       await routinesService.update(selectedRoutine.id, data);
@@ -303,7 +265,7 @@ function TrainerRoutinesPage() {
 
         {/* Tab toggle: Calendario / Tarjetas */}
         {!loading && routines.length > 0 && (
-          <div className="mb-5 flex items-center gap-1 rounded-xl bg-neutral-100 p-1 w-fit dark:bg-neutral-800">
+          <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1">
             {[
               { key: "calendar" as OverviewTab, label: "📅 Calendario" },
               { key: "cards" as OverviewTab, label: "🗂️ Tarjetas" },
@@ -313,10 +275,10 @@ function TrainerRoutinesPage() {
                 type="button"
                 onClick={() => setOverviewTab(tab.key)}
                 className={cn(
-                  "rounded-lg px-4 py-1.5 text-sm font-medium transition-all",
+                  "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
                   overviewTab === tab.key
-                    ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white"
-                    : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200",
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-200",
                 )}
               >
                 {tab.label}
@@ -330,19 +292,19 @@ function TrainerRoutinesPage() {
             {[1, 2].map((i) => (
               <div
                 key={i}
-                className="h-40 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+                className="h-40 animate-pulse rounded-[24px] bg-white/6"
               />
             ))}
           </div>
         ) : routines.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-12 text-center dark:border-neutral-700">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-800">
+          <div className="rounded-[24px] border border-dashed border-white/12 bg-white/4 p-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
               <span className="text-3xl">💪</span>
             </div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-white">
               Sin rutinas aún
             </h3>
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
+            <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
               Crea la primera rutina personalizada para uno de tus clientes.
             </p>
             <Button onClick={() => setView("create")} className="mt-6">
@@ -359,8 +321,8 @@ function TrainerRoutinesPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {routines.map((routine) => (
               <div key={routine.id} className="relative">
-                <div className="absolute -top-2 -right-2 z-10">
-                  <span className="inline-block rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                <div className="absolute -right-2 -top-2 z-10">
+                  <span className="inline-block rounded-full border border-white/8 bg-slate-900 px-2 py-0.5 text-xs font-semibold text-slate-300 shadow-md">
                     {getClientName(routine.clientId)}
                   </span>
                 </div>
@@ -416,66 +378,66 @@ function TrainerRoutinesPage() {
         />
 
         {selectedRoutine.description && (
-          <p className="text-neutral-600 dark:text-neutral-400 mb-6 -mt-4">
+          <p className="-mt-4 mb-6 text-sm text-slate-400">
             {selectedRoutine.description}
           </p>
         )}
 
         {/* ── Client Progress Summary ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
-          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Progreso
             </p>
-            <p className="text-2xl font-extrabold text-neutral-900 dark:text-white mt-1">
+            <p className="mt-1 font-display text-4xl font-bold leading-none text-white">
               {progress}%
             </p>
-            <div className="mt-2 h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+            <div className="mt-3 h-1.5 rounded-full bg-white/8">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
                   progress === 100
-                    ? "bg-green-500"
+                    ? "bg-emerald-500"
                     : "bg-linear-to-r from-primary-500 to-primary-400",
                 )}
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
-          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Ejercicios
             </p>
-            <p className="text-2xl font-extrabold text-neutral-900 dark:text-white mt-1">
+            <p className="mt-1 font-display text-4xl font-bold leading-none text-white">
               {completedLogs}
-              <span className="text-sm font-medium text-neutral-400">
+              <span className="ml-1 font-sans text-sm font-medium text-slate-500">
                 /{totalPossible}
               </span>
             </p>
-            <p className="text-[10px] text-neutral-400 mt-1">completados</p>
+            <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">completados</p>
           </div>
-          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Última Actividad
             </p>
             {lastActivity ? (
               <>
-                <p className="text-sm font-bold text-neutral-900 dark:text-white mt-1.5">
+                <p className="mt-1.5 text-lg font-bold text-white">
                   {new Date(lastActivity.createdAt).toLocaleDateString("es", {
                     day: "numeric",
                     month: "short",
                   })}
                 </p>
-                <p className="text-[10px] text-neutral-400 mt-0.5 truncate">
+                <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-wider text-slate-400">
                   Semana {lastActivity.weekNumber}
                 </p>
               </>
             ) : (
-              <p className="text-sm text-neutral-400 mt-1.5">Sin actividad</p>
+              <p className="mt-1.5 text-sm text-slate-500">Sin actividad</p>
             )}
           </div>
-          <div className="rounded-2xl bg-white p-4 border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Evaluación
             </p>
             <select
@@ -493,7 +455,7 @@ function TrainerRoutinesPage() {
                   handleEvaluateRoutine(val === "yes");
                 }
               }}
-              className="mt-1.5 text-sm rounded-lg border border-neutral-200 px-2 py-1 w-full dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
+              className="mt-2 w-full appearance-none rounded-xl border border-white/12 bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/20 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             >
               <option value="">Pendiente</option>
               <option value="yes">👍 Favorable</option>
@@ -530,16 +492,16 @@ function TrainerRoutinesPage() {
               <div key={day.id}>
                 <RoutineDayDetail day={day} />
                 {!day.isRestDay && dayTotal > 0 && (
-                  <div className="flex items-center gap-3 px-6 py-2 -mt-1 rounded-b-2xl bg-neutral-50 border border-t-0 border-neutral-100 dark:bg-neutral-800/30 dark:border-neutral-800">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                  <div className="-mt-1 flex items-center gap-3 rounded-b-2xl border border-t-0 border-white/8 bg-white/4 px-6 py-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                       Progreso cliente
                     </span>
-                    <div className="flex-1 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 max-w-60">
+                    <div className="h-1.5 flex-1 max-w-60 rounded-full bg-white/8">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
                           dayPct === 100
-                            ? "bg-green-500"
+                            ? "bg-emerald-500"
                             : dayPct > 0
                               ? "bg-primary-500"
                               : "bg-transparent",
@@ -547,7 +509,7 @@ function TrainerRoutinesPage() {
                         style={{ width: `${dayPct}%` }}
                       />
                     </div>
-                    <span className="text-[10px] font-bold text-neutral-500">
+                    <span className="text-[10px] font-bold text-slate-400">
                       {dayLogCount}/{dayTotal}
                     </span>
                   </div>
@@ -559,15 +521,15 @@ function TrainerRoutinesPage() {
 
         {/* Delete confirmation modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[24px] border border-white/12 bg-slate-950 p-6 shadow-2xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20 text-rose-500">
                 <span className="text-2xl">⚠️</span>
               </div>
-              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-white">
                 ¿Eliminar rutina?
               </h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <p className="mt-2 text-sm text-slate-400">
                 Se eliminará <strong>&quot;{selectedRoutine.name}&quot;</strong>{" "}
                 con todos sus días y ejercicios. Esta acción no se puede
                 deshacer.

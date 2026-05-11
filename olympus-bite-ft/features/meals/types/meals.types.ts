@@ -4,6 +4,7 @@ export interface Meal {
   name: string;
   description: string;
   imageUrl: string | null;
+  imageUrls: string[];
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   calories: number;
   protein: number;

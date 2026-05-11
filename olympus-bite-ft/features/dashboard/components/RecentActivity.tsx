@@ -1,83 +1,92 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+import { motion } from 'framer-motion';
 import { Card, CardTitle } from '@/shared/components/ui/Card';
 import { formatCalories, formatTime } from '@/shared/lib/utils';
 import type { RecentMeal } from '../types/dashboard.types';
+import { MEAL_TYPE_COLORS } from '../types/dashboard.types';
+import { cn } from '@/shared/lib/utils';
 
 interface RecentActivityProps {
   meals: RecentMeal[];
 }
 
-const MEAL_TYPE_EMOJI: Record<string, string> = {
-  breakfast: '🌅',
-  lunch: '☀️',
-  dinner: '🌙',
-  snack: '🍎',
+const MEAL_LABEL: Record<string, string> = {
+  breakfast: 'Desayuno',
+  lunch: 'Almuerzo',
+  dinner: 'Cena',
+  snack: 'Snack',
 };
 
 export function RecentActivity({ meals }: RecentActivityProps) {
   if (meals.length === 0) {
     return (
-      <Card>
+      <Card className="flex h-full flex-col">
         <CardTitle>Actividad reciente</CardTitle>
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <span className="text-4xl mb-3">📋</span>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Sin actividad reciente
-          </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Las comidas de tus clientes aparecerán aquí
-          </p>
+        <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+          <p className="font-display text-2xl uppercase text-white/40">Sin actividad</p>
+          <p className="mt-2 text-xs text-slate-500">Las comidas de tus clientes aparecerán aquí</p>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card padding="sm">
-      <div className="px-2 pt-2 pb-1 flex items-center justify-between">
+    <Card className="flex h-full flex-col">
+      <div className="flex items-center justify-between pb-4">
         <CardTitle>Actividad reciente</CardTitle>
-        <span className="text-xs text-neutral-400 font-medium shrink-0">{meals.length} registros</span>
+        <span className="shrink-0 rounded-full border border-white/8 bg-white/5 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+          {meals.length}
+        </span>
       </div>
 
-      <div className="mt-2 space-y-1 max-h-[400px] overflow-y-auto">
-        {meals.map((meal, i) => (
-          <div
-            key={meal.id || i}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-neutral-50 transition-colors dark:hover:bg-neutral-800/50"
-          >
-            {/* Image or emoji */}
-            <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-              {meal.imageUrl ? (
-                <img
-                  src={meal.imageUrl}
-                  alt={meal.mealName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-lg">
-                  {MEAL_TYPE_EMOJI[meal.mealType] || '🍽️'}
-                </span>
-              )}
-            </div>
+      <div className="mt-2 max-h-[420px] space-y-2 overflow-y-auto pr-2">
+        {meals.map((meal, i) => {
+          const spanishType = MEAL_LABEL[meal.mealType] ?? meal.mealType;
+          const cfg = MEAL_TYPE_COLORS[spanishType];
 
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                {meal.mealName}
-              </p>
-              <p className="text-xs text-neutral-400 truncate">
-                {meal.userName}
-              </p>
-            </div>
+          return (
+              <motion.div
+                key={meal.id || i}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-center gap-3 rounded-[20px] border border-white/4 bg-white/4 px-3 py-3 transition-colors hover:bg-white/8"
+              >
+              {/* Avatar / meal icon */}
+              <div
+                className={cn(
+                  'relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-[9px] font-bold uppercase tracking-[0.1em]',
+                  cfg?.bg ?? 'bg-white/8',
+                  cfg?.text ?? 'text-white',
+                )}
+              >
+                {meal.imageUrl ? (
+                  <img
+                    src={meal.imageUrl}
+                    alt={meal.mealName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  spanishType.slice(0, 2)
+                )}
+              </div>
 
-            <div className="flex flex-col items-end gap-0.5 shrink-0">
-              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                {formatCalories(meal.calories)}
-              </span>
-              <span className="text-[10px] text-neutral-400 whitespace-nowrap">
-                {formatTime(meal.time)}
-              </span>
-            </div>
-          </div>
-        ))}
+              {/* Text */}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="truncate text-sm font-semibold text-white">{meal.mealName}</p>
+                <p className="truncate text-xs text-slate-400">{meal.userName}</p>
+              </div>
+
+              {/* Stats */}
+              <div className="flex shrink-0 flex-col items-end gap-0.5">
+                <span className="text-xs font-bold text-amber-300">{formatCalories(meal.calories)}</span>
+                <span className="text-[10px] text-slate-500">{formatTime(meal.time)}</span>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </Card>
   );

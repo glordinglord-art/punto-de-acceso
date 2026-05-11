@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Modal } from '@/shared/components/ui/Modal';
-import { Button } from '@/shared/components/ui/Button';
+
 import { MealDetail } from './MealDetail';
 import { mealsService } from '../services/meals.service';
 import { MEAL_TYPES } from '@/shared/lib/constants';
@@ -253,17 +253,11 @@ export function ClientMealsView({ trainerId }: ClientMealsViewProps) {
         onClose={() => setSelectedMeal(null)}
         title={`${selectedClientName} · ${selectedMeal?.name || ''}`}
         size="lg"
-        footer={
-          <Button variant="ghost" fullWidth onClick={() => setSelectedMeal(null)}>
-            Cerrar
-          </Button>
-        }
       >
         {selectedMeal && (
           <MealDetail
             meal={selectedMeal}
             onClose={() => setSelectedMeal(null)}
-            onDelete={() => {}}
           />
         )}
       </Modal>

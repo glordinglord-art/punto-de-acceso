@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -30,7 +31,7 @@ export function ExerciseDictionaryList() {
       setLoading(true);
       const data = await exerciseDictionaryService.getAll();
       setExercises(data);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Error al cargar los ejercicios");
     } finally {
       setLoading(false);

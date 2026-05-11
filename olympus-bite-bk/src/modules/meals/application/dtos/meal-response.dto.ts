@@ -6,6 +6,7 @@ export class MealResponseDto {
   name!: string;
   description!: string;
   imageUrl!: string | null;
+  imageUrls!: string[];
   mealType!: string;
   calories!: number;
   protein!: number;
@@ -28,6 +29,7 @@ export class MealResponseDto {
     dto.name = meal.name;
     dto.description = meal.description;
     dto.imageUrl = meal.imageUrl;
+    dto.imageUrls = meal.imageUrls;
     dto.mealType = meal.mealType;
     dto.calories = meal.nutritionalInfo.calories;
     dto.protein = meal.nutritionalInfo.protein;

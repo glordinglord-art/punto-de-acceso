@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
-import { Card, CardTitle } from "@/shared/components/ui/Card";
+import { Card } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { cn, formatRest } from "@/shared/lib/utils";
@@ -159,15 +159,15 @@ function ExerciseTrackingCard({
     setExpanded(false);
   };
 
-  const completedSets = sets.filter(
-    (s) => s.completed || s.weight !== null || s.reps !== null,
-  );
+  // const completedSets = sets.filter(
+  //   (s) => s.completed || s.weight !== null || s.reps !== null,
+  // );
 
   // Collapsed logged view — shows summary
   if (isLogged && !expanded) {
     return (
       <div
-        className="group rounded-xl bg-primary-50 px-3 py-3 transition-all dark:bg-primary-900/20 cursor-pointer"
+        className="group rounded-2xl bg-primary-500/10 border border-primary-500/20 px-4 py-4 transition-all hover:bg-primary-500/20 cursor-pointer"
         onClick={() => setExpanded(true)}
       >
         <div className="flex items-center gap-3">
@@ -187,7 +187,7 @@ function ExerciseTrackingCard({
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-primary-700 dark:text-primary-300">
+            <p className="text-sm font-bold uppercase tracking-wider text-primary-400">
               {exercise.name}
             </p>
             {log.setsData && log.setsData.length > 0 ? (
@@ -197,7 +197,7 @@ function ExerciseTrackingCard({
                   .map((s) => (
                     <span
                       key={s.set}
-                      className="inline-flex items-center gap-0.5 rounded-md bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-700 dark:bg-primary-800/40 dark:text-primary-300"
+                      className="inline-flex items-center gap-1 rounded-md bg-primary-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-300 border border-primary-500/10"
                     >
                       S{s.set}: {s.weight ?? "—"}kg × {s.reps ?? "—"}
                       {s.rest != null && (
@@ -232,14 +232,11 @@ function ExerciseTrackingCard({
 
   // Expanded view — form to log sets
   if (expanded || !isLogged) {
-    const showForm = expanded || false;
     return (
       <div
         className={cn(
-          "rounded-xl transition-all",
-          expanded
-            ? "bg-primary-50/50 dark:bg-primary-900/10 ring-1 ring-primary-200 dark:ring-primary-800"
-            : "bg-neutral-50 dark:bg-neutral-800/50",
+          "rounded-2xl transition-all overflow-hidden",
+          expanded ? "bg-[#1a1c23] border border-primary-500/30 shadow-[0_0_20px_rgba(234,88,12,0.1)]" : "bg-white/5 border border-white/10 hover:bg-white/10",
         )}
       >
         {/* Header - clickable to expand/collapse */}
@@ -752,7 +749,7 @@ export function ClientRoutinesView() {
         <Card className="mb-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+              <h2 className="text-xl font-black text-white uppercase tracking-wider">
                 {MONTH_NAMES[calMonth]} {calYear}
               </h2>
               <button
@@ -770,12 +767,15 @@ export function ClientRoutinesView() {
               <button
                 title="Mes anterior"
                 onClick={() => {
-                  calMonth === 0
-                    ? (setCalMonth(11), setCalYear((y) => y - 1))
-                    : setCalMonth((m) => m - 1);
+                  if (calMonth === 0) {
+                    setCalMonth(11);
+                    setCalYear((y) => y - 1);
+                  } else {
+                    setCalMonth((m) => m - 1);
+                  }
                   setCalSelectedDate(null);
                 }}
-                className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-xl p-2 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white transition-all"
               >
                 <svg
                   className="h-4 w-4"
@@ -794,12 +794,15 @@ export function ClientRoutinesView() {
               <button
                 title="Mes siguiente"
                 onClick={() => {
-                  calMonth === 11
-                    ? (setCalMonth(0), setCalYear((y) => y + 1))
-                    : setCalMonth((m) => m + 1);
+                  if (calMonth === 11) {
+                    setCalMonth(0);
+                    setCalYear((y) => y + 1);
+                  } else {
+                    setCalMonth((m) => m + 1);
+                  }
                   setCalSelectedDate(null);
                 }}
-                className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-xl p-2 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white transition-all"
               >
                 <svg
                   className="h-4 w-4"
@@ -831,7 +834,7 @@ export function ClientRoutinesView() {
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 gap-2">
             {calDays.map((date, idx) => {
               if (!date) return <div key={`e-${idx}`} className="p-1" />;
 
@@ -896,7 +899,7 @@ export function ClientRoutinesView() {
 
         {/* Selected day detail */}
         {calSelectedDate && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
               {calSelectedDate.toLocaleDateString("es", {
                 weekday: "long",

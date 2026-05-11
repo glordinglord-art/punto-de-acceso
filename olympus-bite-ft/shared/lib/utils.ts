@@ -1,5 +1,8 @@
-export function cn(...classes: unknown[]): string {
-  return classes.filter((c): c is string => typeof c === 'string' && c.length > 0).join(' ');
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 export function formatCalories(cal: number): string {

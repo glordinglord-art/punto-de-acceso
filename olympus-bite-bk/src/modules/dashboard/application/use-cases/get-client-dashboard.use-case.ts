@@ -5,6 +5,7 @@ export interface ClientDashboardDto {
   /** Info del cliente */
   clientName: string;
   trainerName: string | null;
+  targetCalories: number | null;
 
   /** Stats de comidas */
   mealsToday: number;
@@ -93,6 +94,7 @@ export class GetClientDashboardUseCase {
           where: { id: clientId },
           select: {
             name: true,
+            targetCalories: true,
             trainer: { select: { name: true } },
           },
         }),
@@ -254,6 +256,7 @@ export class GetClientDashboardUseCase {
     return {
       clientName: client?.name ?? 'Usuario',
       trainerName: client?.trainer?.name ?? null,
+      targetCalories: client?.targetCalories ?? null,
       mealsToday: mealsToday.length,
       caloriesToday,
       proteinToday,

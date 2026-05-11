@@ -46,7 +46,7 @@ export function ClientProfileModal({
       const target = calories === "" ? null : Number(calories);
       await onSave(client.id, { dietaryGoal: goal, targetCalories: target });
       onClose();
-    } catch (err) {
+    } catch (_err) {
       // Handled by parent
     } finally {
       setIsSaving(false);

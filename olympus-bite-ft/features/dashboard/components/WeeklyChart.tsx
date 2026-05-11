@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { Card, CardTitle } from "@/shared/components/ui/Card";
 import { getLocalDateString } from "@/shared/lib/utils";
 import type { WeeklyTrendDay } from "../types/dashboard.types";
@@ -9,66 +10,49 @@ interface WeeklyChartProps {
   data: WeeklyTrendDay[];
 }
 
-const CHART_H = 120; // px — fixed height for bar area
+const CHART_H = 130;
 const GRID_LINES = 4;
 
 export function WeeklyChart({ data }: WeeklyChartProps) {
-  const maxMeals = useMemo(
-    () => Math.max(...data.map((d) => d.meals), 1),
-    [data],
-  );
-  const maxCalories = useMemo(
-    () => Math.max(...data.map((d) => d.calories), 1),
-    [data],
-  );
-  const totalMeals = useMemo(
-    () => data.reduce((s, d) => s + d.meals, 0),
-    [data],
-  );
-  const totalCalories = useMemo(
-    () => data.reduce((s, d) => s + d.calories, 0),
-    [data],
-  );
+  const maxMeals = useMemo(() => Math.max(...data.map((d) => d.meals), 1), [data]);
+  const maxCalories = useMemo(() => Math.max(...data.map((d) => d.calories), 1), [data]);
+  const totalMeals = useMemo(() => data.reduce((s, d) => s + d.meals, 0), [data]);
+  const totalCalories = useMemo(() => data.reduce((s, d) => s + d.calories, 0), [data]);
 
   const today = getLocalDateString();
 
   if (!data.length) {
     return (
-      <Card className="h-full flex flex-col">
+      <Card className="flex h-full flex-col">
         <CardTitle className="mb-4">Actividad semanal</CardTitle>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-neutral-400">Sin datos esta semana</p>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-slate-400">Sin datos esta semana</p>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between mb-4">
+    <Card className="flex h-full flex-col">
+      {/* Header */}
+      <div className="mb-5 flex items-start justify-between">
         <div>
           <CardTitle>Actividad semanal</CardTitle>
-          <div className="flex gap-5 mt-2">
+          <div className="mt-2 flex gap-5">
             <div>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-white leading-none">
-                {totalMeals}
-              </p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                comidas totales
-              </p>
+              <p className="font-display text-3xl font-bold leading-none text-white">{totalMeals}</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">comidas totales</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-white leading-none">
-                {totalCalories.toLocaleString()}
+              <p className="font-display text-3xl font-bold leading-none text-white">
+                {totalCalories.toLocaleString('es')}
               </p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                kcal totales
-              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">kcal totales</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-neutral-400 shrink-0">
+
+        <div className="flex shrink-0 flex-col gap-1.5 text-[11px] text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-blue-500" />
             Comidas
@@ -80,84 +64,79 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         </div>
       </div>
 
-      {/* ── Chart area ── */}
-      <div className="relative mt-2" style={{ height: CHART_H + 32 }}>
-        {/* Subtle grid lines */}
+      {/* Chart area */}
+      <div className="relative mt-1 flex-1" style={{ height: CHART_H + 36 }}>
+        {/* Grid lines */}
         {Array.from({ length: GRID_LINES }).map((_, i) => (
           <div
             key={i}
-            className="absolute left-0 right-0 border-t border-dashed border-neutral-800/60"
+            className="absolute left-0 right-0 border-t border-dashed border-white/6"
             style={{ bottom: 32 + ((i + 1) / GRID_LINES) * CHART_H }}
           />
         ))}
 
-        {/* Solid baseline */}
-        <div
-          className="absolute left-0 right-0 border-t border-neutral-700/80"
-          style={{ bottom: 32 }}
-        />
+        {/* Baseline */}
+        <div className="absolute left-0 right-0 border-t border-white/12" style={{ bottom: 32 }} />
 
-        {/* Bar columns */}
-        <div className="absolute inset-0 flex items-end gap-1 pb-8">
-          {data.map((d) => {
+        {/* Bars */}
+        <div className="absolute inset-0 flex items-end gap-0.5 pb-8">
+          {data.map((d, idx) => {
             const isToday = d.date === today;
-            const mealsH =
-              d.meals > 0 ? Math.max((d.meals / maxMeals) * CHART_H, 8) : 0;
-            const calsH =
-              d.calories > 0
-                ? Math.max((d.calories / maxCalories) * CHART_H, 8)
-                : 0;
+            const mealsH = d.meals > 0 ? Math.max((d.meals / maxMeals) * CHART_H, 8) : 0;
+            const calsH = d.calories > 0 ? Math.max((d.calories / maxCalories) * CHART_H, 8) : 0;
             const hasData = d.meals > 0 || d.calories > 0;
 
             return (
               <div
                 key={d.date}
-                className="flex-1 flex flex-col items-center relative"
+                className="relative flex flex-1 flex-col items-center"
                 style={{ height: CHART_H }}
               >
-                {/* Count badge above bars */}
+                {/* Count badge */}
                 {d.meals > 0 && (
-                  <span
-                    className="absolute text-[10px] font-semibold text-neutral-300"
-                    style={{ bottom: Math.max(mealsH, calsH) + 4 }}
+                  <motion.span
+                    className="absolute text-[10px] font-bold text-slate-400"
+                    style={{ bottom: Math.max(mealsH, calsH) + 6 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 + idx * 0.08 }}
                   >
                     {d.meals}
-                  </span>
+                  </motion.span>
                 )}
 
                 {/* Bar pair */}
-                <div className="absolute bottom-0 left-1 right-1 flex items-end gap-[2px]">
-                  {/* Ghost bars (empty day placeholder) */}
+                <div className="absolute bottom-0 left-0.5 right-0.5 flex items-end gap-[2px]">
                   {!hasData ? (
                     <>
-                      <div
-                        className="flex-1 rounded-t-md bg-neutral-800/50"
-                        style={{ height: CHART_H * 0.06 }}
-                      />
-                      <div
-                        className="flex-1 rounded-t-md bg-neutral-800/30"
-                        style={{ height: CHART_H * 0.04 }}
-                      />
+                      <div className="flex-1 rounded-t-md bg-white/8" style={{ height: CHART_H * 0.05 }} />
+                      <div className="flex-1 rounded-t-md bg-white/5" style={{ height: CHART_H * 0.03 }} />
                     </>
                   ) : (
                     <>
-                      {/* Meals bar — blue */}
-                      <div
-                        className={`flex-1 rounded-t-md transition-all duration-700 ${
+                      {/* Meals bar */}
+                      <motion.div
+                        className={`flex-1 rounded-t-md ${
                           isToday
-                            ? "bg-gradient-to-t from-blue-600 to-blue-400 shadow-lg shadow-blue-500/30"
-                            : "bg-gradient-to-t from-blue-700/80 to-blue-500/60"
+                            ? 'bg-linear-to-t from-blue-600 to-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                            : 'bg-linear-to-t from-blue-700/70 to-blue-500/50'
                         }`}
-                        style={{ height: mealsH || CHART_H * 0.04 }}
+                        style={{ transformOrigin: 'bottom' }}
+                        initial={{ scaleY: 0, height: mealsH || CHART_H * 0.04 }}
+                        animate={{ scaleY: 1 }}
+                        transition={{ duration: 0.7, delay: idx * 0.08, ease: 'easeOut' }}
                       />
-                      {/* Calories bar — primary color (theme-aware) */}
-                      <div
-                        className={`flex-1 rounded-t-md transition-all duration-700 ${
+                      {/* Calories bar */}
+                      <motion.div
+                        className={`flex-1 rounded-t-md ${
                           isToday
-                            ? "bg-gradient-to-t from-primary-600 to-primary-400 shadow-lg shadow-primary-500/30"
-                            : "bg-gradient-to-t from-primary-700/70 to-primary-500/50"
+                            ? 'bg-linear-to-t from-primary-600 to-primary-300 shadow-[0_0_12px_rgba(52,211,153,0.3)]'
+                            : 'bg-linear-to-t from-primary-700/60 to-primary-500/40'
                         }`}
-                        style={{ height: calsH || CHART_H * 0.04 }}
+                        style={{ transformOrigin: 'bottom' }}
+                        initial={{ scaleY: 0, height: calsH || CHART_H * 0.04 }}
+                        animate={{ scaleY: 1 }}
+                        transition={{ duration: 0.7, delay: 0.04 + idx * 0.08, ease: 'easeOut' }}
                       />
                     </>
                   )}
@@ -167,15 +146,15 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
           })}
         </div>
 
-        {/* Labels row pinned to bottom */}
+        {/* Day labels */}
         <div className="absolute bottom-0 left-0 right-0 flex">
           {data.map((d) => {
             const isToday = d.date === today;
             return (
-              <div key={d.date} className="flex-1 flex flex-col items-center">
+              <div key={d.date} className="flex flex-1 flex-col items-center">
                 <span
                   className={`text-[11px] font-medium ${
-                    isToday ? "text-blue-400 font-bold" : "text-neutral-500"
+                    isToday ? 'font-bold text-blue-300' : 'text-slate-500'
                   }`}
                 >
                   {d.day}

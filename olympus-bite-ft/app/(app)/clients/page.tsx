@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
 import { Button } from "@/shared/components/ui/Button";
-import { Card } from "@/shared/components/ui/Card";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Modal } from "@/shared/components/ui/Modal";
@@ -14,6 +13,7 @@ import { ClientProfileModal } from "@/features/clients/components/ClientProfileM
 import type { User } from "@/shared/types/common.types";
 import { formatDate } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
+import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users } from "lucide-react";
 
 interface InvCode {
   id: string;
@@ -132,160 +132,154 @@ export default function ClientsPage() {
   return (
     <>
       <Header
-        title="Clientes"
+        title="Gestión de Clientes"
         subtitle={
-          loading ? "Cargando..." : `${clients.length} clientes registrados`
+          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE ACTIVO' : 'CLIENTES ACTIVOS'}`
         }
         action={
-          <div className="flex gap-2">
-            <Button onClick={() => setShowLinkModal(true)} variant="ghost" size="md">
-              🔗 Vincular cliente
+          <div className="flex gap-3">
+            <Button onClick={() => setShowLinkModal(true)} variant="ghost" size="md" className="font-condensed uppercase tracking-wider font-bold">
+              <Link2 className="w-4 h-4 mr-2" /> Vincular
             </Button>
-            <Button onClick={handleShowCodes} variant="secondary" size="md">
-              📋 Ver códigos
+            <Button onClick={handleShowCodes} variant="secondary" size="md" className="font-condensed uppercase tracking-wider font-bold shadow-md">
+              <Key className="w-4 h-4 mr-2" /> Códigos
             </Button>
             <Button
               onClick={handleGenerateCode}
               size="md"
               loading={codeLoading}
+              className="font-condensed uppercase tracking-wider font-bold shadow-lg shadow-primary-500/20"
             >
-              🔑 Generar código
+              + Nuevo Cliente
             </Button>
           </div>
         }
       />
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-4 mt-6">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-20 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+              className="h-28 animate-pulse rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/5"
             />
           ))}
         </div>
       ) : clients.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-12 text-center dark:border-neutral-700">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-800">
-            <span className="text-3xl">👥</span>
+        <div className="rounded-3xl border-2 border-dashed border-neutral-200 p-16 text-center dark:border-white/10 mt-8 bg-white/50 dark:bg-black/20 backdrop-blur-xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 shadow-inner">
+            <Users className="w-10 h-10" />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Sin clientes aún
+          <h3 className="text-2xl font-condensed font-bold text-neutral-900 dark:text-white uppercase tracking-wider">
+            Sin Clientes Asignados
           </h3>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
-            Genera un código de invitación y compártelo con tus clientes para
-            que se registren en la plataforma.
+          <p className="mt-3 text-base text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
+            El verdadero entrenamiento comienza ahora. Genera un código de invitación y comienza a guiar a tus clientes hacia la excelencia.
           </p>
           <Button
             onClick={handleGenerateCode}
-            className="mt-6"
+            className="mt-8 font-condensed uppercase tracking-wider font-bold"
             loading={codeLoading}
+            size="lg"
           >
-            🔑 Generar primer código
+            Generar Código de Acceso
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4 mt-6">
           {clients.map((client) => (
-            <Card
+            <div
               key={client.id}
-              hover
-              className="cursor-pointer"
               onClick={() => setSelectedClient(client)}
+              className="group flex flex-col sm:flex-row gap-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 p-5 transition-all hover:border-primary-300 dark:hover:border-primary-500/50 hover:shadow-lg cursor-pointer backdrop-blur-sm relative overflow-hidden"
             >
-              <div className="flex items-center gap-4">
-                <Avatar name={client.name} size="lg" />
+              {/* Highlight bar on hover */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="flex items-center gap-4 flex-1">
+                <Avatar name={client.name} size="xl" className="ring-2 ring-white dark:ring-black shadow-md" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-neutral-900 dark:text-white">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
                       {client.name}
                     </h3>
-                    <Badge variant={client.isActive ? "success" : "danger"}>
-                      {client.isActive ? "Activo" : "Inactivo"}
+                    <Badge variant={client.isActive ? "success" : "danger"} className="shadow-sm">
+                      {client.isActive ? "ACTIVO" : "INACTIVO"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1 truncate">
                     {client.email}
                   </p>
 
                   {/* Advanced Profile Pills */}
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-3">
                     {client.experienceLevel && (
-                      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30">
-                        🏋️ {client.experienceLevel}
+                      <span className="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20 shadow-sm">
+                        <Dumbbell className="w-3 h-3 mr-1.5" /> {client.experienceLevel}
                       </span>
                     )}
                     {client.equipmentAccess && (
-                      <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-400/10 dark:text-purple-400 dark:ring-purple-400/30">
-                        🛠️ {client.equipmentAccess}
+                      <span className="inline-flex items-center rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20 shadow-sm">
+                        <Activity className="w-3 h-3 mr-1.5" /> {client.equipmentAccess}
                       </span>
                     )}
                   </div>
-
-                  {(client.medicalConditions || client.dietaryPreferences) && (
-                    <div className="mt-2 space-y-1">
-                      {client.medicalConditions && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          <strong className="font-semibold">Condición:</strong>{" "}
-                          {client.medicalConditions}
-                        </p>
-                      )}
-                      {client.dietaryPreferences && (
-                        <p className="text-xs text-orange-600 dark:text-orange-400">
-                          <strong className="font-semibold">
-                            Dieta/Alergias:
-                          </strong>{" "}
-                          {client.dietaryPreferences}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
-
-                <div className="hidden sm:flex items-center gap-6 text-center">
-                  <div>
-                    <p className="text-xs text-neutral-400">Objetivo</p>
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white capitalize">
-                      {client.dietaryGoal
-                        ? FITNESS_GOALS[
-                            client.dietaryGoal as keyof typeof FITNESS_GOALS
-                          ]?.label || client.dietaryGoal
-                        : "--"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-neutral-400">Kcal Diarias</p>
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white">
-                      {client.targetCalories
-                        ? `${client.targetCalories} kcal`
-                        : "--"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-neutral-400">Registrado</p>
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white">
-                      {formatDate(client.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                <svg
-                  className="h-5 w-5 text-neutral-300 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
               </div>
-            </Card>
+
+              {/* Medical / Dietary info if any */}
+              <div className="hidden lg:flex flex-col justify-center flex-1 max-w-xs border-l border-neutral-100 dark:border-white/5 pl-5">
+                {(client.medicalConditions || client.dietaryPreferences) ? (
+                  <div className="space-y-2">
+                    {client.medicalConditions && (
+                      <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-100 dark:border-amber-500/20">
+                        <HeartPulse className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span className="leading-tight"><strong className="font-bold">CONDICIÓN:</strong> {client.medicalConditions}</span>
+                      </div>
+                    )}
+                    {client.dietaryPreferences && (
+                      <div className="flex items-start gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 p-2 rounded-lg border border-orange-100 dark:border-orange-500/20">
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span className="leading-tight"><strong className="font-bold">DIETA/ALERGIA:</strong> {client.dietaryPreferences}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-xs text-neutral-400 font-condensed uppercase tracking-wider border border-dashed border-neutral-200 dark:border-white/10 rounded-xl p-2 bg-neutral-50/50 dark:bg-white/5">
+                    Sin restricciones
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 items-center justify-items-end xl:justify-items-center bg-neutral-50 dark:bg-black/20 p-4 rounded-xl border border-neutral-100 dark:border-white/5">
+                <div className="text-right xl:text-center w-full">
+                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Objetivo</p>
+                  <p className="text-sm font-bold text-neutral-900 dark:text-white capitalize">
+                    {client.dietaryGoal
+                      ? FITNESS_GOALS[
+                          client.dietaryGoal as keyof typeof FITNESS_GOALS
+                        ]?.label || client.dietaryGoal
+                      : "--"}
+                  </p>
+                </div>
+
+                <div className="text-right xl:text-center w-full">
+                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Macros</p>
+                  <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                    {client.targetCalories
+                      ? `${client.targetCalories} kcal`
+                      : "--"}
+                  </p>
+                </div>
+
+                <div className="text-right xl:text-center w-full col-span-2 md:col-span-2 xl:col-span-1 border-t md:border-t-0 pt-2 md:pt-0 mt-2 md:mt-0 border-neutral-200 dark:border-white/10">
+                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Ingreso</p>
+                  <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                    {formatDate(client.createdAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -297,32 +291,32 @@ export default function ClientsPage() {
           setShowCodeModal(false);
           setGeneratedCode(null);
         }}
-        title="Código de invitación"
+        title="Código de Acceso"
         size="sm"
       >
-        <div className="text-center py-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 dark:bg-primary-900/20">
-            <span className="text-3xl">🔑</span>
+        <div className="text-center py-6">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary-500 shadow-inner">
+            <Key className="w-10 h-10" />
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-            Comparte este código con tu nuevo cliente para que pueda registrarse
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">
+            Comparte este código seguro con tu nuevo cliente. Le dará acceso directo a tu grupo de entrenamiento.
           </p>
-          <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-800">
-            <p className="text-3xl font-bold tracking-widest text-neutral-900 dark:text-white">
+          <div className="rounded-2xl bg-neutral-100 p-5 dark:bg-black/40 border border-neutral-200 dark:border-white/5 shadow-inner">
+            <p className="text-4xl font-bold tracking-[0.3em] text-neutral-900 dark:text-white font-mono">
               {generatedCode}
             </p>
           </div>
-          <p className="text-xs text-neutral-400 mt-3">
-            Válido por 7 días · Un solo uso
+          <p className="text-[10px] font-condensed font-bold uppercase tracking-widest text-neutral-400 mt-4">
+            VÁLIDO POR 7 DÍAS · UN SOLO USO
           </p>
           <Button
-            className="mt-6"
+            className="mt-6 font-condensed uppercase tracking-wider font-bold shadow-lg shadow-primary-500/20"
             fullWidth
             onClick={() => {
               navigator.clipboard.writeText(generatedCode ?? "");
             }}
           >
-            📋 Copiar código
+            Copiar al Portapapeles
           </Button>
         </div>
       </Modal>
@@ -331,30 +325,36 @@ export default function ClientsPage() {
       <Modal
         isOpen={showCodesPanel}
         onClose={() => setShowCodesPanel(false)}
-        title="Códigos de invitación"
-        size="lg"
+        title="Códigos Activos"
+        size="md"
       >
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-3 max-h-96 overflow-y-auto pr-2 pb-2 custom-scrollbar">
           {existingCodes.length === 0 ? (
-            <p className="text-sm text-neutral-500 text-center py-4">
-              No has generado códigos aún
-            </p>
+            <div className="text-center py-10">
+              <Key className="w-8 h-8 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+              <p className="text-sm font-condensed uppercase tracking-wider font-bold text-neutral-400">
+                No hay códigos generados
+              </p>
+            </div>
           ) : (
             existingCodes.map((code) => (
               <div
                 key={code.id}
-                className="flex items-center justify-between rounded-xl border border-neutral-100 p-3 dark:border-neutral-800"
+                className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5 transition-colors hover:bg-neutral-100 dark:hover:bg-white/10"
               >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-bold text-neutral-900 dark:text-white">
+                <div className="flex items-center gap-4">
+                  <span className="font-mono text-lg font-bold text-neutral-900 dark:text-white tracking-widest">
                     {code.code}
                   </span>
-                  <Badge variant={code.isUsed ? "danger" : "success"}>
-                    {code.isUsed ? "Usado" : "Disponible"}
+                  <Badge variant={code.isUsed ? "danger" : "success"} className="shadow-sm">
+                    {code.isUsed ? "USADO" : "DISPONIBLE"}
                   </Badge>
                 </div>
-                <div className="text-xs text-neutral-400">
-                  Expira: {formatDate(code.expiresAt)}
+                <div className="text-right">
+                  <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-0.5">Expira</p>
+                  <div className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                    {formatDate(code.expiresAt)}
+                  </div>
                 </div>
               </div>
             ))
@@ -370,31 +370,41 @@ export default function ClientsPage() {
 
       {/* Vincular cliente existente */}
       {showLinkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-1">
-              Vincular cliente existente
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-7 shadow-2xl dark:bg-neutral-900 border border-white/10 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-2xl font-condensed font-bold text-neutral-900 dark:text-white mb-2 uppercase tracking-wide">
+              Vincular Cliente
             </h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-              Si un cliente ya se registró pero no aparece en tu lista, ingresas su email y lo vinculas a tu cuenta.
+            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-6">
+              Si tu cliente ya tiene cuenta, ingresa su correo electrónico para añadirlo a tu roster.
             </p>
-            <input
-              type="email"
-              value={linkEmail}
-              onChange={(e) => { setLinkEmail(e.target.value); setLinkError(""); }}
-              placeholder="email@ejemplo.com"
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 mb-2"
-              onKeyDown={(e) => e.key === "Enter" && handleLinkClient()}
-              autoFocus
-            />
-            {linkError && (
-              <p className="text-xs text-red-500 mb-3">{linkError}</p>
-            )}
-            <div className="flex justify-end gap-3 mt-4">
-              <Button variant="ghost" size="md" onClick={() => { setShowLinkModal(false); setLinkEmail(""); setLinkError(""); }}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-condensed font-bold text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wider">
+                  Correo del Cliente
+                </label>
+                <input
+                  type="email"
+                  value={linkEmail}
+                  onChange={(e) => { setLinkEmail(e.target.value); setLinkError(""); }}
+                  placeholder="ejemplo@correo.com"
+                  className="w-full rounded-xl border-2 border-neutral-200 bg-neutral-50/50 px-4 py-3.5 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-white/10 dark:bg-black/20 dark:text-white dark:placeholder:text-neutral-600 dark:focus:border-primary-500 dark:focus:bg-black/40 transition-all"
+                  onKeyDown={(e) => e.key === "Enter" && handleLinkClient()}
+                  autoFocus
+                />
+              </div>
+              {linkError && (
+                <div className="flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 p-3 rounded-lg border border-red-100 dark:border-red-500/20">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  {linkError}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-8">
+              <Button variant="ghost" size="lg" onClick={() => { setShowLinkModal(false); setLinkEmail(""); setLinkError(""); }} className="font-condensed font-bold uppercase tracking-wider">
                 Cancelar
               </Button>
-              <Button size="md" onClick={handleLinkClient} loading={linkLoading} disabled={!linkEmail.trim()}>
+              <Button size="lg" onClick={handleLinkClient} loading={linkLoading} disabled={!linkEmail.trim()} className="font-condensed font-bold uppercase tracking-wider shadow-lg shadow-primary-500/20">
                 Vincular
               </Button>
             </div>

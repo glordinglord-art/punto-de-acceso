@@ -13,6 +13,7 @@ export interface CreateMealProps {
   name: string;
   description: string;
   imageUrl?: string;
+  imageUrls?: string[];
   mealType: MealType;
   nutritionalInfo: NutritionalInfo;
   foods: string[];
@@ -28,6 +29,7 @@ export class Meal extends BaseEntity {
   name: string;
   description: string;
   imageUrl: string | null;
+  imageUrls: string[];
   mealType: MealType;
   nutritionalInfo: NutritionalInfo;
   foods: string[];
@@ -43,6 +45,7 @@ export class Meal extends BaseEntity {
     this.name = props.name;
     this.description = props.description;
     this.imageUrl = props.imageUrl ?? null;
+    this.imageUrls = props.imageUrls ?? [];
     this.mealType = props.mealType;
     this.nutritionalInfo = props.nutritionalInfo;
     this.foods = props.foods;

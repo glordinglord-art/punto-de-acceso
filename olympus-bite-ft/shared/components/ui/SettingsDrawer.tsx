@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useTheme } from "next-themes";
@@ -29,6 +30,21 @@ const FONTS = [
   { id: "roboto", label: "Roboto", sample: "Aa" },
 ];
 
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-3">
+    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+      {title}
+    </p>
+    {children}
+  </div>
+);
+
 export function SettingsDrawer({
   isOpen,
   onClose,
@@ -47,23 +63,11 @@ export function SettingsDrawer({
   } = useSettings();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
   if (!mounted) return null;
-
-  const Section = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="space-y-3">
-      <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-        {title}
-      </p>
-      {children}
-    </div>
-  );
 
   return (
     <>
