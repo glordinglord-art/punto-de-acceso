@@ -12,4 +12,12 @@ export const dashboardService = {
     const tz = new Date().getTimezoneOffset();
     return api.get<ApiResponse<ClientDashboard>>(`/dashboard/client/${clientId}?tz=${tz}`);
   },
+
+  updateWater: (clientId: string, date: string, amount: number) => {
+    return api.post<ApiResponse<unknown>>(`/dashboard/client/${clientId}/water`, {
+      date,
+      amount,
+    });
+  },
 };
+

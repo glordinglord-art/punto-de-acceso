@@ -13,7 +13,6 @@ import { MEAL_TYPE_COLORS } from '@/features/dashboard/types/dashboard.types';
 import type { ClientDashboard } from '@/features/dashboard/types/dashboard.types';
 import { Card, CardDescription, CardTitle } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
-import { Button } from '@/shared/components/ui/Button';
 import { Header } from '@/shared/components/layout/Header';
 import { cn, formatCalories } from '@/shared/lib/utils';
 
@@ -219,10 +218,21 @@ export function ClientDashboardView({
 
   const todayNum = now.getDay() === 0 ? 7 : now.getDay();
   const todayDay = stats.activeRoutine?.days.find((d) => d.dayNumber === todayNum);
-  const waterGlasses = Math.min(
-    Math.max(Math.round(stats.mealsToday + stats.proteinToday / 40), 0),
-    WATER_GOAL,
-  );
+  const waterGlasses = stats.waterGlasses ?? 0;
+
+  const handleWaterClick = async (index: number) => {
+    if (!user) return;
+    const newAmount = index + 1 === waterGlasses ? index : index + 1;
+    // Optimistic update
+    setStats((prev) => prev ? { ...prev, waterGlasses: newAmount } : prev);
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      await dashboardService.updateWater(user.id, todayStr, newAmount);
+    } catch {
+      // Revert on error
+      setStats((prev) => prev ? { ...prev, waterGlasses: waterGlasses } : prev);
+    }
+  };
 
   const rings: RingConfig[] = [
     {
@@ -278,7 +288,6 @@ export function ClientDashboardView({
         action={
           <div className="flex items-center gap-3">
             {trainerSwitchAction}
-            <Button variant="secondary" onClick={loadData}>Actualizar</Button>
           </div>
         }
       />
@@ -392,10 +401,11 @@ export function ClientDashboardView({
                   </div>
                   <div className="mt-3 flex gap-1.5">
                     {Array.from({ length: WATER_GOAL }).map((_, i) => (
-                      <motion.div
+                      <motion.button
                         key={i}
+                        onClick={() => handleWaterClick(i)}
                         className={cn(
-                          'h-7 flex-1 rounded-full border',
+                          'h-7 flex-1 rounded-full border cursor-pointer transition-all hover:brightness-110 active:scale-95',
                           i < waterGlasses
                             ? 'border-cyan-400/30 bg-gradient-to-t from-cyan-600 to-cyan-300'
                             : 'border-white/8 bg-white/4',

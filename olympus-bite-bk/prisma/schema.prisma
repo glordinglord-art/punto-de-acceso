@@ -97,6 +97,7 @@ model User {
   usedCode       InvitationCode?  @relation("UsedByUser")
   dailyTasks     DailyTask[]
   taskLogs       TaskLog[]
+  waterLogs      WaterLog[]
 
   @@index([trainerId, isActive])
   @@map("users")
@@ -293,3 +294,21 @@ model TaskLog {
   @@index([userId, date])
   @@map("task_logs")
 }
+
+// ─── Water Tracking ─────────────────────────────────────
+
+model WaterLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      String   // "2026-03-06"
+  amount    Int      @default(0) // number of glasses
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("water_logs")
+}
+

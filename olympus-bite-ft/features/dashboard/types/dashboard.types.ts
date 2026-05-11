@@ -122,6 +122,7 @@ export interface ClientDashboard {
   fiberToday: number;
   sugarToday: number;
   mealsThisWeek: number;
+  waterGlasses: number;
   weeklyTrend: WeeklyTrendDay[];
   mealTypeDistribution: MealTypeCount[];
   activeRoutine: ClientActiveRoutine | null;

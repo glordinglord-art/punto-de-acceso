@@ -117,9 +117,6 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
             <Button variant="secondary" onClick={onSwitchToClient} className="border-primary-500/30 text-primary-400 hover:bg-primary-500/10">
               👤 Mi Dashboard Personal
             </Button>
-            <Button variant="secondary" onClick={loadData}>
-              Actualizar panel
-            </Button>
           </div>
         }
       />

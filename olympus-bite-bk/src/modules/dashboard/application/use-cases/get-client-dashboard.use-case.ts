@@ -16,6 +16,7 @@ export interface ClientDashboardDto {
   fiberToday: number;
   sugarToday: number;
   mealsThisWeek: number;
+  waterGlasses: number;
 
   /** Tendencia semanal */
   weeklyTrend: {
@@ -74,7 +75,12 @@ export class GetClientDashboardUseCase {
     const now = new Date();
     const userNow = new Date(now.getTime() - tzOffset * 60_000);
     const todayStart = new Date(
-      Date.UTC(userNow.getUTCFullYear(), userNow.getUTCMonth(), userNow.getUTCDate()) + tzOffset * 60_000,
+      Date.UTC(
+        userNow.getUTCFullYear(),
+        userNow.getUTCMonth(),
+        userNow.getUTCDate(),
+      ) +
+        tzOffset * 60_000,
     );
     const todayEnd = new Date(todayStart.getTime() + 86400000);
 
@@ -87,7 +93,7 @@ export class GetClientDashboardUseCase {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
     // ── BATCH: Todo en paralelo ──
-    const [client, activeRoutine, mealsLast7, recentMealsRaw] =
+    const [client, activeRoutine, mealsLast7, recentMealsRaw, waterLog] =
       await Promise.all([
         // Info del cliente + trainer
         this.prisma.user.findUnique({
@@ -154,6 +160,15 @@ export class GetClientDashboardUseCase {
             mealType: true,
             imageUrl: true,
             date: true,
+          },
+        }),
+        // Water log for today
+        this.prisma.waterLog.findUnique({
+          where: {
+            userId_date: {
+              userId: clientId,
+              date: todayStart.toISOString().split('T')[0],
+            },
           },
         }),
       ]);
@@ -265,6 +280,7 @@ export class GetClientDashboardUseCase {
       fiberToday,
       sugarToday,
       mealsThisWeek,
+      waterGlasses: waterLog?.amount ?? 0,
       weeklyTrend,
       mealTypeDistribution,
       activeRoutine: routineData,
