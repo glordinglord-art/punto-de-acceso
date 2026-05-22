@@ -12,7 +12,7 @@ self.addEventListener('push', (event) => {
       body: data.body || fallback.body,
       icon: '/icon-192.svg',
       badge: '/icon-192.svg',
-      tag: data.tag || 'olympus-bite-notification',
+      tag: data.tag || 'punto-de-inflexion-notification',
       data: { url: data.url || fallback.url },
     }),
   );

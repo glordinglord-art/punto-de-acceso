@@ -70,7 +70,15 @@ export function NotificationPrompt() {
     if (!prefs) return;
     const optimistic = { ...prefs, [field]: value };
     setPrefs(optimistic);
-    const res = await notificationsService.updatePreferences(user.id, optimistic);
+    const payload = {
+      enabled: optimistic.enabled,
+      breakfastTime: optimistic.breakfastTime,
+      lunchTime: optimistic.lunchTime,
+      dinnerTime: optimistic.dinnerTime,
+      workoutTime: optimistic.workoutTime,
+      timezoneOffset: optimistic.timezoneOffset,
+    };
+    const res = await notificationsService.updatePreferences(user.id, payload);
     setPrefs(res.data ?? optimistic);
   };
 

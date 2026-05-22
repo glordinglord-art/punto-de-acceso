@@ -217,12 +217,12 @@ export function Sidebar() {
         )}
       >
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.32)]">
-          <span className="text-xl font-black italic tracking-tighter">OB</span>
+          <span className="text-xl font-black italic tracking-tighter">PI</span>
         </div>
         <div>
           <h1 className="text-lg font-black italic text-slate-950 tracking-tight uppercase leading-none dark:text-white">
-            OLYMPUS
-            <span className="block text-primary-500">BITE</span>
+            PUNTO DE
+            <span className="block text-primary-500">INFLEXIÓN</span>
           </h1>
         </div>
       </div>

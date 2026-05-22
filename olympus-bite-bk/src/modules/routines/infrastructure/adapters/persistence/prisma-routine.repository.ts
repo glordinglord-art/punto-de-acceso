@@ -115,6 +115,17 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
   }
 
   async save(entity: Routine): Promise<Routine> {
+    if (entity.isActive) {
+      await this.prisma.routine.updateMany({
+        where: {
+          clientId: entity.clientId,
+          isActive: true,
+          id: { not: entity.id },
+        },
+        data: { isActive: false },
+      });
+    }
+
     const raw = await this.prisma.routine.create({
       data: {
         id: entity.id,
@@ -154,6 +165,17 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
   }
 
   async update(entity: Routine): Promise<Routine> {
+    if (entity.isActive) {
+      await this.prisma.routine.updateMany({
+        where: {
+          clientId: entity.clientId,
+          isActive: true,
+          id: { not: entity.id },
+        },
+        data: { isActive: false },
+      });
+    }
+
     // Eliminar días y ejercicios anteriores (cascade)
     await this.prisma.routineDay.deleteMany({
       where: { routineId: entity.id },
@@ -197,5 +219,59 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
 
   async delete(id: string): Promise<void> {
     await this.prisma.routine.delete({ where: { id } });
+  }
+
+  async hasLogs(routineId: string): Promise<boolean> {
+    const count = await this.prisma.workoutLog.count({
+      where: {
+        exercise: {
+          routineDay: {
+            routineId,
+          },
+        },
+      },
+    });
+    return count > 0;
+  }
+
+  async swapDays(
+    routineId: string,
+    dayNumberA: number,
+    dayNumberB: number,
+  ): Promise<Routine> {
+    const dayA = await this.prisma.routineDay.findUnique({
+      where: { routineId_dayNumber: { routineId, dayNumber: dayNumberA } },
+    });
+    const dayB = await this.prisma.routineDay.findUnique({
+      where: { routineId_dayNumber: { routineId, dayNumber: dayNumberB } },
+    });
+
+    if (!dayA || !dayB) {
+      throw new Error('Uno o ambos días no existen en la rutina');
+    }
+
+    await this.prisma.$transaction([
+      // Temp update dayA to avoid constraint
+      this.prisma.routineDay.update({
+        where: { id: dayA.id },
+        data: { dayNumber: -999 },
+      }),
+      // Update dayB to dayA's number
+      this.prisma.routineDay.update({
+        where: { id: dayB.id },
+        data: { dayNumber: dayNumberA },
+      }),
+      // Update dayA to dayB's number
+      this.prisma.routineDay.update({
+        where: { id: dayA.id },
+        data: { dayNumber: dayNumberB },
+      }),
+    ]);
+
+    const updated = await this.findById(routineId);
+    if (!updated) {
+      throw new Error('Rutina no encontrada después del intercambio');
+    }
+    return updated;
   }
 }

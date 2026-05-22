@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CreateRoutineUseCase } from '../../../application/use-cases/create-routine.use-case';
 import { UpdateRoutineUseCase } from '../../../application/use-cases/update-routine.use-case';
+import { SwapDaysUseCase } from '../../../application/use-cases/swap-days.use-case';
 import { DeleteRoutineUseCase } from '../../../application/use-cases/delete-routine.use-case';
 import { GetRoutinesByClientUseCase } from '../../../application/use-cases/get-routines-by-client.use-case';
 import { LogWorkoutUseCase } from '../../../application/use-cases/log-workout.use-case';
@@ -21,6 +22,7 @@ import {
 import {
   CreateRoutineDto,
   LogWorkoutDto,
+  SwapDaysDto,
 } from '../../../application/dtos/routine.dto';
 import { RoutineResponseDto } from '../../../application/dtos/routine-response.dto';
 
@@ -29,6 +31,7 @@ export class RoutinesController {
   constructor(
     private readonly createRoutineUseCase: CreateRoutineUseCase,
     private readonly updateRoutineUseCase: UpdateRoutineUseCase,
+    private readonly swapDaysUseCase: SwapDaysUseCase,
     private readonly deleteRoutineUseCase: DeleteRoutineUseCase,
     private readonly getRoutinesByClientUseCase: GetRoutinesByClientUseCase,
     private readonly logWorkoutUseCase: LogWorkoutUseCase,
@@ -86,6 +89,19 @@ export class RoutinesController {
     @Body() dto: EvaluateRoutineDto,
   ) {
     const routine = await this.evaluateRoutineUseCase.execute(routineId, dto);
+    return { success: true, data: RoutineResponseDto.fromEntity(routine) };
+  }
+
+  @Put(':routineId/swap-days')
+  async swapDays(
+    @Param('routineId') routineId: string,
+    @Body() dto: SwapDaysDto,
+  ) {
+    const routine = await this.swapDaysUseCase.execute(
+      routineId,
+      dto.dayNumberA,
+      dto.dayNumberB,
+    );
     return { success: true, data: RoutineResponseDto.fromEntity(routine) };
   }
 

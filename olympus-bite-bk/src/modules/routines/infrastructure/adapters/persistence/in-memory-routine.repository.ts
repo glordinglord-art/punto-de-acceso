@@ -39,4 +39,28 @@ export class InMemoryRoutineRepository implements RoutineRepositoryPort {
   async delete(id: string): Promise<void> {
     this.routines.delete(id);
   }
+
+  async hasLogs(routineId: string): Promise<boolean> {
+    return false;
+  }
+
+  async swapDays(
+    routineId: string,
+    dayNumberA: number,
+    dayNumberB: number,
+  ): Promise<Routine> {
+    const routine = this.routines.get(routineId);
+    if (!routine) {
+      throw new Error('Rutina no encontrada');
+    }
+    const dayA = routine.days.find((d) => d.dayNumber === dayNumberA);
+    const dayB = routine.days.find((d) => d.dayNumber === dayNumberB);
+    if (!dayA || !dayB) {
+      throw new Error('Uno o ambos días no existen en la rutina');
+    }
+    const temp = dayA.dayNumber;
+    dayA.dayNumber = dayB.dayNumber;
+    dayB.dayNumber = temp;
+    return routine;
+  }
 }

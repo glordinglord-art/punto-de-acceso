@@ -4,6 +4,7 @@ import { PrismaRoutineRepository } from './adapters/persistence/prisma-routine.r
 import { PrismaWorkoutLogRepository } from './adapters/persistence/prisma-workout-log.repository';
 import { CreateRoutineUseCase } from '../application/use-cases/create-routine.use-case';
 import { UpdateRoutineUseCase } from '../application/use-cases/update-routine.use-case';
+import { SwapDaysUseCase } from '../application/use-cases/swap-days.use-case';
 import { DeleteRoutineUseCase } from '../application/use-cases/delete-routine.use-case';
 import { GetRoutinesByClientUseCase } from '../application/use-cases/get-routines-by-client.use-case';
 import {
@@ -34,6 +35,7 @@ import { DeleteDictExerciseUseCase } from '../application/use-cases/delete-dict-
     },
     CreateRoutineUseCase,
     UpdateRoutineUseCase,
+    SwapDaysUseCase,
     DeleteRoutineUseCase,
     GetRoutinesByClientUseCase,
     LogWorkoutUseCase,

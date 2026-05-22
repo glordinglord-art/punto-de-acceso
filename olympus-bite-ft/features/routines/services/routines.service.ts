@@ -51,4 +51,10 @@ export const routinesService = {
     api.delete<ApiResponse<null>>(
       `/routines/${routineId}/log/${userId}/${exerciseId}/${weekNumber}`,
     ),
+
+  swapDays: (routineId: string, dayNumberA: number, dayNumberB: number) =>
+    api.put<ApiResponse<Routine>>(`/routines/${routineId}/swap-days`, {
+      dayNumberA,
+      dayNumberB,
+    }),
 };

@@ -21,6 +21,8 @@ export class UpdateRoutineUseCase {
       throw new NotFoundException('Rutina no encontrada');
     }
 
+    const hasLogs = await this.routineRepository.hasLogs(routineId);
+
     const days = dto.days.map((dayDto) => {
       const exercises = (dayDto.exercises ?? []).map(
         (e, index) =>
@@ -46,11 +48,28 @@ export class UpdateRoutineUseCase {
       });
     });
 
-    existing.name = dto.name;
-    existing.description = dto.description ?? '';
-    existing.weekCount = dto.weekCount ?? existing.weekCount;
-    (existing as any).days = days;
+    if (hasLogs) {
+      existing.isActive = false;
+      await this.routineRepository.update(existing);
 
-    return this.routineRepository.update(existing);
+      const newRoutine = new Routine({
+        name: dto.name,
+        description: dto.description ?? '',
+        trainerId: existing.trainerId,
+        clientId: existing.clientId,
+        weekCount: dto.weekCount ?? existing.weekCount,
+        isFavorable: existing.isFavorable ?? undefined,
+        days,
+      });
+
+      return this.routineRepository.save(newRoutine);
+    } else {
+      existing.name = dto.name;
+      existing.description = dto.description ?? '';
+      existing.weekCount = dto.weekCount ?? existing.weekCount;
+      (existing as any).days = days;
+
+      return this.routineRepository.update(existing);
+    }
   }
 }

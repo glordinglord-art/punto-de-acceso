@@ -4,10 +4,11 @@ import { useEffect, useState, useCallback, useId, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, animate } from 'framer-motion';
 import {
-  Flame, Droplets, Beef, Dumbbell, Calendar, ChevronRight,
+  Flame, Droplets, Beef, Dumbbell, Calendar, ChevronRight, Trophy, Award,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { WeeklyChart } from '@/features/dashboard/components/WeeklyChart';
+import { AthleteSkillsChart } from '@/features/dashboard/components/AthleteSkillsChart';
 import { dashboardService } from '@/features/dashboard/services/dashboard.service';
 import { MEAL_TYPE_COLORS } from '@/features/dashboard/types/dashboard.types';
 import type { ClientDashboard } from '@/features/dashboard/types/dashboard.types';
@@ -215,6 +216,27 @@ export function ClientDashboardView({
     stats.activeRoutine && stats.activeRoutine.totalLogs > 0
       ? Math.round((stats.activeRoutine.completedLogs / stats.activeRoutine.totalLogs) * 100)
       : 0;
+
+  const avgCalories = (() => {
+    if (!stats.weeklyTrend || stats.weeklyTrend.length === 0) return 0;
+    const loggedDays = stats.weeklyTrend.filter((d) => d.calories > 0);
+    if (loggedDays.length === 0) return 0;
+    const sum = loggedDays.reduce((acc, d) => acc + d.calories, 0);
+    return Math.round(sum / loggedDays.length);
+  })();
+
+  const aiCoachTip = (() => {
+    if (stats.waterGlasses < 4) {
+      return '¡La hidratación es clave! Bebe más agua hoy para mantener tus músculos activos y evitar la fatiga en tus entrenamientos.';
+    }
+    if (stats.proteinToday < 80) {
+      return 'Tu ingesta de proteína está un poco baja hoy. Prioriza alimentos ricos en aminoácidos para facilitar la recuperación muscular.';
+    }
+    if (stats.activeRoutine && stats.activeRoutine.completedLogs === 0) {
+      return '¡Aún no has registrado entrenamientos de esta rutina! Da tu primer paso iniciando tu sesión de hoy.';
+    }
+    return '¡Rendimiento impecable! Duerme de 7 a 8 horas esta noche para maximizar la síntesis proteica y consolidar tus ganancias de fuerza.';
+  })();
 
   const todayNum = now.getDay() === 0 ? 7 : now.getDay();
   const todayDay = stats.activeRoutine?.days.find((d) => d.dayNumber === todayNum);
@@ -578,6 +600,104 @@ export function ClientDashboardView({
           </Card>
 
           <WeeklyChart data={stats.weeklyTrend} />
+        </section>
+
+        {/* ── Habilidades + Logros Semanales ── */}
+        <section className="grid gap-4 md:grid-cols-2">
+          <AthleteSkillsChart stats={stats} />
+
+          <Card className="flex h-full flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    Resumen de Hábitos <Trophy className="h-4 w-4 text-amber-400" />
+                  </CardTitle>
+                  <CardDescription>Tu consistencia acumulada e ingesta</CardDescription>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400">
+                  <Award className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                {/* 1. Ingesta Calórica Promedio */}
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-white/3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Ingesta Promedio</p>
+                      <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">
+                        {avgCalories > 0 ? `${avgCalories.toLocaleString('es')} kcal / día` : 'Sin registros esta semana'}
+                      </p>
+                    </div>
+                    {stats.targetCalories && (
+                      <span className="text-[10px] bg-primary-500/10 text-primary-400 px-2 py-1 rounded-lg font-bold">
+                        Meta: {stats.targetCalories} kcal
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Progreso de la Rutina */}
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-white/3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Progreso de Rutina</p>
+                      <p className="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white">
+                        {stats.activeRoutine 
+                          ? stats.activeRoutine.name
+                          : 'Sin rutina activa'}
+                      </p>
+                    </div>
+                    {stats.activeRoutine && (
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        {stats.activeRoutine.completedLogs} / {stats.activeRoutine.totalLogs}
+                      </span>
+                    )}
+                  </div>
+                  {stats.activeRoutine ? (
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/8">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-primary-500 to-emerald-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${routineProgress}%` }}
+                        transition={{ duration: 1.5, ease: 'easeOut' }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-500">Pídele a tu entrenador que te asigne una rutina activa.</p>
+                  )}
+                </div>
+
+                {/* 3. Hidratación Semanal / Hábitos */}
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-white/3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Meta de Hidratación</p>
+                      <p className="mt-1 text-sm font-black text-cyan-400">
+                        {stats.waterGlasses >= 8 ? '💧 ¡Meta cumplida hoy!' : `💧 ${stats.waterGlasses} de ${WATER_GOAL} vasos hoy`}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-500">Mínimo: 8 vasos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Tip of the Day */}
+            <div className="mt-4 relative overflow-hidden rounded-2xl border border-primary-500/20 bg-primary-500/5 p-3.5">
+              <div className="absolute -right-6 -bottom-6 w-16 h-16 bg-primary-500/10 rounded-full blur-[20px]" />
+              <div className="flex items-start gap-2.5">
+                <span className="text-base shrink-0">💡</span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary-400">Consejo Inteligente</p>
+                  <p className="mt-0.5 text-[11px] text-slate-700 dark:text-slate-300 leading-normal font-medium">
+                    {aiCoachTip}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </section>
 
         {/* ── Recent Meals ── */}

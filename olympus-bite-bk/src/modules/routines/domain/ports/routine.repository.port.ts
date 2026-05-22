@@ -6,4 +6,10 @@ export const ROUTINE_REPOSITORY = Symbol('ROUTINE_REPOSITORY');
 export interface RoutineRepositoryPort extends RepositoryPort<Routine> {
   findByClientId(clientId: string): Promise<Routine[]>;
   findByTrainerId(trainerId: string): Promise<Routine[]>;
+  hasLogs(routineId: string): Promise<boolean>;
+  swapDays(
+    routineId: string,
+    dayNumberA: number,
+    dayNumberB: number,
+  ): Promise<Routine>;
 }

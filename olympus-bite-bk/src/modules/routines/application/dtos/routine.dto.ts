@@ -110,3 +110,11 @@ export class LogWorkoutDto {
   @IsOptional()
   duration?: number;
 }
+
+export class SwapDaysDto {
+  @IsNumber()
+  dayNumberA!: number;
+
+  @IsNumber()
+  dayNumberB!: number;
+}

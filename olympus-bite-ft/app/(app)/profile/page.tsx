@@ -12,7 +12,10 @@ import { Badge } from "@/shared/components/ui/Badge";
 import type { User } from "@/shared/types/common.types";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
 import type { FitnessGoal } from "@/features/meals/types/meals.types";
-import { UserCircle, KeyRound, LogOut, ArrowLeft, Save, Scale, Ruler, Dumbbell, ShieldAlert, Apple, Sparkles, Activity } from "lucide-react";
+import { UserCircle, KeyRound, LogOut, ArrowLeft, Save, Scale, Ruler, Dumbbell, ShieldAlert, Apple, Sparkles, Activity, Bell, BellRing, Clock, Send } from "lucide-react";
+import { notificationsService } from "@/features/notifications/services/notifications.service";
+import { isPushSupported, registerPushSubscription } from "@/features/notifications/lib/push";
+import type { NotificationConfig, NotificationPreferences } from "@/features/notifications/types/notifications.types";
 
 type ViewMode = "view" | "edit" | "password";
 
@@ -43,6 +46,14 @@ export default function ProfilePage() {
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState(false);
 
+  /* ─── Notification state ────────────────── */
+  const [isSupported, setIsSupported] = useState(false);
+  const [notifConfig, setNotifConfig] = useState<NotificationConfig | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences | null>(null);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifMessage, setNotifMessage] = useState<string | null>(null);
+
   const loadProfile = useCallback(async () => {
     if (!authUser) return;
     try {
@@ -58,6 +69,109 @@ export default function ProfilePage() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (isPushSupported()) {
+      setIsSupported(true);
+      setPushPermission(Notification.permission);
+      if (authUser) {
+        notificationsService.getConfig().then((res) => setNotifConfig(res.data ?? null)).catch(() => undefined);
+        notificationsService.getPreferences(authUser.id).then((res) => setNotifPrefs(res.data ?? null)).catch(() => undefined);
+      }
+    }
+  }, [authUser]);
+
+  /* ─── Notification Handlers ─────────────── */
+  const enableNotifications = async () => {
+    if (!authUser) return;
+    setNotifLoading(true);
+    setNotifMessage(null);
+    try {
+      const currentConfig = (await notificationsService.getConfig()).data;
+      setNotifConfig(currentConfig ?? null);
+      if (!currentConfig?.configured || !currentConfig.publicKey) {
+        setNotifMessage("Faltan claves VAPID en el backend para activar push real.");
+        return;
+      }
+
+      const nextPermission = await Notification.requestPermission();
+      setPushPermission(nextPermission);
+      if (nextPermission !== "granted") {
+        setNotifMessage("Permiso no concedido. Puedes activarlo luego desde el navegador.");
+        return;
+      }
+
+      const subscription = await registerPushSubscription(currentConfig.publicKey);
+      await notificationsService.subscribe(authUser.id, subscription);
+      const nextPrefs = await notificationsService.updatePreferences(authUser.id, {
+        enabled: true,
+        timezoneOffset: new Date().getTimezoneOffset(),
+      });
+      setNotifPrefs(nextPrefs.data ?? null);
+      setNotifMessage("Notificaciones activadas en este dispositivo.");
+    } catch (error) {
+      setNotifMessage(error instanceof Error ? error.message : "No se pudo activar notificaciones.");
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!authUser || !notifPrefs) return;
+    const optimistic = { ...notifPrefs, enabled };
+    setNotifPrefs(optimistic);
+    try {
+      const res = await notificationsService.updatePreferences(authUser.id, { enabled });
+      setNotifPrefs(res.data ?? optimistic);
+    } catch {
+      setNotifPrefs(notifPrefs);
+    }
+  };
+
+  const updateTime = async (
+    field: keyof Pick<NotificationPreferences, "breakfastTime" | "lunchTime" | "dinnerTime" | "workoutTime">,
+    value: string
+  ) => {
+    if (!authUser || !notifPrefs) return;
+    const optimistic = { ...notifPrefs, [field]: value };
+    setNotifPrefs(optimistic);
+    try {
+      const payload = {
+        enabled: optimistic.enabled,
+        breakfastTime: optimistic.breakfastTime,
+        lunchTime: optimistic.lunchTime,
+        dinnerTime: optimistic.dinnerTime,
+        workoutTime: optimistic.workoutTime,
+        timezoneOffset: optimistic.timezoneOffset,
+      };
+      const res = await notificationsService.updatePreferences(authUser.id, payload);
+      setNotifPrefs(res.data ?? optimistic);
+    } catch {
+      // ignore
+    }
+  };
+
+  const sendTestNotification = async () => {
+    if (!authUser) return;
+    setNotifLoading(true);
+    setNotifMessage(null);
+    try {
+      const currentConfig = (await notificationsService.getConfig()).data;
+      setNotifConfig(currentConfig ?? null);
+      const res = await notificationsService.sendTest(authUser.id);
+      setNotifMessage(
+        res.data?.skipped
+          ? "Backend sin claves VAPID configuradas."
+          : "Notificación de prueba enviada."
+      );
+    } catch (error) {
+      setNotifMessage(
+        error instanceof Error ? error.message : "No se pudo enviar prueba."
+      );
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   /* ─── Handlers ──────────────────────────── */
 
@@ -608,6 +722,129 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            </Card>
+          )}
+
+          {/* Recordatorios y Notificaciones */}
+          {isSupported && (
+            <Card padding="lg">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Bell className="text-primary-500 w-5.5 h-5.5" />
+                  <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-slate-900 m-0 dark:text-white">
+                    Notificaciones y Recordatorios
+                  </h3>
+                </div>
+                {notifPrefs?.enabled && pushPermission === "granted" && (
+                  <Badge variant="success" className="px-2.5 py-0.5 font-condensed tracking-wider text-[10px] uppercase">
+                    Activas
+                  </Badge>
+                )}
+              </div>
+
+              <p className="text-sm text-slate-600 dark:text-neutral-400 mb-6">
+                Configura los horarios en los que deseas recibir recordatorios automáticos para tus comidas y entrenamientos diarios.
+              </p>
+
+              {pushPermission !== "granted" ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-500 dark:text-amber-400/90">
+                    <div className="flex gap-2.5">
+                      <ShieldAlert className="w-5 h-5 shrink-0 text-amber-500" />
+                      <div>
+                        <p className="font-bold">Notificaciones desactivadas</p>
+                        <p className="text-xs mt-0.5 opacity-90">
+                          Debes conceder permisos de notificación en tu navegador para poder recibir alertas e ingresar tus horarios.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {notifConfig && !notifConfig.configured && (
+                    <div className="flex gap-2 rounded-2xl border border-amber-400/30 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+                      <ShieldAlert className="h-4 w-4 shrink-0" />
+                      Configura VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en backend para enviar push real.
+                    </div>
+                  )}
+
+                  <Button 
+                    fullWidth 
+                    loading={notifLoading} 
+                    onClick={enableNotifications}
+                    className="font-condensed font-bold uppercase tracking-wider h-11"
+                  >
+                    <BellRing className="w-4 h-4 mr-2" /> Permitir Notificaciones
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {/* Interruptor General */}
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-white/5 dark:bg-white/5">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">Habilitar Recordatorios</p>
+                      <p className="text-xs text-slate-500 dark:text-neutral-400">Recibir avisos diarios push en este navegador</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs?.enabled ?? false}
+                        onChange={(e) => handleToggleNotifications(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:bg-slate-300 peer-checked:bg-primary-500"></div>
+                    </label>
+                  </div>
+
+                  {notifPrefs?.enabled ? (
+                    <div className="space-y-3.5">
+                      {(
+                        [
+                          { field: "breakfastTime", label: "Desayuno" },
+                          { field: "lunchTime", label: "Almuerzo" },
+                          { field: "dinnerTime", label: "Cena" },
+                          { field: "workoutTime", label: "Entrenamiento / Rutina" },
+                        ] as const
+                      ).map(({ field, label }) => (
+                        <div key={field} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/5 dark:bg-[#1a1a1a]">
+                          <span className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-neutral-300">
+                            <Clock className="h-4 w-4 text-primary-400" /> {label}
+                          </span>
+                          <input
+                            type="time"
+                            value={notifPrefs?.[field] || "08:00"}
+                            onChange={(e) => updateTime(field, e.target.value)}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-400 focus:bg-white dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:border-primary-500 dark:focus:bg-slate-900"
+                          />
+                        </div>
+                      ))}
+
+                      <div className="pt-4 border-t border-slate-200 dark:border-white/5">
+                        <Button 
+                          variant="secondary" 
+                          fullWidth 
+                          loading={notifLoading} 
+                          onClick={sendTestNotification}
+                          className="font-condensed font-bold uppercase tracking-wider text-sm h-11"
+                        >
+                          <Send className="h-4 w-4 mr-2" /> Enviar Notificación de Prueba
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-white/5 dark:bg-white/5">
+                      <p className="text-sm text-slate-500 dark:text-neutral-400">
+                        Habilita los recordatorios para configurar las horas.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {notifMessage && (
+                <div className="mt-4 rounded-xl bg-slate-100 p-3 text-xs text-slate-600 dark:bg-white/5 dark:text-neutral-300">
+                  {notifMessage}
+                </div>
+              )}
             </Card>
           )}
 
