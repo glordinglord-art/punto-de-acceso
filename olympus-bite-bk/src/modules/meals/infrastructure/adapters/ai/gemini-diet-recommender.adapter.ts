@@ -46,6 +46,7 @@ export class GeminiDietRecommenderAdapter
       dietaryPreferences,
       targetCalories,
       recentMeals,
+      activeRoutine,
       history = [],
     } = context || {};
 
@@ -78,11 +79,24 @@ export class GeminiDietRecommenderAdapter
       });
     }
 
+    if (activeRoutine) {
+      userContextString += `\n- RUTINA DE ENTRENAMIENTO ACTIVA DEL USUARIO:\n  Nombre de la rutina: ${activeRoutine.name}\n  Descripción: ${activeRoutine.description || 'Sin descripción'}\n  Días configurados:\n`;
+      activeRoutine.days.forEach((d: any) => {
+        const restText = d.isRestDay ? ' (Día de descanso)' : '';
+        userContextString += `    • Día ${d.dayNumber}: ${d.focusArea}${restText}\n`;
+        if (d.exercises && d.exercises.length > 0) {
+          d.exercises.forEach((ex: any) => {
+            userContextString += `      - ${ex.name}: ${ex.sets}x${ex.reps} (Notas: ${ex.observations || 'Ninguna'})\n`;
+          });
+        }
+      });
+    }
+
     const systemInstruction = `
 Eres un asistente experto en nutrición y fitness de clase mundial, conversando directamente con tu usuario (el cliente).
-Tu objetivo es ayudarlo a lograr sus metas de salud basándote en su contexto (calorías, comidas previas, alergias, peso).
+Tu objetivo es ayudarlo a lograr sus metas de salud basándote en su contexto (calorías, comidas previas, alergias, peso, y su rutina de entrenamiento activa).
 Habla de forma directa, motivadora, empática y en primera persona. NO hables de un "cliente" ni menciones a un "entrenador". Tú estás hablando interactiva y directamente con la persona.
-Devuelve tu respuesta SOLAMENTE en Markdown estructurado y amigable, usando listas, negritas y emojis relevantes. Si el usuario te indica que una comida le cayó mal o pregunta algo de su historial, respóndele como un humano inteligente usando el historial brindado.
+Devuelve tu respuesta SOLAMENTE en Markdown estructurado y amigable, usando listas, negritas y emojis relevantes. Si el usuario te pregunta por su rutina, qué comer según su día de entrenamiento o su historial, responde con inteligencia usando todo el contexto provisto.
     `;
 
     const mappedHistory = history.map((msg) => ({

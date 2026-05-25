@@ -15,6 +15,21 @@ export interface DietRecommenderContext {
     macros: string;
     foods: string[];
   }[];
+  activeRoutine?: {
+    name: string;
+    description?: string;
+    days: {
+      dayNumber: number;
+      focusArea: string;
+      isRestDay: boolean;
+      exercises: {
+        name: string;
+        sets: number;
+        reps: string;
+        observations?: string;
+      }[];
+    }[];
+  };
   history?: { role: string; content: string }[];
 }
 

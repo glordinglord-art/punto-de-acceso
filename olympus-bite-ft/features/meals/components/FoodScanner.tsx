@@ -10,6 +10,7 @@ import { FITNESS_GOALS, GOAL_RATING_CONFIG } from "../types/meals.types";
 import type { FoodAnalysis, FitnessGoal } from "../types/meals.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getLocalDateString, localDateToISO } from "@/shared/lib/utils";
+import { Sparkles, Camera, FileText, ArrowLeft, RefreshCw } from "lucide-react";
 
 interface FoodScannerProps {
   userId: string;
@@ -166,6 +167,135 @@ date: localDateToISO(scanDate),
 
   /* ─── Info-only mode ────────────────────── */
   // The Info-only mode has been removed as per the latest requirements
+
+  /* ─── Analyzing state HUD ───────────────── */
+  if (analyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-6 animate-in fade-in duration-500 relative">
+        <style>{`
+          @keyframes scanLine {
+            0% { top: 0%; opacity: 0.8; }
+            50% { top: 100%; opacity: 0.8; }
+            100% { top: 0%; opacity: 0.8; }
+          }
+          .animate-scan-line {
+            animation: scanLine 2.5s infinite ease-in-out;
+          }
+        `}</style>
+        
+        {/* Holographic scanning box */}
+        <div className="relative w-60 h-60 rounded-3xl overflow-hidden border border-primary-500/30 shadow-[0_0_35px_rgba(16,185,129,0.2)] bg-neutral-950 dark:bg-black/60">
+          {imagesBase64[0] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imagesBase64[0]}
+              alt="Analyzing food"
+              className="w-full h-full object-cover opacity-60"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-neutral-600">
+              <Camera className="w-12 h-12 animate-pulse" />
+            </div>
+          )}
+          
+          {/* Laser Line Animation */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary-400 to-transparent shadow-[0_0_15px_#10b981] animate-scan-line" />
+          
+          {/* Radar scan ripples */}
+          <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_30%,rgba(16,185,129,0.05)_70%] pointer-events-none animate-pulse" />
+          
+          {/* Glowing scanner corners */}
+          <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-primary-400 rounded-tl-sm" />
+          <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-primary-400 rounded-tr-sm" />
+          <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-primary-400 rounded-bl-sm" />
+          <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-primary-400 rounded-br-sm" />
+        </div>
+
+        {/* Status texts with rotating details */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <RefreshCw className="w-5 h-5 text-primary-500 animate-spin" />
+            <h3 className="font-bold text-lg uppercase tracking-wider font-condensed text-neutral-900 dark:text-white">
+              Analizando tu plato
+            </h3>
+          </div>
+          <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
+            Nuestra Inteligencia Artificial está identificando los ingredientes y calculando valores nutricionales a la medida de tu objetivo...
+          </p>
+        </div>
+
+        {/* Progress tracker */}
+        <div className="w-full max-w-xs p-4 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/5 text-[10px] font-bold uppercase tracking-widest text-left space-y-2 font-mono text-neutral-600 dark:text-neutral-400 shadow-inner">
+          <div className="flex items-center gap-2 text-primary-500">
+            <span>✔</span>
+            <span>Estableciendo conexión con la IA...</span>
+          </div>
+          <div className="flex items-center gap-2 text-primary-400 animate-pulse">
+            <span className="animate-spin">⚡</span>
+            <span>Identificando alimentos en la imagen...</span>
+          </div>
+          <div className="flex items-center gap-2 opacity-40">
+            <span>○</span>
+            <span>Calculando macronutrientes...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── Choose mode ───────────────────────── */
+  if (mode === "choose") {
+    return (
+      <div className="space-y-6 py-4 animate-in fade-in duration-300">
+        <div className="text-center space-y-1.5">
+          <h3 className="font-bold text-base uppercase tracking-wider font-condensed text-neutral-800 dark:text-white">
+            ¿Cómo deseas registrar tu comida?
+          </h3>
+          <p className="text-xs text-neutral-500 max-w-xs mx-auto">
+            Escanea tu plato con Inteligencia Artificial o ingresa los macronutrientes manualmente.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Scan Option */}
+          <button
+            onClick={() => setMode("scan")}
+            className="flex flex-col items-center p-6 rounded-3xl border border-slate-200 bg-white/50 hover:bg-neutral-50 dark:border-white/5 dark:bg-white/4 dark:hover:bg-white/8 transition-all hover:scale-[1.02] active:scale-[0.98] text-center space-y-4 group shadow-sm cursor-pointer"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-300 flex items-center justify-center shadow-lg shadow-primary-500/20 text-white transform group-hover:rotate-6 transition-all duration-300">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-neutral-800 dark:text-white">
+                Escanear con IA
+              </h4>
+              <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                Toma o sube fotos. La IA detectará los ingredientes y macronutrientes de forma inteligente.
+              </p>
+            </div>
+          </button>
+
+          {/* Manual Option */}
+          <button
+            onClick={() => setMode("manual")}
+            className="flex flex-col items-center p-6 rounded-3xl border border-slate-200 bg-white/50 hover:bg-neutral-50 dark:border-white/5 dark:bg-white/4 dark:hover:bg-white/8 transition-all hover:scale-[1.02] active:scale-[0.98] text-center space-y-4 group shadow-sm cursor-pointer"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white transform group-hover:-rotate-6 transition-all duration-300">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-neutral-800 dark:text-white">
+                Registro Manual
+              </h4>
+              <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                Escribe el nombre, las calorías y los macronutrientes del alimento por tu cuenta.
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /* ─── Manual mode ───────────────────────── */
   if (mode === "manual") {

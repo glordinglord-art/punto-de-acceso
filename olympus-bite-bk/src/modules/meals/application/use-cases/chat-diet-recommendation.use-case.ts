@@ -12,6 +12,10 @@ import {
   DIET_CHAT_MESSAGE_REPOSITORY,
   DietChatMessageRepositoryPort,
 } from '../../domain/ports/diet-chat-message.repository.port';
+import {
+  ROUTINE_REPOSITORY,
+  RoutineRepositoryPort,
+} from '../../../routines/domain/ports/routine.repository.port';
 
 import {
   IsString,
@@ -34,6 +38,9 @@ export class DietRecommenderContextDto implements DietRecommenderContext {
 
   @IsOptional()
   recentMeals?: any[];
+
+  @IsOptional()
+  activeRoutine?: any;
 
   // Note: history is now fetched from the database, not strictly required from DTO.
   @IsOptional()
@@ -60,6 +67,8 @@ export class ChatDietRecommendationUseCase {
     private readonly mealRepository: MealRepositoryPort,
     @Inject(DIET_CHAT_MESSAGE_REPOSITORY)
     private readonly chatMessageRepository: DietChatMessageRepositoryPort,
+    @Inject(ROUTINE_REPOSITORY)
+    private readonly routineRepository: RoutineRepositoryPort,
   ) {}
 
   async execute(
@@ -81,6 +90,31 @@ export class ChatDietRecommendationUseCase {
 
     if (!dto.context) dto.context = new DietRecommenderContextDto();
     dto.context.recentMeals = recentMeals;
+
+    // Fetch user active routine if any
+    try {
+      const userRoutines = await this.routineRepository.findByClientId(userId);
+      const activeRoutineEntity = userRoutines.find((r) => r.isActive);
+      if (activeRoutineEntity) {
+        dto.context.activeRoutine = {
+          name: activeRoutineEntity.name,
+          description: activeRoutineEntity.description,
+          days: activeRoutineEntity.days.map((d) => ({
+            dayNumber: d.dayNumber,
+            focusArea: d.focusArea,
+            isRestDay: d.isRestDay,
+            exercises: d.exercises.map((ex) => ({
+              name: ex.name,
+              sets: ex.sets,
+              reps: ex.reps,
+              observations: ex.observations ?? undefined,
+            })),
+          })),
+        };
+      }
+    } catch (err) {
+      console.error('Error fetching client routine for AI chat:', err);
+    }
 
     // Fetch DB history
     const rawHistory = await this.chatMessageRepository.findByUserId(userId);

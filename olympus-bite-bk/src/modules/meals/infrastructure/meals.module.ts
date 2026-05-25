@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MealsController } from './adapters/http/meals.controller';
 import { PrismaMealRepository } from './adapters/persistence/prisma-meal.repository';
 import { GeminiFoodRecognitionAdapter } from './adapters/ai/gemini-food-recognition.adapter';
+import { MimoFoodRecognitionAdapter } from './adapters/ai/mimo-food-recognition.adapter';
+import { HybridFoodRecognitionAdapter } from './adapters/ai/hybrid-food-recognition.adapter';
 import { GeminiDietRecommenderAdapter } from './adapters/ai/gemini-diet-recommender.adapter';
 import { CreateMealUseCase } from '../application/use-cases/create-meal.use-case';
 import { AnalyzeFoodPhotoUseCase } from '../application/use-cases/analyze-food-photo.use-case';
@@ -19,8 +21,10 @@ import { SupabaseStorageService } from '../../../shared/infrastructure/supabase/
 import { PrismaDietChatMessageRepository } from './adapters/persistence/prisma-diet-chat-message.repository';
 import { GetDietChatHistoryUseCase } from '../application/use-cases/get-diet-chat-history.use-case';
 import { ClearDietChatHistoryUseCase } from '../application/use-cases/clear-diet-chat-history.use-case';
+import { RoutinesModule } from '../../routines/infrastructure/routines.module';
 
 @Module({
+  imports: [RoutinesModule],
   controllers: [MealsController],
   providers: [
     {
@@ -31,9 +35,11 @@ import { ClearDietChatHistoryUseCase } from '../application/use-cases/clear-diet
       provide: DIET_CHAT_MESSAGE_REPOSITORY,
       useClass: PrismaDietChatMessageRepository,
     },
+    GeminiFoodRecognitionAdapter,
+    MimoFoodRecognitionAdapter,
     {
       provide: FOOD_RECOGNITION_SERVICE,
-      useClass: GeminiFoodRecognitionAdapter,
+      useClass: HybridFoodRecognitionAdapter,
     },
     {
       provide: DIET_RECOMMENDER_SERVICE,

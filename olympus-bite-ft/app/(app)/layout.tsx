@@ -8,6 +8,7 @@ import { Sidebar } from "@/shared/components/layout/Sidebar";
 import { MobileNav } from "@/shared/components/layout/MobileNav";
 import { OnboardingSurveyModal } from "@/features/clients/components/OnboardingSurveyModal";
 import { SettingsTrigger } from "@/shared/components/ui/SettingsTrigger";
+import { GlobalAiAssistant } from "@/shared/components/ui/GlobalAiAssistant";
 import { NotificationPrompt } from "@/features/notifications/components/NotificationPrompt";
 import { cn } from "@/shared/lib/utils";
 
@@ -49,6 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Modal para clientes nuevos */}
       <OnboardingSurveyModal />
       <SettingsTrigger />
+      <GlobalAiAssistant />
       <NotificationPrompt />
     </div>
   );

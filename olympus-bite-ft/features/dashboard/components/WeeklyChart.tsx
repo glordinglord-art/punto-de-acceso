@@ -40,11 +40,11 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
           <CardTitle>Actividad semanal</CardTitle>
           <div className="mt-2 flex gap-5">
             <div>
-              <p className="font-display text-3xl font-bold leading-none text-white">{totalMeals}</p>
+              <p className="font-display text-3xl font-bold leading-none text-slate-900 dark:text-white">{totalMeals}</p>
               <p className="mt-0.5 text-[11px] text-slate-500">comidas totales</p>
             </div>
             <div>
-              <p className="font-display text-3xl font-bold leading-none text-white">
+              <p className="font-display text-3xl font-bold leading-none text-slate-900 dark:text-white">
                 {totalCalories.toLocaleString('es')}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-500">kcal totales</p>
@@ -70,13 +70,13 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         {Array.from({ length: GRID_LINES }).map((_, i) => (
           <div
             key={i}
-            className="absolute left-0 right-0 border-t border-dashed border-white/6"
+            className="absolute left-0 right-0 border-t border-dashed border-slate-200 dark:border-white/6"
             style={{ bottom: 32 + ((i + 1) / GRID_LINES) * CHART_H }}
           />
         ))}
 
         {/* Baseline */}
-        <div className="absolute left-0 right-0 border-t border-white/12" style={{ bottom: 32 }} />
+        <div className="absolute left-0 right-0 border-t border-slate-300 dark:border-white/12" style={{ bottom: 32 }} />
 
         {/* Bars */}
         <div className="absolute inset-0 flex items-end gap-0.5 pb-8">
@@ -95,7 +95,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
                 {/* Count badge */}
                 {d.meals > 0 && (
                   <motion.span
-                    className="absolute text-[10px] font-bold text-slate-400"
+                    className="absolute text-[10px] font-bold text-slate-500 dark:text-slate-400 w-full text-center left-0"
                     style={{ bottom: Math.max(mealsH, calsH) + 6 }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -109,8 +109,8 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
                 <div className="absolute bottom-0 left-0.5 right-0.5 flex items-end gap-[2px]">
                   {!hasData ? (
                     <>
-                      <div className="flex-1 rounded-t-md bg-white/8" style={{ height: CHART_H * 0.05 }} />
-                      <div className="flex-1 rounded-t-md bg-white/5" style={{ height: CHART_H * 0.03 }} />
+                      <div className="flex-1 rounded-t-md bg-slate-200 dark:bg-white/8" style={{ height: CHART_H * 0.05 }} />
+                      <div className="flex-1 rounded-t-md bg-slate-100 dark:bg-white/5" style={{ height: CHART_H * 0.03 }} />
                     </>
                   ) : (
                     <>
@@ -118,8 +118,8 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
                       <motion.div
                         className={`flex-1 rounded-t-md ${
                           isToday
-                            ? 'bg-linear-to-t from-blue-600 to-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)]'
-                            : 'bg-linear-to-t from-blue-700/70 to-blue-500/50'
+                            ? 'bg-gradient-to-t from-blue-600 to-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                            : 'bg-gradient-to-t from-blue-700/70 to-blue-500/50'
                         }`}
                         style={{ transformOrigin: 'bottom' }}
                         initial={{ scaleY: 0, height: mealsH || CHART_H * 0.04 }}
@@ -130,8 +130,8 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
                       <motion.div
                         className={`flex-1 rounded-t-md ${
                           isToday
-                            ? 'bg-linear-to-t from-primary-600 to-primary-300 shadow-[0_0_12px_rgba(52,211,153,0.3)]'
-                            : 'bg-linear-to-t from-primary-700/60 to-primary-500/40'
+                            ? 'bg-gradient-to-t from-emerald-600 to-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.3)]'
+                            : 'bg-gradient-to-t from-emerald-700/60 to-emerald-500/40'
                         }`}
                         style={{ transformOrigin: 'bottom' }}
                         initial={{ scaleY: 0, height: calsH || CHART_H * 0.04 }}
@@ -147,14 +147,14 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         </div>
 
         {/* Day labels */}
-        <div className="absolute bottom-0 left-0 right-0 flex">
+        <div className="absolute bottom-0 left-0 right-0 flex gap-0.5">
           {data.map((d) => {
             const isToday = d.date === today;
             return (
               <div key={d.date} className="flex flex-1 flex-col items-center">
                 <span
                   className={`text-[11px] font-medium ${
-                    isToday ? 'font-bold text-blue-300' : 'text-slate-500'
+                    isToday ? 'font-bold text-blue-500 dark:text-blue-300' : 'text-slate-500'
                   }`}
                 >
                   {d.day}
