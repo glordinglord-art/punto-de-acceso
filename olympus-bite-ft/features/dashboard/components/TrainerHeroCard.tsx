@@ -202,11 +202,11 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
               transition={{ duration: 0.8, delay: 0.7 }}
             >
               <div className="text-center">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Actividad</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Actividad</p>
                 <p className="font-display text-4xl leading-none text-slate-900 dark:text-white">
                   {engagementPct}%
                 </p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300/68">de clientes</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400/60">de clientes</p>
               </div>
             </motion.div>
           </div>
@@ -229,7 +229,7 @@ export function TrainerHeroCard({ stats }: TrainerHeroCardProps) {
                 <p className="mt-1.5 font-display text-4xl leading-none text-slate-900 dark:text-white">
                   <AnimatedCounter value={stats.mealsThisWeek} />
                 </p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300/68">comidas registradas</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400/60">comidas registradas</p>
               </div>
               <div
                 className={cn(

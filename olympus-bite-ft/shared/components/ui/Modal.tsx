@@ -54,7 +54,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
     >
       <div
         className={cn(
-          'w-full max-h-[90vh] flex flex-col rounded-3xl bg-white shadow-2xl dark:bg-neutral-900 border border-white/10 animate-in fade-in zoom-in-95 duration-200 relative',
+          'w-full max-h-[90vh] flex flex-col rounded-3xl bg-white/95 backdrop-blur-2xl shadow-[0_32px_96px_rgba(15,23,42,0.2)] dark:bg-[#101118]/95 dark:shadow-[0_32px_96px_rgba(0,0,0,0.6)] border border-slate-200/60 dark:border-white/8 animate-in fade-in zoom-in-95 duration-200 relative',
           sizeStyles[size],
           className
         )}
@@ -71,14 +71,14 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
         )}
 
         {title && (
-          <div className="shrink-0 px-6 sm:px-8 pt-6 pb-4 flex items-center justify-between border-b border-neutral-100 dark:border-white/5">
+          <div className="shrink-0 px-6 sm:px-8 pt-6 pb-4 flex items-center justify-between border-b border-slate-200/60 dark:border-white/6">
             <h2 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white">
               {title}
             </h2>
             <button
               onClick={onClose}
               aria-label="Cerrar modal"
-              className="rounded-full p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-white/10 dark:hover:text-white transition-colors"
+              className="rounded-full p-2 text-neutral-400 hover:bg-slate-100 hover:text-neutral-600 dark:hover:bg-white/8 dark:hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -93,7 +93,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
         </div>
         
         {footer && (
-          <div className="shrink-0 border-t border-neutral-100 bg-neutral-50/50 px-6 sm:px-8 py-4 dark:border-white/5 dark:bg-black/20 rounded-b-3xl">
+          <div className="shrink-0 border-t border-slate-200/60 bg-slate-50/50 px-6 sm:px-8 py-4 dark:border-white/6 dark:bg-white/[0.02] rounded-b-3xl">
             {footer}
           </div>
         )}

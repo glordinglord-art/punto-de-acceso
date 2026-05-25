@@ -82,9 +82,7 @@ export function NutritionSummary({
         <div className="flex-1 w-full space-y-5">
           <div className="flex items-end justify-between border-b border-neutral-100 dark:border-white/5 pb-2">
             <div>
-              <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest font-condensed mb-0.5">
-                Resumen Diario
-              </h3>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Resumen Diario</p>
               <p className="text-xs font-semibold text-neutral-500">
                 {calorieGoal - calories > 0 
                   ? <span className="text-primary-500 font-bold">{calorieGoal - calories} kcal restantes</span> 
@@ -101,7 +99,7 @@ export function NutritionSummary({
             {macros.map((macro) => (
               <div key={macro.label} className="space-y-1.5">
                 <div className="flex justify-between items-baseline text-xs">
-                  <span className="font-bold tracking-wider uppercase text-neutral-500">{macro.label}</span>
+                  <span className="font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">{macro.label}</span>
                   <div className="flex items-baseline gap-1">
                     <span className={cn("text-base font-black font-condensed tracking-tight", macro.textStyle)}>{macro.value}g</span>
                     <span className="font-semibold text-[10px] text-neutral-400">{Math.round(macro.pct)}%</span>

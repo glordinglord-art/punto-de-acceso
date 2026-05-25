@@ -59,7 +59,7 @@ function StatCard({
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative min-w-0 overflow-hidden rounded-[24px] border border-white/8 bg-white/5 backdrop-blur-md transition-all hover:border-white/14 hover:bg-white/7"
+      className="group relative min-w-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.07] backdrop-blur-md transition-all hover:border-white/18 hover:bg-white/10"
     >
       {/* Gradient top border */}
       <div
@@ -105,9 +105,9 @@ function StatCard({
           <p className="font-display text-4xl font-bold tracking-tight text-white">
             <AnimatedCounter value={value} suffix={suffix} />
           </p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">{title}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-slate-300/70">{title}</p>
           {extra && (
-            <p className="mt-0.5 truncate text-[10px] text-slate-500">{extra}</p>
+            <p className="mt-0.5 truncate text-[10px] text-slate-400/60">{extra}</p>
           )}
         </div>
       </div>

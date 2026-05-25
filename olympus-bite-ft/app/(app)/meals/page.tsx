@@ -141,14 +141,14 @@ export default function MealsPage() {
 
       {/* Tabs for trainer */}
       {isTrainer && (
-        <div className="flex items-center gap-1 mb-5 p-1 bg-neutral-100 rounded-xl w-fit dark:bg-neutral-800">
+        <div className="flex items-center gap-1 mb-5 p-1 bg-white/50 dark:bg-white/[0.04] backdrop-blur-md rounded-2xl w-fit border border-slate-200/50 dark:border-white/8 shadow-sm">
           <button
             onClick={() => setTab("mine")}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+              "rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200",
               tab === "mine"
-                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700",
+                ? "bg-primary-500/12 text-primary-600 border border-primary-500/20 shadow-sm dark:text-primary-400 dark:border-primary-500/15"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5 border border-transparent",
             )}
           >
             🍽️ Mis comidas
@@ -156,10 +156,10 @@ export default function MealsPage() {
           <button
             onClick={() => setTab("clients")}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+              "rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200",
               tab === "clients"
-                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700",
+                ? "bg-primary-500/12 text-primary-600 border border-primary-500/20 shadow-sm dark:text-primary-400 dark:border-primary-500/15"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5 border border-transparent",
             )}
           >
             👥 Clientes
@@ -218,19 +218,19 @@ export default function MealsPage() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-28 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+                  className="h-28 animate-pulse rounded-[28px] bg-white/40 border border-slate-200/40 dark:bg-white/[0.04] dark:border-white/6"
                 />
               ))}
             </div>
           ) : mealsByType.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-neutral-200 p-12 text-center dark:border-neutral-700">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-800">
+            <div className="rounded-[28px] border-2 border-dashed border-slate-200/80 bg-white/30 p-12 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.02]">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-500/10 border border-primary-500/15">
                 <span className="text-3xl">🍽️</span>
               </div>
-              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-wide font-condensed">
                 Sin comidas registradas
               </h3>
-              <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                 {isToday
                   ? "Registra tu primera comida del día con una foto o manualmente."
                   : "No hay registros para este día."}

@@ -110,3 +110,8 @@ main {
 .dark * {
   scrollbar-color: #404040 transparent;
 }
+
+/* Safe area for mobile bottom nav (iPhone notch) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

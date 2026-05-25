@@ -71,7 +71,7 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
         <Header title="Dashboard" subtitle="Cargando estadísticas..." />
         <div className="grid gap-4 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-52 animate-pulse rounded-[28px] bg-white/6" />
+            <div key={i} className="h-52 animate-pulse rounded-[28px] bg-white/40 border border-slate-200/40 dark:bg-white/[0.04] dark:border-white/6" />
           ))}
         </div>
       </>
@@ -82,12 +82,12 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
     return (
       <>
         <Header title="Dashboard" subtitle="Error" />
-        <div className="rounded-[24px] border border-rose-500/20 bg-rose-500/5 p-8 text-center">
+        <div className="rounded-[28px] border border-rose-500/20 bg-rose-500/[0.06] backdrop-blur-md p-8 text-center shadow-sm">
           <span className="mb-3 block text-4xl">⚠️</span>
-          <p className="font-medium text-rose-400">{error}</p>
+          <p className="font-medium text-rose-500 dark:text-rose-400">{error}</p>
           <button
             onClick={loadData}
-            className="mt-4 rounded-xl bg-rose-500/20 px-4 py-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/30"
+            className="mt-4 rounded-xl bg-rose-500/15 border border-rose-500/20 px-5 py-2.5 text-sm font-semibold text-rose-600 dark:text-rose-300 transition-all hover:bg-rose-500/25 hover:border-rose-500/30"
           >
             Reintentar
           </button>

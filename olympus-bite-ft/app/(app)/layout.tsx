@@ -25,8 +25,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900 dark:border-neutral-700 dark:border-t-white" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-neutral-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-3 border-slate-200 border-t-primary-500 dark:border-white/10 dark:border-t-primary-400" />
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cargando...</p>
+        </div>
       </div>
     );
   }

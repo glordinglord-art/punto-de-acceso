@@ -127,7 +127,7 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               className={cn(
                 "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(16,185,129,0.28)]"
+                  ? "bg-primary-500/12 text-primary-600 border-primary-500/25 shadow-[0_0_20px_rgba(16,185,129,0.15)] dark:text-primary-400 dark:border-primary-500/20 dark:shadow-[0_0_24px_rgba(16,185,129,0.2)]"
                   : "bg-slate-900/5 text-slate-600 border-slate-200/80 hover:bg-slate-900/10 hover:text-slate-950 dark:bg-white/5 dark:text-slate-400 dark:border-white/5 dark:hover:bg-white/10 dark:hover:text-white"
               )}
             >
@@ -171,7 +171,7 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500 text-slate-950 border-primary-500 shadow-[0_0_15px_rgba(16,185,129,0.28)]"
+                  ? "bg-primary-500/12 text-primary-600 border-primary-500/25 shadow-[0_0_20px_rgba(16,185,129,0.15)] dark:text-primary-400 dark:border-primary-500/20 dark:shadow-[0_0_24px_rgba(16,185,129,0.2)]"
                   : "bg-transparent text-slate-600 border-transparent hover:bg-slate-900/5 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               )}
             >

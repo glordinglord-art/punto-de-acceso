@@ -9,11 +9,11 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
-  success: 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
-  warning: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  danger: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  info: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  default: 'bg-neutral-100/80 text-neutral-700 border border-neutral-200/60 dark:bg-white/8 dark:text-neutral-300 dark:border-white/8',
+  success: 'bg-primary-500/10 text-primary-700 border border-primary-500/15 dark:text-primary-400 dark:border-primary-500/15',
+  warning: 'bg-amber-500/10 text-amber-700 border border-amber-500/15 dark:text-amber-400 dark:border-amber-500/15',
+  danger: 'bg-red-500/10 text-red-700 border border-red-500/15 dark:text-red-400 dark:border-red-500/15',
+  info: 'bg-blue-500/10 text-blue-700 border border-blue-500/15 dark:text-blue-400 dark:border-blue-500/15',
   outline: 'bg-transparent border border-current opacity-80',
 };
 
@@ -21,7 +21,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-lg px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
         variantStyles[variant],
         className,
       )}
