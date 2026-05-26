@@ -9,7 +9,7 @@ export const clientsService = {
 
   updateProfile: (
     id: string,
-    data: { dietaryGoal?: string; targetCalories?: number | null },
+    data: { dietaryGoal?: string; targetCalories?: number | null; password?: string },
   ) => api.put<ApiResponse<User>>(`/users/${id}/profile`, data),
 
   completeOnboarding: (

@@ -47,4 +47,11 @@ export class InMemoryUserRepository implements UserRepositoryPort {
     this.users.set(user.id, user);
     return user;
   }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    return (
+      Array.from(this.users.values()).find((u) => u.resetToken === token) ??
+      null
+    );
+  }
 }

@@ -9,14 +9,14 @@ import { cn, formatDate } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
 import { ClientMealsProgress } from "./ClientMealsProgress";
 import { ClientAiChat } from "./ClientAiChat";
-import { Settings, Target, Flame, Activity, ShieldAlert, HeartPulse, UserCircle, LineChart, Sparkles } from "lucide-react";
+import { Settings, Target, Flame, Activity, ShieldAlert, HeartPulse, UserCircle, LineChart, Sparkles, Key } from "lucide-react";
 
 interface ClientProfileModalProps {
   client: User | null;
   onClose: () => void;
   onSave: (
     clientId: string,
-    data: { dietaryGoal?: string; targetCalories?: number | null },
+    data: { dietaryGoal?: string; targetCalories?: number | null; password?: string },
   ) => Promise<void>;
 }
 
@@ -27,6 +27,7 @@ export function ClientProfileModal({
 }: ClientProfileModalProps) {
   const [goal, setGoal] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "progress" | "ai">(
     "profile",
@@ -36,6 +37,7 @@ export function ClientProfileModal({
     if (client) {
       setGoal(client.dietaryGoal || "");
       setCalories(client.targetCalories?.toString() || "");
+      setPassword("");
     }
   }, [client]);
 
@@ -45,7 +47,11 @@ export function ClientProfileModal({
     setIsSaving(true);
     try {
       const target = calories === "" ? null : Number(calories);
-      await onSave(client.id, { dietaryGoal: goal, targetCalories: target });
+      await onSave(client.id, {
+        dietaryGoal: goal,
+        targetCalories: target,
+        password: password === "" ? undefined : password,
+      });
       onClose();
     } catch {
       // Handled by parent
@@ -60,7 +66,8 @@ export function ClientProfileModal({
       onClose={onClose}
       title=""
       size="lg"
-      
+      noPadding={true}
+      className="overflow-hidden"
     >
       <div className="relative">
         {/* Banner with gradient */}
@@ -274,6 +281,23 @@ export function ClientProfileModal({
                       onChange={(e) => setCalories(e.target.value)}
                     />
                   </div>
+                </div>
+                
+                {/* Reset Password Row */}
+                <div className="mt-5 pt-5 border-t border-neutral-100 dark:border-white/5">
+                  <label className="block text-xs font-condensed font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-neutral-400" /> Restablecer Contraseña del Cliente
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full text-sm font-medium rounded-xl border-2 border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-black/20 dark:text-white py-3 px-4 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 placeholder-neutral-400 transition-all"
+                    placeholder="Escribe una nueva contraseña para el cliente si deseas cambiarla..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 mt-2">
+                    Si ingresas texto aquí, la clave de acceso de este cliente se actualizará automáticamente al guardar.
+                  </p>
                 </div>
               </div>
 

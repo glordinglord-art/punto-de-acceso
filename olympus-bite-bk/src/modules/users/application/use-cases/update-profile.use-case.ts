@@ -5,6 +5,7 @@ import {
 } from '../../domain/ports/user.repository.port';
 import { User } from '../../domain/entities/user.entity';
 import { UpdateUserDto } from '../dtos/user.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class UpdateProfileUseCase {
@@ -32,6 +33,14 @@ export class UpdateProfileUseCase {
       height: dto.height,
       targetCalories: dto.targetCalories,
     });
+
+    if (dto.password) {
+      const hashedPassword = crypto
+        .createHash('sha256')
+        .update(dto.password)
+        .digest('hex');
+      user.changePassword(hashedPassword);
+    }
 
     return this.userRepository.update(user);
   }

@@ -85,6 +85,8 @@ export class UpdateUserDto {
   @Transform(({ value }) => (value === '' ? null : Number(value)))
   height?: number | null;
 
-  // Since height/weight might be number and they're not always strings
-  // we could just leave them as not validated strictly in this PR or use IsNumber
+  @IsString()
+  @IsOptional()
+  @MinLength(6)
+  password?: string;
 }

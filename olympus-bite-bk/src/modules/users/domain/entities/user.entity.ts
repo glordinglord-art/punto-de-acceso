@@ -43,6 +43,8 @@ export class User extends BaseEntity {
   dietaryPreferences: string | null;
 
   isActive: boolean;
+  resetToken: string | null = null;
+  resetTokenExpires: Date | null = null;
 
   constructor(props: CreateUserProps, id?: string) {
     super(id);

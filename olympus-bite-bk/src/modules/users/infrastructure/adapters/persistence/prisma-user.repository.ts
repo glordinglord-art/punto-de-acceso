@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { UserRepositoryPort } from '../../../domain/ports/user.repository.port';
-import { User, CreateUserProps } from '../../../domain/entities/user.entity';
+import { User } from '../../../domain/entities/user.entity';
 import { UserRole } from '../../../domain/enums/user-role.enum';
 import type { User as PrismaUser } from '@prisma/client';
 
@@ -32,6 +32,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
       raw.id,
     );
     user.isActive = raw.isActive;
+    user.resetToken = raw.resetToken;
+    user.resetTokenExpires = raw.resetTokenExpires;
     (user as any).createdAt = raw.createdAt;
     (user as any).updatedAt = raw.updatedAt;
     return user;
@@ -78,6 +80,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
         medicalConditions: entity.medicalConditions,
         dietaryPreferences: entity.dietaryPreferences,
         isActive: entity.isActive,
+        resetToken: entity.resetToken,
+        resetTokenExpires: entity.resetTokenExpires,
       },
     });
     return this.toDomain(raw);
@@ -104,6 +108,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
         medicalConditions: entity.medicalConditions,
         dietaryPreferences: entity.dietaryPreferences,
         isActive: entity.isActive,
+        resetToken: entity.resetToken,
+        resetTokenExpires: entity.resetTokenExpires,
       },
     });
     return this.toDomain(raw);
@@ -121,5 +127,12 @@ export class PrismaUserRepository implements UserRepositoryPort {
       data: { trainerId },
     });
     return this.toDomain(raw);
+  }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    const raw = await this.prisma.user.findFirst({
+      where: { resetToken: token },
+    });
+    return raw ? this.toDomain(raw) : null;
   }
 }

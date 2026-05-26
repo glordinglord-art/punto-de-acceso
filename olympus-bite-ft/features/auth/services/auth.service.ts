@@ -17,4 +17,10 @@ export const authService = {
 
   getCodes: (trainerId: string) =>
     api.get<ApiResponse<InvitationCode[]>>(`/auth/invitation-codes/${trainerId}`),
+
+  forgotPassword: (email: string) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/forgot-password', { email }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/reset-password', { token, newPassword }),
 };

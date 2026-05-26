@@ -110,8 +110,11 @@ function MoreMenu({ pathname }: { pathname: string }) {
 
   // Close on route change
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+    if (open) {
+      const timer = setTimeout(() => setOpen(false), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, open]);
 
   return (
     <div ref={ref} className="relative flex flex-col items-center">

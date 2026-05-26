@@ -56,9 +56,7 @@ export class HybridFoodRecognitionAdapter
         `⚠️ ${primaryName} retornó confianza 0. Intentando respaldo...`,
       );
     } catch (error: any) {
-      this.logger.warn(
-        `❌ ${primaryName} falló: ${error?.message || error}`,
-      );
+      this.logger.warn(`❌ ${primaryName} falló: ${error?.message || error}`);
     }
 
     // --- Intento 2: Proveedor de respaldo ---

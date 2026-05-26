@@ -539,6 +539,11 @@ export const SignInFlow = ({ className }: SignInPageProps) => {
                         required
                       />
                     </div>
+                    <div className="flex justify-end px-1">
+                      <Link href="/forgot-password" className="text-xs font-medium text-slate-400 hover:text-white transition-colors">
+                        ¿Olvidaste tu contraseña?
+                      </Link>
+                    </div>
                     
                     {error && (
                       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">

@@ -176,7 +176,9 @@ Sé lo más preciso posible con los valores nutricionales. Si no puedes identifi
           text.match(/(\{[\s\S]*\})/);
 
         if (!jsonMatch) {
-          throw new Error('No se pudo encontrar un JSON válido en la respuesta');
+          throw new Error(
+            'No se pudo encontrar un JSON válido en la respuesta',
+          );
         }
 
         const parsed = JSON.parse(jsonMatch[1].trim());

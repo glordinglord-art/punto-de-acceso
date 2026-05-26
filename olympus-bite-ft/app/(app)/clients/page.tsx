@@ -139,7 +139,7 @@ export default function ClientsPage() {
 
   const handleSaveProfile = async (
     clientId: string,
-    data: { dietaryGoal?: string; targetCalories?: number | null },
+    data: { dietaryGoal?: string; targetCalories?: number | null; password?: string },
   ) => {
     try {
       await clientsService.updateProfile(clientId, data);
