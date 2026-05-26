@@ -34,7 +34,8 @@ export class ResendEmailAdapter implements EmailServicePort, OnModuleInit {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Punto de Acceso <onboarding@resend.dev>',
+          from:
+            process.env.EMAIL_FROM || 'Punto de Acceso <onboarding@resend.dev>',
           to: [email],
           subject: 'Recuperar contraseña - Punto de Acceso',
           html: `
