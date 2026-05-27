@@ -19,6 +19,7 @@ import {
   EvaluateRoutineUseCase,
   EvaluateRoutineDto,
 } from '../../../application/use-cases/evaluate-routine.use-case';
+import { ActivateRoutineUseCase } from '../../../application/use-cases/activate-routine.use-case';
 import {
   CreateRoutineDto,
   LogWorkoutDto,
@@ -36,6 +37,7 @@ export class RoutinesController {
     private readonly getRoutinesByClientUseCase: GetRoutinesByClientUseCase,
     private readonly logWorkoutUseCase: LogWorkoutUseCase,
     private readonly evaluateRoutineUseCase: EvaluateRoutineUseCase,
+    private readonly activateRoutineUseCase: ActivateRoutineUseCase,
   ) {}
 
   @Post(':trainerId')
@@ -102,6 +104,12 @@ export class RoutinesController {
       dto.dayNumberA,
       dto.dayNumberB,
     );
+    return { success: true, data: RoutineResponseDto.fromEntity(routine) };
+  }
+
+  @Put(':routineId/activate')
+  async activateRoutine(@Param('routineId') routineId: string) {
+    const routine = await this.activateRoutineUseCase.execute(routineId);
     return { success: true, data: RoutineResponseDto.fromEntity(routine) };
   }
 

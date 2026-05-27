@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
 import { Card } from "@/shared/components/ui/Card";
@@ -519,6 +519,7 @@ function GuidedRoutineSession({
   isSaving,
   onBack,
   onSaveSet,
+  isReadOnly = false,
 }: {
   routine: Routine;
   day: RoutineDay;
@@ -532,6 +533,7 @@ function GuidedRoutineSession({
     weight: number | null,
     reps: number | null,
   ) => Promise<void>;
+  isReadOnly?: boolean;
 }) {
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [setIndex, setSetIndex] = useState(0);
@@ -594,6 +596,129 @@ function GuidedRoutineSession({
     }, 1000);
     return () => window.clearInterval(timer);
   }, [restRemaining]);
+
+  if (isReadOnly && exercise) {
+    const exerciseLog = logs.find((l) => l.exerciseId === exercise.id && l.weekNumber === weekNumber);
+    const setsData = exerciseLog?.setsData ?? [];
+
+    return (
+      <div className="space-y-5 animate-in fade-in duration-300">
+        {/* Horizontal exercises tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {day.exercises.map((ex, index) => {
+            const isActive = index === exerciseIndex;
+            return (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => setExerciseIndex(index)}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap border shrink-0",
+                  isActive
+                    ? "bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20"
+                    : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                )}
+              >
+                <span>✅</span>
+                <span>{ex.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Exercise Header Card */}
+        <Card className="relative overflow-hidden border-emerald-500/20 bg-gradient-to-br from-white via-slate-50 to-white shadow-lg dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-500">Resumen de Entrenamiento (Lectura)</p>
+              <h2 className="mt-2 font-display text-3xl font-black uppercase leading-none text-slate-900 dark:text-white sm:text-5xl">
+                {day.focusArea}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                {routine.name} · Semana {weekNumber} · {DAY_NAMES[day.dayNumber]}
+              </p>
+            </div>
+            <Button variant="ghost" onClick={onBack}>Salir</Button>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+              Ejercicio {exerciseIndex + 1}/{day.exercises.length}
+            </p>
+            <h3 className="mt-2 text-3xl font-black uppercase text-slate-900 dark:text-white sm:text-4xl">
+              {exercise.name}
+            </h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant="info">{exercise.muscleGroup}</Badge>
+              <Badge variant="default">{exercise.sets} series</Badge>
+              <Badge variant="default">{exercise.reps} reps objetivo</Badge>
+            </div>
+          </div>
+        </Card>
+
+        {/* Sets Summary Card */}
+        <Card>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Series Registradas</h4>
+          <div className="space-y-3">
+            {Array.from({ length: exercise.sets }).map((_, idx) => {
+              const setNum = idx + 1;
+              const setLog = setsData.find((s) => s.set === setNum);
+              return (
+                <div
+                  key={setNum}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-white/5 dark:bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                      {setNum}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Serie {setNum}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {setLog?.completed ? (
+                      <span className="text-base font-extrabold text-slate-900 dark:text-white">
+                        {setLog.weight ?? "--"} kg × {setLog.reps ?? "--"} reps
+                      </span>
+                    ) : (
+                      <span className="text-sm text-slate-400">No registrada</span>
+                    )}
+                    <span className="text-emerald-500 font-bold ml-1">✓</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex justify-between gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setExerciseIndex((prev) => Math.max(0, prev - 1))}
+              disabled={exerciseIndex === 0}
+              className="flex-1"
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (exerciseIndex + 1 < day.exercises.length) {
+                  setExerciseIndex((prev) => prev + 1);
+                } else {
+                  onBack();
+                }
+              }}
+              className="flex-1"
+            >
+              {exerciseIndex + 1 < day.exercises.length ? "Siguiente Ejercicio" : "Finalizar Lectura"}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (showSuccessScreen) {
     return (
@@ -750,18 +875,20 @@ function GuidedRoutineSession({
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
-              Ejercicio {exerciseIndex + 1}/{day.exercises.length}
-            </p>
-            <h3 className="mt-2 text-3xl font-black uppercase text-slate-900 dark:text-white sm:text-5xl">
-              {exercise.name}
-            </h3>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Badge variant="info">{exercise.muscleGroup}</Badge>
-              <Badge variant="default">{exercise.sets} series</Badge>
-              <Badge variant="default">{exercise.reps} reps objetivo</Badge>
-              <Badge variant="default">{formatRest(exercise.restSeconds)} descanso</Badge>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none flex flex-col justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+                Ejercicio {exerciseIndex + 1}/{day.exercises.length}
+              </p>
+              <h3 className="mt-2 text-3xl font-black uppercase text-slate-900 dark:text-white sm:text-4xl">
+                {exercise.name}
+              </h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="info">{exercise.muscleGroup}</Badge>
+                <Badge variant="default">{exercise.sets} series</Badge>
+                <Badge variant="default">{exercise.reps} reps objetivo</Badge>
+                <Badge variant="default">{formatRest(exercise.restSeconds)} descanso</Badge>
+              </div>
             </div>
             {exercise.observations && (
               <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-400/10 dark:text-amber-100">
@@ -770,14 +897,36 @@ function GuidedRoutineSession({
             )}
           </div>
 
-          <div className="rounded-[24px] border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:shadow-none">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:shadow-none flex flex-col justify-center items-center">
             <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Serie actual</p>
-            <p className="mt-2 font-display text-7xl font-black text-slate-900 dark:text-white">{setIndex + 1}</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400">de {totalSets}</p>
+            <p className="mt-2 font-display text-7xl font-black text-slate-900 dark:text-white leading-none">{setIndex + 1}</p>
+            <p className="text-xs text-slate-500 mt-1">de {totalSets}</p>
+
+            {/* Burbujas visuales de series */}
+            <div className="mt-4 flex justify-center gap-1.5">
+              {Array.from({ length: totalSets }).map((_, idx) => {
+                const isCompleted = idx < setIndex;
+                const isCurrent = idx === setIndex;
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "h-3 w-3 rounded-full transition-all duration-300",
+                      isCompleted
+                        ? "bg-primary-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+                        : isCurrent
+                          ? "bg-amber-500 animate-pulse scale-125 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                          : "bg-slate-200 dark:bg-white/10"
+                    )}
+                  />
+                );
+              })}
+            </div>
+
             {restRemaining > 0 && (
-              <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-300">Descanso</p>
-                <p className="mt-1 text-3xl font-black text-cyan-700 dark:text-cyan-100">{formatRest(restRemaining)}</p>
+              <div className="mt-4 w-full rounded-2xl border border-cyan-500/20 bg-cyan-500/5 dark:bg-cyan-500/10 p-3 shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">Descanso</p>
+                <p className="mt-1 text-3xl font-black text-cyan-500 font-mono tracking-wider">{formatRest(restRemaining)}</p>
               </div>
             )}
           </div>
@@ -826,10 +975,10 @@ function GuidedSetForm({
   const [reps, setReps] = useState(initialSet?.reps != null ? String(initialSet.reps) : "");
 
   return (
-    <Card>
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-md dark:border-white/10 dark:bg-[#14161a] transition-all duration-300">
+      <div className="grid gap-5 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Peso usado</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Peso registrado</span>
           <div className="relative mt-2">
             <input
               type="number"
@@ -837,41 +986,47 @@ function GuidedSetForm({
               step="0.5"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-2xl font-bold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-3xl font-extrabold text-slate-900 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-white/10 dark:bg-slate-950/70 dark:text-white transition-all duration-300"
               placeholder="0"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">kg</span>
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">kg</span>
           </div>
         </label>
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Reps hechas</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Repeticiones logradas</span>
           <input
             type="number"
             inputMode="numeric"
             value={reps}
             onChange={(e) => setReps(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-2xl font-bold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-3xl font-extrabold text-slate-900 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-white/10 dark:bg-slate-950/70 dark:text-white transition-all duration-300"
             placeholder={exercise.reps}
           />
         </label>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
         <Button
           size="lg"
           fullWidth
           onClick={() => onSave(weight === "" ? null : Number(weight), reps === "" ? null : Number(reps))}
           loading={isSaving}
+          className="flex-1 bg-primary-500 hover:bg-primary-600 hover:scale-[1.01] active:scale-100 transition-all font-bold uppercase tracking-wider text-sm h-14"
         >
           {nextLabel}
         </Button>
         {restRemaining > 0 && (
-          <Button size="lg" variant="secondary" onClick={onSkipRest}>
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            onClick={onSkipRest}
+            className="hover:scale-[1.01] active:scale-100 transition-all font-bold uppercase tracking-wider text-sm h-14"
+          >
             Saltar descanso
           </Button>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -881,19 +1036,25 @@ export function ClientRoutinesView() {
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [savingLog, setSavingLog] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "detail" | "tracking" | "calendar" | "session">(
+  const [view, setView] = useState<"list" | "detail" | "tracking" | "session">(
     "list",
   );
   const [sessionDay, setSessionDay] = useState<RoutineDay | null>(null);
+  const [isReadOnlySession, setIsReadOnlySession] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date | null>(null);
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [swapDayA, setSwapDayA] = useState<number | null>(null);
-  const [swapDayB, setSwapDayB] = useState<number | null>(null);
-  const [swapping, setSwapping] = useState(false);
+  const [routineView, setRoutineView] = useState<"cards" | "calendar">("cards");
+  const [showInfo, setShowInfo] = useState(false);
+  const [showWeekDropdown, setShowWeekDropdown] = useState(false);
+  const [showRoutineDropdown, setShowRoutineDropdown] = useState(false);
+  const [weekCompletedToast, setWeekCompletedToast] = useState<string | null>(null);
+
+
+  const lastRoutineId = useRef<string | null>(null);
 
   // New history and flexibility state variables
   const [activeTab, setActiveTab] = useState<"routine" | "history">("routine");
@@ -904,6 +1065,7 @@ export function ClientRoutinesView() {
 
   const refreshLogs = useCallback(async (currentRoutinesList: Routine[]) => {
     if (!user) return;
+    setLogsLoading(true);
     try {
       const allLogsPromises = currentRoutinesList.map((r) =>
         routinesService.getWorkoutLogs(r.id, user.id).catch(() => ({ data: [] }))
@@ -911,8 +1073,11 @@ export function ClientRoutinesView() {
       const logsResponses = await Promise.all(allLogsPromises);
       const combinedLogs = logsResponses.flatMap((res) => res.data ?? []);
       setLogs(combinedLogs);
+      return combinedLogs;
     } catch {
       /* ignore */
+    } finally {
+      setLogsLoading(false);
     }
   }, [user]);
 
@@ -941,12 +1106,31 @@ export function ClientRoutinesView() {
     loadData();
   }, [loadData]);
 
+
+
   const handleSelectRoutine = async (routine: Routine) => {
     setSelectedRoutine(routine);
     setView("detail");
     setActiveTab("routine"); // Reset active tab
     if (user) {
       await refreshLogs(routines);
+    }
+  };
+
+  const handleActivateRoutine = async (routineId: string) => {
+    try {
+      await routinesService.activate(routineId);
+      if (user) {
+        const res = await routinesService.getByClient(user.id);
+        const data = res.data ?? [];
+        setRoutines(data);
+        const updated = data.find((r) => r.id === routineId);
+        if (updated) {
+          setSelectedRoutine(updated);
+        }
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al activar la rutina");
     }
   };
 
@@ -1089,30 +1273,49 @@ export function ClientRoutinesView() {
   const activeRoutineLogs = useMemo(() => {
     return logs.filter((l) => activeRoutineExerciseIds.has(l.exerciseId));
   }, [logs, activeRoutineExerciseIds]);
-
-  const handleSwapDays = async () => {
-    if (!selectedRoutine || swapDayA === null || swapDayB === null) return;
-    setSwapping(true);
-    try {
-      await routinesService.swapDays(selectedRoutine.id, swapDayA, swapDayB);
-      if (user) {
-        const res = await routinesService.getByClient(user.id);
-        const data = res.data ?? [];
-        setRoutines(data);
-        const updatedRoutine = data.find((r) => r.id === selectedRoutine.id);
-        if (updatedRoutine) {
-          setSelectedRoutine(updatedRoutine);
+  useEffect(() => {
+    if (!loading && !logsLoading && selectedRoutine && lastRoutineId.current !== selectedRoutine.id) {
+      lastRoutineId.current = selectedRoutine.id;
+      const totalExercises = selectedRoutine.days.reduce(
+        (s, d) => s + d.exercises.length,
+        0,
+      );
+      let suggested = 1;
+      for (let w = 1; w <= selectedRoutine.weekCount; w++) {
+        const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
+        if (wLogs.length < totalExercises) {
+          suggested = w;
+          break;
         }
+        suggested = selectedRoutine.weekCount;
       }
-      setShowSwapModal(false);
-      setSwapDayA(null);
-      setSwapDayB(null);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al intercambiar días");
-    } finally {
-      setSwapping(false);
+      setCurrentWeek(suggested);
     }
-  };
+  }, [loading, logsLoading, selectedRoutine, activeRoutineLogs]);
+
+  const checkAndAdvanceWeek = useCallback((weekNumber: number, currentLogs: WorkoutLog[]) => {
+    if (!selectedRoutine) return;
+    const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
+    const totalExercises = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
+    if (totalExercises === 0) return;
+
+    const activeExIds = new Set(selectedRoutine.days.flatMap((d) => d.exercises.map((e) => e.id)));
+    const weekLogs = currentLogs.filter(
+      (l) => l.weekNumber === weekNumber && activeExIds.has(l.exerciseId)
+    );
+
+    if (weekLogs.length >= totalExercises) {
+      if (weekNumber === currentWeek && weekNumber < selectedRoutine.weekCount) {
+        if (view === "session") return;
+
+        setCurrentWeek(weekNumber + 1);
+        setWeekCompletedToast(`¡Completaste la Semana ${weekNumber}! Avanzamos a la Semana ${weekNumber + 1} 🚀`);
+        setTimeout(() => {
+          setWeekCompletedToast(null);
+        }, 4500);
+      }
+    }
+  }, [selectedRoutine, currentWeek, view]);
 
   const handleToggleLogExercise = async (
     exerciseId: string,
@@ -1136,7 +1339,10 @@ export function ClientRoutinesView() {
           repsDone: "done",
         });
       }
-      await refreshLogs(routines);
+      const updatedLogs = await refreshLogs(routines);
+      if (updatedLogs) {
+        checkAndAdvanceWeek(weekNumber, updatedLogs);
+      }
     } catch (err) {
       alert(
         err instanceof Error ? err.message : "Error al actualizar el registro",
@@ -1174,7 +1380,10 @@ export function ClientRoutinesView() {
         observations: observations || undefined,
         setsData,
       });
-      await refreshLogs(routines);
+      const updatedLogs = await refreshLogs(routines);
+      if (updatedLogs) {
+        checkAndAdvanceWeek(weekNumber, updatedLogs);
+      }
     } catch (err) {
       alert(
         err instanceof Error ? err.message : "Error al guardar el registro",
@@ -1189,16 +1398,16 @@ export function ClientRoutinesView() {
       (l) => l.exerciseId === exerciseId && l.weekNumber === weekNumber,
     );
   };
-
   const getExerciseLog = (exerciseId: string, weekNumber: number) => {
     return logs.find(
       (l) => l.exerciseId === exerciseId && l.weekNumber === weekNumber,
     );
   };
 
-  const startGuidedSession = (day: RoutineDay, weekNumber: number) => {
+  const startGuidedSession = (day: RoutineDay, weekNumber: number, readOnly = false) => {
     setSessionDay(day);
     setCurrentWeek(weekNumber);
+    setIsReadOnlySession(readOnly);
     setView("session");
   };
 
@@ -1277,370 +1486,7 @@ export function ClientRoutinesView() {
   }
 
   /* ── Calendar view ── */
-  if (view === "calendar" && selectedRoutine) {
-    const calDays = getCalendarDays(calYear, calMonth);
-    const today = new Date();
 
-    // Get the routine day for a calendar date
-    const getRoutineDayForDate = (date: Date) => {
-      const jsDay = date.getDay();
-      const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-      return selectedRoutine.days.find((d) => d.dayNumber === dayOfWeek);
-    };
-
-    const selectedDayInfo = calSelectedDate
-      ? getRoutineDayForDate(calSelectedDate)
-      : null;
-
-    return (
-      <>
-        <Header
-          title="Mi Rutina"
-          subtitle={selectedRoutine.name}
-          action={
-            <div className="flex gap-2">
-              {selectedRoutine.isActive && (
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => setShowSwapModal(true)}
-                >
-                  🔄 Reorganizar Días
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="md"
-                onClick={() => setView("detail")}
-              >
-                📋 Detalle
-              </Button>
-            </div>
-          }
-        />
-
-        {/* View toggle */}
-        <div className="flex items-center gap-1 mb-4 p-1 bg-neutral-100 rounded-xl w-fit dark:bg-neutral-800">
-          <button
-            onClick={() => setView("calendar")}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-          >
-            📅 Calendario
-          </button>
-          <button
-            onClick={() => setView("detail")}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700"
-          >
-            📋 Tarjetas
-          </button>
-        </div>
-
-        {/* Calendar */}
-        <Card className="mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-black text-white uppercase tracking-wider">
-                {MONTH_NAMES[calMonth]} {calYear}
-              </h2>
-              <button
-                onClick={() => {
-                  setCalMonth(today.getMonth());
-                  setCalYear(today.getFullYear());
-                  setCalSelectedDate(today);
-                }}
-                className="rounded-lg bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
-              >
-                Hoy
-              </button>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                title="Mes anterior"
-                onClick={() => {
-                  if (calMonth === 0) {
-                    setCalMonth(11);
-                    setCalYear((y) => y - 1);
-                  } else {
-                    setCalMonth((m) => m - 1);
-                  }
-                  setCalSelectedDate(null);
-                }}
-                className="rounded-xl p-2 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white transition-all"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              <button
-                title="Mes siguiente"
-                onClick={() => {
-                  if (calMonth === 11) {
-                    setCalMonth(0);
-                    setCalYear((y) => y + 1);
-                  } else {
-                    setCalMonth((m) => m + 1);
-                  }
-                  setCalSelectedDate(null);
-                }}
-                className="rounded-xl p-2 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white transition-all"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 mb-2">
-            {WEEKDAY_LABELS.map((l) => (
-              <div
-                key={l}
-                className="py-2 text-center text-xs font-medium uppercase tracking-wider text-neutral-400"
-              >
-                {l}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {calDays.map((date, idx) => {
-              if (!date) return <div key={`e-${idx}`} className="p-1" />;
-
-              const rd = getRoutineDayForDate(date);
-              const hasTraining = rd && !rd.isRestDay;
-              const hasRest = rd?.isRestDay;
-              const isSelected =
-                calSelectedDate && isSameDay(date, calSelectedDate);
-              const isTodayDate = isSameDay(date, today);
-
-              return (
-                <button
-                  key={date.toISOString()}
-                  type="button"
-                  onClick={() => setCalSelectedDate(date)}
-                  className={cn(
-                    "relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-xl text-sm transition-all",
-                    isSelected
-                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold"
-                      : isTodayDate
-                        ? "ring-2 ring-neutral-900 dark:ring-white font-semibold text-neutral-900 dark:text-white"
-                        : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800",
-                  )}
-                >
-                  {date.getDate()}
-                  {(hasTraining || hasRest) && (
-                    <div className="absolute bottom-1 flex gap-0.5">
-                      {hasTraining && (
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            isSelected ? "bg-primary-400" : "bg-primary-500",
-                          )}
-                        />
-                      )}
-                      {hasRest && !hasTraining && (
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            isSelected ? "bg-amber-400" : "bg-amber-400",
-                          )}
-                        />
-                      )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-4 flex items-center gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-              <span className="h-2 w-2 rounded-full bg-primary-500" />{" "}
-              Entrenamiento
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-              <span className="h-2 w-2 rounded-full bg-amber-400" /> Descanso
-            </div>
-          </div>
-        </Card>
-
-        {/* Selected day detail */}
-        {calSelectedDate && (
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
-              {calSelectedDate.toLocaleDateString("es", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </h3>
-
-            {selectedDayInfo ? (
-              selectedDayInfo.isRestDay ? (
-                <Card className="bg-primary-50/50 border-primary-100 dark:bg-primary-900/10 dark:border-primary-900/30">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🧘</span>
-                    <div>
-                      <p className="font-semibold text-primary-800 dark:text-primary-300">
-                        Día de descanso
-                      </p>
-                      {selectedDayInfo.restDayNote && (
-                        <p className="text-sm text-primary-600 dark:text-primary-400/70">
-                          {selectedDayInfo.restDayNote}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ) : (
-                <Card padding="sm">
-                  <div className="px-2 pt-2 pb-1 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="info">{selectedDayInfo.focusArea}</Badge>
-                      <span className="text-xs text-neutral-400">
-                        {selectedDayInfo.exercises.length} ejercicios
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-2 space-y-1.5">
-                    {selectedDayInfo.exercises.map((ex) => (
-                      <div
-                        key={ex.id}
-                        className="flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5 dark:bg-neutral-800/50"
-                      >
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                          {MUSCLE_LABELS[ex.muscleGroup] || "General"}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                            {ex.name}
-                          </p>
-                          <p className="text-xs text-neutral-400">
-                            {ex.sets} series × {ex.reps} · {formatRest(ex.restSeconds)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )
-            ) : (
-              <Card className="border-dashed">
-                <div className="text-center py-4">
-                  <span className="text-2xl">🏖️</span>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Sin actividad programada
-                  </p>
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* Day swap modal */}
-        {showSwapModal && selectedRoutine && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => {
-              setShowSwapModal(false);
-              setSwapDayA(null);
-              setSwapDayB(null);
-            }} />
-            <div className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
-              <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white">
-                🔄 Reorganizar Días
-              </h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                Intercambia el orden de dos días de tu rutina. Las bitácoras existentes de tus ejercicios no se perderán.
-              </p>
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Primer Día
-                  </label>
-                  <select
-                    value={swapDayA ?? ""}
-                    onChange={(e) => setSwapDayA(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  >
-                    <option value="">Selecciona un día</option>
-                    {selectedRoutine.days.map((day) => (
-                      <option key={day.id} value={day.dayNumber} disabled={day.dayNumber === swapDayB}>
-                        {DAY_NAMES[day.dayNumber]} — {day.isRestDay ? "🧘 Descanso" : `💪 ${day.focusArea}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Segundo Día
-                  </label>
-                  <select
-                    value={swapDayB ?? ""}
-                    onChange={(e) => setSwapDayB(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  >
-                    <option value="">Selecciona un día</option>
-                    {selectedRoutine.days.map((day) => (
-                      <option key={day.id} value={day.dayNumber} disabled={day.dayNumber === swapDayA}>
-                        {DAY_NAMES[day.dayNumber]} — {day.isRestDay ? "🧘 Descanso" : `💪 ${day.focusArea}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowSwapModal(false);
-                    setSwapDayA(null);
-                    setSwapDayB(null);
-                  }}
-                  disabled={swapping}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleSwapDays}
-                  loading={swapping}
-                  disabled={swapDayA === null || swapDayB === null || swapping}
-                >
-                  Confirmar
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
 
   /* ── Tracking view ── */
   if (view === "tracking" && selectedRoutine) {
@@ -1788,10 +1634,28 @@ export function ClientRoutinesView() {
           weekNumber={currentWeek}
           logs={activeRoutineLogs}
           isSaving={savingLog !== null}
-          onBack={() => setView("detail")}
+          onBack={async () => {
+            setView("detail");
+            const updatedLogs = await refreshLogs(routines);
+            if (updatedLogs) {
+              const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
+              const totalExercises = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
+              const activeExIds = new Set(selectedRoutine.days.flatMap((d) => d.exercises.map((e) => e.id)));
+              const weekLogs = updatedLogs.filter(
+                (l) => l.weekNumber === currentWeek && activeExIds.has(l.exerciseId)
+              );
+              if (weekLogs.length >= totalExercises && totalExercises > 0 && currentWeek < selectedRoutine.weekCount) {
+                setCurrentWeek(currentWeek + 1);
+                setWeekCompletedToast(`¡Completaste la Semana ${currentWeek}! Avanzamos a la Semana ${currentWeek + 1} 🚀`);
+                setTimeout(() => {
+                  setWeekCompletedToast(null);
+                }, 4500);
+              }
+            }
+          }}
           onSaveSet={handleSessionSaveSet}
-        />
-      </>
+          isReadOnly={isReadOnlySession}
+        />      </>
     );
   }
 
@@ -1812,24 +1676,28 @@ export function ClientRoutinesView() {
     );
     const todayIsTraining = todayDay && !todayDay.isRestDay;
 
-    // Find which week has exercises still to do (latest incomplete)
-    const findCurrentWeek = () => {
-      for (let w = 1; w <= selectedRoutine.weekCount; w++) {
-        const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
-        if (wLogs.length < totalExercises) return w;
-      }
-      return selectedRoutine.weekCount;
-    };
-    const suggestedWeek = findCurrentWeek();
-
-    // Today's exercises completion for suggested week
+    // Today's exercises completion for current week
     const todayLogged = todayDay
       ? todayDay.exercises.filter((ex) =>
           activeRoutineLogs.some(
-            (l) => l.exerciseId === ex.id && l.weekNumber === suggestedWeek,
+            (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
           ),
         ).length
       : 0;
+
+    // Calendar variables
+    const calDays = getCalendarDays(calYear, calMonth);
+    const todayDate = new Date();
+
+    const getRoutineDayForDate = (date: Date) => {
+      const jsDay = date.getDay();
+      const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+      return selectedRoutine.days.find((d) => d.dayNumber === dayOfWeek);
+    };
+
+    const selectedDayInfo = calSelectedDate
+      ? getRoutineDayForDate(calSelectedDate)
+      : null;
 
     const formatSessionDate = (dateStr: string) => {
       try {
@@ -1860,114 +1728,338 @@ export function ClientRoutinesView() {
 
     return (
       <>
-        <Header
-          title="Mi Rutina"
-          subtitle={selectedRoutine.name}
-          action={
-            <div className="flex gap-2">
-              {selectedRoutine.isActive && (
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => setShowSwapModal(true)}
-                >
-                  🔄 Reorganizar Días
-                </Button>
-              )}
-              {routines.length > 1 && (
-                <Button variant="ghost" size="md" onClick={() => setView("list")}>
-                  Ver todas
-                </Button>
-              )}
-            </div>
-          }
-        />
-
-        {selectedRoutine.isFavorable !== undefined &&
-          selectedRoutine.isFavorable !== null && (
-            <div className="mb-4">
-              <Badge
-                variant={selectedRoutine.isFavorable ? "success" : "danger"}
+        {/* Compact unified header block */}
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-slate-200/50 dark:border-white/5 pb-4">
+          <div className="flex items-center gap-3">
+            {routines.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setView("list")}
+                className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/70 text-slate-700 dark:text-slate-350 cursor-pointer transition-colors"
+                title="Ver todas las rutinas"
               >
-                {selectedRoutine.isFavorable
-                  ? "👍 Rutina Favorable"
-                  : "👎 Rutina Desfavorable"}
-              </Badge>
+                ←
+              </button>
+            )}
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-950 dark:text-white">
+                  Mi Rutina
+                </h1>
+                {selectedRoutine.isActive ? (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                    Activa
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleActivateRoutine(selectedRoutine.id)}
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 px-2 py-0.5 text-[9px] font-bold text-amber-650 dark:text-amber-400 cursor-pointer transition-colors uppercase tracking-wider animate-pulse"
+                    title="Establecer como activa"
+                  >
+                    ⚠️ Activar
+                  </button>
+                )}
+                {selectedRoutine.isFavorable !== undefined &&
+                  selectedRoutine.isFavorable !== null && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold border uppercase tracking-wider",
+                        selectedRoutine.isFavorable
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-450"
+                      )}
+                    >
+                      {selectedRoutine.isFavorable ? "👍 Favorable" : "👎 Desfavor."}
+                    </span>
+                  )}
+              </div>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400/80 mt-0.5">
+                {selectedRoutine.name}
+              </p>
             </div>
-          )}
+          </div>
 
-        {/* Tab Selector */}
-        <div className="flex border-b border-slate-200 dark:border-white/10 mb-6 gap-6">
-          <button
-            onClick={() => setActiveTab("routine")}
-            className={cn(
-              "pb-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer",
-              activeTab === "routine"
-                ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-            )}
-          >
-            📋 Mi Rutina
-          </button>
-          <button
-            onClick={() => setActiveTab("history")}
-            className={cn(
-              "pb-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer",
-              activeTab === "history"
-                ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-            )}
-          >
-            📊 Historial y Progreso
-          </button>
+          {/* Tab Selector Segmented Control */}
+          <div className="flex p-0.5 bg-slate-100 rounded-xl dark:bg-neutral-800 border border-slate-200/30 dark:border-neutral-750 self-start md:self-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab("routine")}
+              className={cn(
+                "rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer",
+                activeTab === "routine"
+                  ? "bg-white text-slate-900 shadow-xs dark:bg-slate-950 dark:text-white"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+              )}
+            >
+              📋 Rutina
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("history")}
+              className={cn(
+                "rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer",
+                activeTab === "history"
+                  ? "bg-white text-slate-900 shadow-xs dark:bg-slate-950 dark:text-white"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+              )}
+            >
+              📊 Historial
+            </button>
+          </div>
         </div>
 
         {activeTab === "routine" ? (
           <>
-            {/* View toggle */}
-            <div className="flex items-center gap-1 mb-4 p-1 bg-neutral-100 rounded-xl w-fit dark:bg-neutral-800">
-              <button
-                onClick={() => setView("calendar")}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700"
-              >
-                📅 Calendario
-              </button>
-              <button className="rounded-lg px-3 py-1.5 text-sm font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
-                📋 Tarjetas
-              </button>
-            </div>
+            {/* Control Bar — 2 rows */}
+            <div className="mb-4 p-2.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/50 dark:border-white/10 space-y-2">
+              {/* Row 1: Selectors */}
+              <div className="flex items-center gap-2">
+                {/* Routine selector */}
+                <div className="relative flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => { setShowRoutineDropdown(!showRoutineDropdown); setShowWeekDropdown(false); }}
+                    className="flex items-center gap-2 w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-bold text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-white cursor-pointer hover:border-primary-400 transition-colors"
+                  >
+                    <span className="text-sm shrink-0">💪</span>
+                    <span className="truncate flex-1">{selectedRoutine.name}</span>
+                    <svg className={cn("h-3 w-3 text-neutral-400 transition-transform shrink-0", showRoutineDropdown && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
-            {/* ── Today's Workout CTA ── */}
-            {todayIsTraining && todayDay && (
-              <div
-                className="mb-5 rounded-2xl bg-linear-to-r from-primary-500 to-primary-600 p-5 text-white cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all"
-                onClick={() => {
-                  startGuidedSession(todayDay, suggestedWeek);
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-primary-100 uppercase tracking-wider">
-                      Entrenamiento de hoy
-                    </p>
-                    <p className="text-lg font-bold mt-1">
-                      {DAY_NAMES[todayDay.dayNumber]} — {todayDay.focusArea}
-                    </p>
-                    <p className="text-sm text-primary-100 mt-1">
-                      {todayDay.exercises.length} ejercicios · Semana{" "}
-                      {suggestedWeek}
-                      {todayLogged > 0 && (
-                        <span className="ml-2 inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs">
-                          {todayLogged}/{todayDay.exercises.length} completados
+                  {showRoutineDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowRoutineDropdown(false)} />
+                      <div className="absolute left-0 right-0 mt-1.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-slate-900 z-20 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="px-2.5 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-white/5 mb-1">
+                          Seleccionar Rutina
+                        </div>
+                        {routines.map((r) => {
+                          const isSelected = selectedRoutine.id === r.id;
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => { handleSelectRoutine(r); setShowRoutineDropdown(false); }}
+                              className={cn(
+                                "flex items-center justify-between w-full rounded-lg px-2.5 py-2 text-[11px] font-bold transition-colors cursor-pointer text-left",
+                                isSelected
+                                  ? "bg-primary-500 text-white"
+                                  : r.isActive
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
+                                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-850"
+                              )}
+                            >
+                              <span className="flex items-center gap-1 truncate">
+                                {r.isActive && <span>⭐️</span>}
+                                <span className="truncate">{r.name}</span>
+                              </span>
+                              <span className={cn(
+                                "text-[9px] font-bold px-2 py-0.5 rounded shrink-0 ml-2",
+                                isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-neutral-800 text-slate-400"
+                              )}>
+                                {r.days.filter((d) => !d.isRestDay).length}d · {r.weekCount}s
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Week selector */}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setShowWeekDropdown(!showWeekDropdown); setShowRoutineDropdown(false); }}
+                    className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-bold text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-white cursor-pointer hover:border-primary-400 transition-colors"
+                  >
+                    <span>Sem. {currentWeek}</span>
+                    {(() => {
+                      const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === currentWeek);
+                      const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
+                      const wTotal = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
+                      return (
+                        <span className="text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 dark:text-neutral-400">
+                          {wLogs.length}/{wTotal}
                         </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-                    <span className="text-2xl">💪</span>
-                  </div>
+                      );
+                    })()}
+                    <svg className={cn("h-3 w-3 text-neutral-400 transition-transform", showWeekDropdown && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showWeekDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowWeekDropdown(false)} />
+                      <div className="absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-slate-900 z-20 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {Array.from({ length: selectedRoutine.weekCount }, (_, i) => i + 1).map((w) => {
+                          const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
+                          const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
+                          const wTotal = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
+                          const wDone = wLogs.length;
+                          const isSelected = currentWeek === w;
+                          const isCompleted = wDone > 0 && wDone === wTotal;
+                          return (
+                            <button
+                              key={w}
+                              type="button"
+                              onClick={() => { setCurrentWeek(w); setShowWeekDropdown(false); }}
+                              className={cn(
+                                "flex items-center justify-between w-full rounded-lg px-2.5 py-2 text-[11px] font-bold transition-colors cursor-pointer",
+                                isSelected
+                                  ? "bg-primary-500 text-white"
+                                  : isCompleted
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
+                                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-850"
+                              )}
+                            >
+                              <span className="flex items-center gap-1">
+                                {isCompleted && <span>✅</span>}
+                                <span>Semana {w}</span>
+                              </span>
+                              {wTotal > 0 && (
+                                <span className={cn(
+                                  "text-[9px] font-bold px-2 py-0.5 rounded",
+                                  isSelected ? "bg-white/20 text-white" : isCompleted ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                                )}>
+                                  {wDone}/{wTotal}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* Row 2: View toggle + Info */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-0 p-0.5 bg-neutral-100 rounded-xl dark:bg-neutral-800 border border-neutral-200/30 dark:border-neutral-700">
+                  <button
+                    type="button"
+                    onClick={() => setRoutineView("calendar")}
+                    className={cn(
+                      "rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                      routineView === "calendar"
+                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400"
+                    )}
+                  >
+                    📅 Calendario
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoutineView("cards")}
+                    className={cn(
+                      "rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                      routineView === "cards"
+                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400"
+                    )}
+                  >
+                    📋 Tarjetas
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInfo(!showInfo)}
+                  className={cn(
+                    "flex h-7 px-3 items-center gap-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer",
+                    showInfo
+                      ? "bg-primary-500 border-primary-500 text-white"
+                      : "bg-white border-slate-200/80 text-slate-500 hover:bg-slate-50 dark:bg-slate-950/70 dark:border-white/10 dark:text-slate-400"
+                  )}
+                >
+                  {showInfo ? "✕ Ocultar" : "ℹ️ Guía"}
+                </button>
+              </div>
+            </div>
+
+            {showInfo && (
+              <div className="mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                {selectedRoutine.description && (
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {selectedRoutine.description}
+                  </p>
+                )}
+                <div className="flex items-start gap-2.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-slate-200/50 dark:border-white/5 pt-2.5">
+                  <span className="text-sm shrink-0">💡</span>
+                  <p>
+                    <strong>¿Cómo usar tu rutina?</strong> Puedes cambiar de semana arriba para planificar o registrar. Para entrenar hoy, pulsa el botón &quot;Comenzar&quot; o inicia cualquier día de la rutina. Si ya completaste un día, pulsa &quot;Comenzar&quot; o el día para ver tus series registradas en modo lectura.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {todayIsTraining && todayDay && (
+              (() => {
+                const isTodayCompleted = todayDay.exercises.length > 0 && todayDay.exercises.every(ex =>
+                  activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
+                );
+
+                if (isTodayCompleted) {
+                  return (
+                    <div className="mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-5 text-emerald-700 dark:text-emerald-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">
+                            Entrenamiento de hoy completado
+                          </p>
+                          <p className="text-lg font-bold mt-1">
+                            {DAY_NAMES[todayDay.dayNumber]} — {todayDay.focusArea}
+                          </p>
+                          <p className="text-sm text-emerald-600 dark:text-emerald-500/80 mt-1">
+                            ¡Buen trabajo! Has completado tu entrenamiento de hoy. 🏆
+                          </p>
+                        </div>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20">
+                          <span className="text-2xl">🏆</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    className="mb-5 rounded-2xl bg-linear-to-r from-primary-500 to-primary-600 p-5 text-white cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all"
+                    onClick={() => {
+                      startGuidedSession(todayDay, currentWeek);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-primary-100 uppercase tracking-wider">
+                          Entrenamiento de hoy
+                        </p>
+                        <p className="text-lg font-bold mt-1">
+                          {DAY_NAMES[todayDay.dayNumber]} — {todayDay.focusArea}
+                        </p>
+                        <p className="text-sm text-primary-100 mt-1">
+                          {todayDay.exercises.length} ejercicios · Semana{" "}
+                          {currentWeek}
+                          {todayLogged > 0 && (
+                            <span className="ml-2 inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs">
+                              {todayLogged}/{todayDay.exercises.length} completados
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                        <span className="text-2xl">💪</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
             )}
             {todayDay?.isRestDay && (
               <div className="mb-5 rounded-2xl bg-primary-50 dark:bg-primary-900/10 p-5 border border-primary-100 dark:border-primary-900/30">
@@ -2015,12 +2107,13 @@ export function ClientRoutinesView() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   if (todayIsTraining && todayDay) {
-                    startGuidedSession(todayDay, suggestedWeek);
+                    const isTodayCompleted = todayDay.exercises.length > 0 && todayLogged === todayDay.exercises.length;
+                    startGuidedSession(todayDay, currentWeek, isTodayCompleted);
                     return;
                   }
-                  setCurrentWeek(suggestedWeek);
                   setView("tracking");
                 }}
                 className="rounded-2xl bg-neutral-900 dark:bg-white p-4 text-center hover:opacity-90 transition-opacity cursor-pointer"
@@ -2034,130 +2127,415 @@ export function ClientRoutinesView() {
               </button>
             </div>
 
-            {selectedRoutine.description && (
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-                {selectedRoutine.description}
-              </p>
-            )}
-
-            {/* Days */}
-            <div className="space-y-3">
-              {selectedRoutine.days.map((day) => {
-                const isToday = day.dayNumber === todayDayNumber;
-                // Per-day completion across all weeks
-                const dayTotalLogs = day.isRestDay
-                  ? 0
-                  : day.exercises.reduce(
-                      (count, ex) =>
-                        count + activeRoutineLogs.filter((l) => l.exerciseId === ex.id).length,
-                      0,
-                    );
-                const dayTotalPossible = day.isRestDay
-                  ? 0
-                  : day.exercises.length * selectedRoutine.weekCount;
-
-                return (
-                  <Card
-                    key={day.dayNumber}
-                    padding="sm"
-                    className={cn(
-                      isToday && "ring-2 ring-primary-500/50",
-                      !day.isRestDay &&
-                        "cursor-pointer hover:shadow-md transition-shadow",
-                    )}
-                    onClick={
-                      !day.isRestDay
-                        ? () => {
-                            setCurrentWeek(suggestedWeek);
-                            startGuidedSession(day, suggestedWeek);
-                          }
-                        : undefined
-                    }
-                  >
-                    <div className="px-2 pt-2 pb-1 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                          {DAY_NAMES[day.dayNumber]}
-                        </span>
-                        {day.isRestDay ? (
-                          <Badge variant="default">🧘 Descanso</Badge>
-                        ) : (
-                          <Badge variant="info">{day.focusArea}</Badge>
-                        )}
-                        {isToday && <Badge variant="success">Hoy</Badge>}
-                      </div>
-                      {!day.isRestDay && (
-                        <div className="flex items-center gap-2">
-                          {dayTotalLogs > 0 && (
-                            <span className="text-[10px] font-semibold text-primary-500">
-                              {dayTotalLogs}/{dayTotalPossible}
-                            </span>
-                          )}
-                          <span className="text-xs text-neutral-400">
-                            {day.exercises.length} ej.
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-primary-50 dark:bg-primary-950/40 px-2 py-0.5 text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors">
-                            ▶ Iniciar
-                          </span>
-                        </div>
-                      )}
+            {routineView === "calendar" ? (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                {/* Calendar Card */}
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                        {MONTH_NAMES[calMonth]} {calYear}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalMonth(todayDate.getMonth());
+                          setCalYear(todayDate.getFullYear());
+                          setCalSelectedDate(todayDate);
+                        }}
+                        className="rounded-lg bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 cursor-pointer"
+                      >
+                        Hoy
+                      </button>
                     </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        title="Mes anterior"
+                        onClick={() => {
+                          if (calMonth === 0) {
+                            setCalMonth(11);
+                            setCalYear((y) => y - 1);
+                          } else {
+                            setCalMonth((m) => m - 1);
+                          }
+                          setCalSelectedDate(null);
+                        }}
+                        className="rounded-xl p-2 text-slate-400 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        title="Mes siguiente"
+                        onClick={() => {
+                          if (calMonth === 11) {
+                            setCalMonth(0);
+                            setCalYear((y) => y + 1);
+                          } else {
+                            setCalMonth((m) => m + 1);
+                          }
+                          setCalSelectedDate(null);
+                        }}
+                        className="rounded-xl p-2 text-slate-400 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
 
-                    {!day.isRestDay && (
-                      <div className="mt-2 space-y-1.5">
-                        {day.exercises.map((ex) => {
-                          const exLogCount = activeRoutineLogs.filter(
-                            (l) => l.exerciseId === ex.id,
-                          ).length;
-                          const exTotal = selectedRoutine.weekCount;
-                          const exPct =
-                            exTotal > 0
-                              ? Math.round((exLogCount / exTotal) * 100)
-                              : 0;
+                  {/* Weekday headers */}
+                  <div className="grid grid-cols-7 mb-2">
+                    {WEEKDAY_LABELS.map((l) => (
+                      <div
+                        key={l}
+                        className="py-2 text-center text-xs font-semibold uppercase tracking-wider text-neutral-400"
+                      >
+                        {l}
+                      </div>
+                    ))}
+                  </div>
 
-                          return (
-                            <div
-                              key={ex.id}
-                              className={cn(
-                                "flex items-center gap-3 rounded-xl px-3 py-2.5",
-                                exLogCount > 0
-                                  ? "bg-primary-50/50 dark:bg-primary-900/10"
-                                  : "bg-neutral-50 dark:bg-neutral-800/50",
+                  {/* Calendar grid */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {calDays.map((date, idx) => {
+                      if (!date) return <div key={`e-${idx}`} className="p-1" />;
+
+                      const rd = getRoutineDayForDate(date);
+                      const hasTraining = rd && !rd.isRestDay;
+                      const hasRest = rd?.isRestDay;
+                      const isSelected =
+                        calSelectedDate && isSameDay(date, calSelectedDate);
+                      const isTodayDate = isSameDay(date, todayDate);
+
+                      return (
+                        <button
+                          key={date.toISOString()}
+                          type="button"
+                          onClick={() => setCalSelectedDate(date)}
+                          className={cn(
+                            "relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-xl text-sm transition-all cursor-pointer",
+                            isSelected
+                              ? "bg-primary-500 text-white font-bold shadow-lg shadow-primary-500/20"
+                              : isTodayDate
+                                ? "ring-2 ring-primary-500 font-semibold text-neutral-900 dark:text-white"
+                                : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
+                          )}
+                        >
+                          {date.getDate()}
+                          {(hasTraining || hasRest) && (
+                            <div className="absolute bottom-1 flex gap-0.5">
+                              {hasTraining && (
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    isSelected ? "bg-white" : "bg-primary-500",
+                                  )}
+                                />
                               )}
-                            >
-                              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                                {MUSCLE_LABELS[ex.muscleGroup] || "General"}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                                  {ex.name}
-                                </p>
-                                <p className="text-xs text-neutral-400">
-                                  {ex.sets}×{ex.reps} · {formatRest(ex.restSeconds)}
-                                </p>
-                              </div>
-                              {exLogCount > 0 && (
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <div className="w-10 h-1 rounded-full bg-neutral-200 dark:bg-neutral-700">
-                                    <div
-                                      className="h-full rounded-full bg-primary-500"
-                                      style={{ width: `${exPct}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[10px] font-medium text-primary-500">
-                                    {exLogCount}/{exTotal}
-                                  </span>
-                                </div>
+                              {hasRest && !hasTraining && (
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    isSelected ? "bg-white" : "bg-amber-400",
+                                  )}
+                                />
                               )}
                             </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-4 flex items-center gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                      <span className="h-2 w-2 rounded-full bg-primary-500" />{" "}
+                      Entrenamiento
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                      <span className="h-2 w-2 rounded-full bg-amber-400" /> Descanso
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Selected day detail */}
+                {calSelectedDate && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <h3 className="text-base font-semibold text-neutral-900 dark:text-white capitalize">
+                      {calSelectedDate.toLocaleDateString("es", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                    </h3>
+
+                    {selectedDayInfo ? (
+                      selectedDayInfo.isRestDay ? (
+                        <Card className="bg-primary-50/50 border-primary-100 dark:bg-primary-900/10 dark:border-primary-900/30">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">🧘</span>
+                            <div>
+                              <p className="font-semibold text-primary-800 dark:text-primary-300">
+                                Día de descanso
+                              </p>
+                              {selectedDayInfo.restDayNote && (
+                                <p className="text-sm text-primary-600 dark:text-primary-400/70">
+                                  {selectedDayInfo.restDayNote}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ) : (
+                        (() => {
+                          const isDayCompleted = !selectedDayInfo.isRestDay && selectedDayInfo.exercises.length > 0 && selectedDayInfo.exercises.every(ex =>
+                            activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
                           );
-                        })}
-                      </div>
+
+                          return (
+                            <Card
+                              padding="sm"
+                              className={cn(
+                                "cursor-pointer hover:shadow-md transition-shadow",
+                                isDayCompleted && "border-emerald-500/20 dark:border-emerald-500/10 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.01]"
+                              )}
+                              onClick={() => {
+                                startGuidedSession(selectedDayInfo, currentWeek, isDayCompleted);
+                              }}
+                            >
+                              <div className="px-2 pt-2 pb-1 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="info">{selectedDayInfo.focusArea}</Badge>
+                                  <span className="text-xs text-neutral-400">
+                                    {selectedDayInfo.exercises.length} ejercicios
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isDayCompleted ? (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                      ✓ Completado
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-primary-50 dark:bg-primary-950/40 px-2 py-0.5 text-xs font-bold text-primary-600 dark:text-primary-400">
+                                      ▶ Iniciar
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="mt-2 space-y-1.5">
+                                {selectedDayInfo.exercises.map((ex) => {
+                                  const isExLoggedCurrentWeek = activeRoutineLogs.some(
+                                    (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek
+                                  );
+
+                                  return (
+                                    <div
+                                      key={ex.id}
+                                      className={cn(
+                                        "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors border",
+                                        isExLoggedCurrentWeek
+                                          ? "bg-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/5 dark:border-emerald-500/10"
+                                          : "bg-neutral-50 dark:bg-neutral-800/50 border-transparent",
+                                      )}
+                                    >
+                                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                        {MUSCLE_LABELS[ex.muscleGroup] || "General"}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                                          {ex.name}
+                                        </p>
+                                        <p className="text-xs text-neutral-400">
+                                          {ex.sets}×{ex.reps} · {formatRest(ex.restSeconds)}
+                                        </p>
+                                      </div>
+                                      {isExLoggedCurrentWeek && (
+                                        <span className="text-emerald-500 font-bold text-xs shrink-0 mr-1">✓</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </Card>
+                          );
+                        })()
+                      )
+                    ) : (
+                      <Card className="border-dashed">
+                        <div className="text-center py-4">
+                          <span className="text-2xl">🏖️</span>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            Sin actividad programada
+                          </p>
+                        </div>
+                      </Card>
                     )}
-                  </Card>
-                );
-              })}
-            </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Days Cards List View */
+              <div className="space-y-3">
+                {selectedRoutine.days.map((day) => {
+                  const isToday = day.dayNumber === todayDayNumber;
+                  // Per-day completion across all weeks
+                  const dayTotalLogs = day.isRestDay
+                    ? 0
+                    : day.exercises.reduce(
+                        (count, ex) =>
+                          count + activeRoutineLogs.filter((l) => l.exerciseId === ex.id).length,
+                        0,
+                      );
+                  const dayTotalPossible = day.isRestDay
+                    ? 0
+                    : day.exercises.length * selectedRoutine.weekCount;
+
+                  const isDayCompleted = !day.isRestDay && day.exercises.length > 0 && day.exercises.every(ex =>
+                    activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
+                  );
+
+                  return (
+                    <Card
+                      key={day.dayNumber}
+                      padding="sm"
+                      className={cn(
+                        isToday && "ring-2 ring-primary-500/50",
+                        !day.isRestDay &&
+                          "cursor-pointer hover:shadow-md transition-shadow",
+                        isDayCompleted && "border-emerald-500/20 dark:border-emerald-500/10 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.01]"
+                      )}
+                      onClick={
+                        !day.isRestDay
+                          ? () => {
+                              startGuidedSession(day, currentWeek, isDayCompleted);
+                            }
+                          : undefined
+                      }
+                    >
+                      <div className="px-2 pt-2 pb-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-neutral-900 dark:text-white">
+                            {DAY_NAMES[day.dayNumber]}
+                          </span>
+                          {day.isRestDay ? (
+                            <Badge variant="default">🧘 Descanso</Badge>
+                          ) : (
+                            <Badge variant="info">{day.focusArea}</Badge>
+                          )}
+                          {isToday && <Badge variant="success">Hoy</Badge>}
+                        </div>
+                        {!day.isRestDay && (
+                          <div className="flex items-center gap-2">
+                            {dayTotalLogs > 0 && (
+                              <span className="text-[10px] font-semibold text-primary-500">
+                                {dayTotalLogs}/{dayTotalPossible}
+                              </span>
+                            )}
+                            <span className="text-xs text-neutral-400">
+                              {day.exercises.length} ej.
+                            </span>
+                            {isDayCompleted ? (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                ✓ Completado
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-primary-50 dark:bg-primary-950/40 px-2 py-0.5 text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors">
+                                ▶ Iniciar
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {!day.isRestDay && (
+                        <div className="mt-2 space-y-1.5">
+                          {day.exercises.map((ex) => {
+                            const exLogCount = activeRoutineLogs.filter(
+                              (l) => l.exerciseId === ex.id,
+                            ).length;
+                            const exTotal = selectedRoutine.weekCount;
+                            const exPct =
+                              exTotal > 0
+                                ? Math.round((exLogCount / exTotal) * 100)
+                                : 0;
+
+                            const isExLoggedCurrentWeek = activeRoutineLogs.some(
+                              (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek
+                            );
+
+                            return (
+                              <div
+                                key={ex.id}
+                                className={cn(
+                                  "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors border",
+                                  isExLoggedCurrentWeek
+                                    ? "bg-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/5 dark:border-emerald-500/10"
+                                    : "bg-neutral-50 dark:bg-neutral-800/50 border-transparent",
+                                )}
+                              >
+                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                  {MUSCLE_LABELS[ex.muscleGroup] || "General"}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                                    {ex.name}
+                                  </p>
+                                  <p className="text-xs text-neutral-400">
+                                    {ex.sets}×{ex.reps} · {formatRest(ex.restSeconds)}
+                                  </p>
+                                </div>
+                                {isExLoggedCurrentWeek && (
+                                  <span className="text-emerald-500 font-bold text-xs shrink-0 mr-1">✓</span>
+                                )}
+                                {exLogCount > 0 && (
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="w-10 h-1 rounded-full bg-neutral-200 dark:bg-neutral-700">
+                                      <div
+                                        className="h-full rounded-full bg-primary-500"
+                                        style={{ width: `${exPct}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] font-medium text-primary-500">
+                                      {exLogCount}/{exTotal}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -2399,82 +2777,11 @@ export function ClientRoutinesView() {
           </div>
         )}
 
-        {/* Day swap modal */}
-        {showSwapModal && selectedRoutine && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => {
-              setShowSwapModal(false);
-              setSwapDayA(null);
-              setSwapDayB(null);
-            }} />
-            <div className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
-              <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white">
-                🔄 Reorganizar Días
-              </h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                Intercambia el orden de dos días de tu rutina. Las bitácoras existentes de tus ejercicios no se perderán.
-              </p>
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Primer Día
-                  </label>
-                  <select
-                    value={swapDayA ?? ""}
-                    onChange={(e) => setSwapDayA(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  >
-                    <option value="">Selecciona un día</option>
-                    {selectedRoutine.days.map((day) => (
-                      <option key={day.id} value={day.dayNumber} disabled={day.dayNumber === swapDayB}>
-                        {DAY_NAMES[day.dayNumber]} — {day.isRestDay ? "🧘 Descanso" : `💪 ${day.focusArea}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Segundo Día
-                  </label>
-                  <select
-                    value={swapDayB ?? ""}
-                    onChange={(e) => setSwapDayB(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-primary-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  >
-                    <option value="">Selecciona un día</option>
-                    {selectedRoutine.days.map((day) => (
-                      <option key={day.id} value={day.dayNumber} disabled={day.dayNumber === swapDayA}>
-                        {DAY_NAMES[day.dayNumber]} — {day.isRestDay ? "🧘 Descanso" : `💪 ${day.focusArea}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowSwapModal(false);
-                    setSwapDayA(null);
-                    setSwapDayB(null);
-                  }}
-                  disabled={swapping}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleSwapDays}
-                  loading={swapping}
-                  disabled={swapDayA === null || swapDayB === null || swapping}
-                >
-                  Confirmar
-                </Button>
-              </div>
-            </div>
+        {/* Floating toast notification for week completion */}
+        {weekCompletedToast && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-2xl bg-emerald-500/90 backdrop-blur-md px-4 py-3 shadow-lg border border-emerald-400/30 text-white animate-bounce text-sm font-semibold">
+            <span>🎉</span>
+            <span>{weekCompletedToast}</span>
           </div>
         )}
       </>

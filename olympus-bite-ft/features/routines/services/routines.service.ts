@@ -57,4 +57,7 @@ export const routinesService = {
       dayNumberA,
       dayNumberB,
     }),
+
+  activate: (routineId: string) =>
+    api.put<ApiResponse<Routine>>(`/routines/${routineId}/activate`, {}),
 };

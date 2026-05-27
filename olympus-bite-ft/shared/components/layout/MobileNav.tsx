@@ -109,15 +109,17 @@ function MoreMenu({ pathname }: { pathname: string }) {
   }, [open]);
 
   // Close on route change
+  const lastPathname = useRef(pathname);
   useEffect(() => {
-    if (open) {
+    if (pathname !== lastPathname.current) {
+      lastPathname.current = pathname;
       const timer = setTimeout(() => setOpen(false), 0);
       return () => clearTimeout(timer);
     }
-  }, [pathname, open]);
+  }, [pathname]);
 
   return (
-    <div ref={ref} className="relative flex flex-col items-center">
+    <div ref={ref} className="relative flex flex-col items-center flex-1 w-full">
       {/* Backdrop overlay */}
       {open && (
         <div
@@ -128,7 +130,7 @@ function MoreMenu({ pathname }: { pathname: string }) {
 
       {/* Popover panel */}
       {open && (
-        <div className="absolute bottom-full mb-3 z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_16px_48px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-white/10 dark:bg-[#14161a]/95 dark:shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
+        <div className="absolute bottom-full mb-3 right-0 z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_16px_48px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-white/10 dark:bg-[#14161a]/95 dark:shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
           {items.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -155,14 +157,14 @@ function MoreMenu({ pathname }: { pathname: string }) {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex flex-col items-center justify-center gap-1.5 rounded-2xl min-w-[72px] px-2 py-2 transition-all duration-300 relative",
+          "flex flex-col items-center justify-center gap-1.5 rounded-2xl w-full py-2 transition-all duration-300 relative",
           hasActiveChild && !open
             ? "text-primary-500"
             : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
         )}
       >
         {hasActiveChild && !open && (
-          <div className="absolute inset-0 rounded-2xl bg-primary-500/10 border border-primary-500/20" />
+          <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/20" />
         )}
         <div className="relative z-10 transition-transform duration-300">
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,8 +187,8 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/60 bg-white/90 shadow-[0_-8px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl lg:hidden dark:border-white/8 dark:bg-[#0c0d10]/90 dark:shadow-[0_-8px_40px_rgba(0,0,0,0.5)]">
-      <div className="flex items-center justify-around px-2 py-2 safe-bottom">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg rounded-3xl border border-slate-200/80 bg-white/85 shadow-[0_12px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-[#0c0d10]/85 dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+      <div className="flex items-center justify-between p-1.5">
         {mainNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -194,7 +196,7 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 rounded-2xl min-w-[64px] px-3 py-2 transition-all duration-300 relative",
+                "flex flex-col items-center justify-center gap-1 rounded-2xl flex-1 py-2 transition-all duration-300 relative",
                 isActive
                   ? "text-primary-500"
                   : "text-slate-500 active:text-slate-800 dark:active:text-slate-300"
@@ -202,7 +204,7 @@ export function MobileNav() {
             >
               {/* Subtle glow background on active */}
               {isActive && (
-                <div className="absolute inset-0 rounded-2xl bg-primary-500/10 border border-primary-500/15 shadow-[0_0_20px_rgba(16,185,129,0.12)]" />
+                <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/15 shadow-[0_0_20px_rgba(16,185,129,0.12)]" />
               )}
 
               <div className={cn(
@@ -221,7 +223,7 @@ export function MobileNav() {
 
               {/* Active dot indicator */}
               {isActive && (
-                <div className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
               )}
             </Link>
           );

@@ -13,6 +13,7 @@ import {
 } from '../application/use-cases/log-workout.use-case';
 import { EvaluateRoutineUseCase } from '../application/use-cases/evaluate-routine.use-case';
 import { ROUTINE_REPOSITORY } from '../domain/ports/routine.repository.port';
+import { ActivateRoutineUseCase } from '../application/use-cases/activate-routine.use-case';
 
 // Exercise Dictionary
 import { ExerciseDictionaryController } from './adapters/http/exercise-dictionary.controller';
@@ -40,6 +41,7 @@ import { DeleteDictExerciseUseCase } from '../application/use-cases/delete-dict-
     GetRoutinesByClientUseCase,
     LogWorkoutUseCase,
     EvaluateRoutineUseCase,
+    ActivateRoutineUseCase,
     {
       provide: EXERCISE_DICTIONARY_REPOSITORY,
       useClass: PrismaExerciseDictionaryRepository,
