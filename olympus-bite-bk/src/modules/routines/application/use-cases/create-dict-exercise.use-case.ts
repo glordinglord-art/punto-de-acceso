@@ -25,6 +25,15 @@ export class CreateDictExerciseUseCase {
       name: dto.name,
       muscleGroup: dto.muscleGroup,
       videoUrl: dto.videoUrl,
+      equipment: dto.equipment,
+      category: dto.category,
+      target: dto.target,
+      gifUrl: dto.gifUrl,
+      imageUrl: dto.imageUrl,
+      instructionsEs: dto.instructionsEs,
+      instructionStepsEs: dto.instructionStepsEs,
+      secondaryMuscles: dto.secondaryMuscles,
+      attribution: dto.attribution,
     });
 
     return this.repository.save(newExercise);

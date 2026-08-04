@@ -25,6 +25,15 @@ export interface CreateExerciseDictionaryProps {
   name: string;
   muscleGroup: string;
   videoUrl?: string | null;
+  equipment?: string | null;
+  category?: string | null;
+  target?: string | null;
+  gifUrl?: string | null;
+  imageUrl?: string | null;
+  instructionsEs?: string | null;
+  instructionStepsEs?: string[];
+  secondaryMuscles?: string[];
+  attribution?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -34,6 +43,15 @@ export class ExerciseDictionary {
   public name: string;
   public muscleGroup: string;
   public videoUrl: string | null;
+  public equipment: string | null;
+  public category: string | null;
+  public target: string | null;
+  public gifUrl: string | null;
+  public imageUrl: string | null;
+  public instructionsEs: string | null;
+  public instructionStepsEs: string[];
+  public secondaryMuscles: string[];
+  public attribution: string | null;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -42,6 +60,15 @@ export class ExerciseDictionary {
     this.name = props.name;
     this.muscleGroup = props.muscleGroup;
     this.videoUrl = props.videoUrl ?? null;
+    this.equipment = props.equipment ?? null;
+    this.category = props.category ?? null;
+    this.target = props.target ?? null;
+    this.gifUrl = props.gifUrl ?? null;
+    this.imageUrl = props.imageUrl ?? null;
+    this.instructionsEs = props.instructionsEs ?? null;
+    this.instructionStepsEs = props.instructionStepsEs ?? [];
+    this.secondaryMuscles = props.secondaryMuscles ?? [];
+    this.attribution = props.attribution ?? null;
     this.createdAt = props.createdAt ?? new Date();
     this.updatedAt = props.updatedAt ?? new Date();
   }

@@ -4,10 +4,28 @@ export const EXERCISE_DICTIONARY_REPOSITORY = Symbol(
   'EXERCISE_DICTIONARY_REPOSITORY',
 );
 
+export interface ExerciseDictFilterParams {
+  search?: string;
+  muscleGroup?: string;
+  equipment?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ExerciseDictPaginatedResult {
+  data: ExerciseDictionary[];
+  total: number;
+}
+
 export interface ExerciseDictionaryRepositoryPort {
   save(exercise: ExerciseDictionary): Promise<ExerciseDictionary>;
   findById(id: string): Promise<ExerciseDictionary | null>;
   findByName(name: string): Promise<ExerciseDictionary | null>;
   findAll(): Promise<ExerciseDictionary[]>;
+  findFiltered(
+    filters: ExerciseDictFilterParams,
+  ): Promise<ExerciseDictPaginatedResult>;
+  upsertByName(exercise: ExerciseDictionary): Promise<ExerciseDictionary>;
   delete(id: string): Promise<void>;
 }

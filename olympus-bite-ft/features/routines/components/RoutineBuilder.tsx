@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   exerciseDictionaryService,
   type ExerciseDict,
@@ -13,6 +13,9 @@ import { MUSCLE_GROUPS } from "@/shared/lib/constants";
 import { cn } from "@/shared/lib/utils";
 import type { User } from "@/shared/types/common.types";
 import type { Routine } from "@/features/routines/types/routines.types";
+import { ExerciseInfoModal } from "./ExerciseInfoModal";
+import { ExercisePickerModal } from "./ExercisePickerModal";
+import { Dumbbell, Eye, Search, Sparkles } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────── */
 
@@ -68,7 +71,146 @@ const emptyDay = (dayNumber: number): DayForm => ({
   exercises: [emptyExercise()],
 });
 
-/* ─── Component ───────────────────────────────── */
+/* ─── Autocomplete Dropdown ──────────────────── */
+
+function ExerciseAutocomplete({
+  value,
+  dictionary,
+  onChange,
+  onOpenPicker,
+}: {
+  value: string;
+  dictionary: ExerciseDict[];
+  onChange: (name: string, match: ExerciseDict | null) => void;
+  onOpenPicker: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputVal, setInputVal] = useState(value);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setInputVal(value);
+  }, [value]);
+
+  const filtered = inputVal.length >= 2
+    ? dictionary
+        .filter((d) =>
+          d.name.toLowerCase().includes(inputVal.toLowerCase()),
+        )
+        .slice(0, 8)
+    : [];
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
+          Nombre del ejercicio
+        </label>
+        <button
+          type="button"
+          onClick={onOpenPicker}
+          className="inline-flex items-center gap-1 text-xs font-bold text-primary-400 hover:text-primary-300 uppercase tracking-wider transition-colors"
+        >
+          <Search className="w-3.5 h-3.5" /> Catálogo (1,324 GIFs)
+        </button>
+      </div>
+
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Ej: Press de banca plano..."
+          value={inputVal}
+          onChange={(e) => {
+            const v = e.target.value;
+            setInputVal(v);
+            setIsOpen(v.length >= 2);
+            const match = dictionary.find(
+              (d) => d.name.toLowerCase() === v.toLowerCase(),
+            );
+            onChange(v, match ?? null);
+          }}
+          onFocus={() => {
+            if (inputVal.length >= 2) setIsOpen(true);
+          }}
+          className="w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-white placeholder:text-slate-400 transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+        />
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-[320px] overflow-y-auto rounded-2xl border border-white/15 bg-[#1a1c23]/98 backdrop-blur-xl shadow-2xl shadow-black/50">
+          {filtered.map((ex) => {
+            const mg =
+              MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
+            return (
+              <button
+                key={ex.id}
+                type="button"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-white/8 transition-colors first:rounded-t-2xl last:rounded-b-2xl group"
+                onClick={() => {
+                  setInputVal(ex.name);
+                  setIsOpen(false);
+                  onChange(ex.name, ex);
+                }}
+              >
+                {ex.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={ex.imageUrl}
+                    alt=""
+                    className="h-10 w-10 rounded-lg object-cover bg-black/30 border border-white/5 shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-4 h-4 text-slate-500" />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate leading-tight">
+                    {ex.name}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-primary-400">
+                      {mg?.icon} {mg?.label || ex.muscleGroup}
+                    </span>
+                    {ex.equipment && (
+                      <>
+                        <span className="text-slate-600">·</span>
+                        <span className="text-[11px] text-slate-400 capitalize">
+                          {ex.equipment}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {ex.gifUrl && (
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                    GIF
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────── */
 
 export function RoutineBuilder({
   clients,
@@ -125,10 +267,30 @@ export function RoutineBuilder({
     isEditing ? "days" : "info",
   );
   const [activeDayIdx, setActiveDayIdx] = useState(0);
+  const [previewExercise, setPreviewExercise] = useState<ExerciseDict | null>(
+    null,
+  );
+  const [pickerTarget, setPickerTarget] = useState<{
+    dayIdx: number;
+    exIdx: number;
+  } | null>(null);
 
   useEffect(() => {
     exerciseDictionaryService.getAll().then(setDictionary).catch(console.error);
   }, []);
+
+  const findDictEntry = (name: string): ExerciseDict | null => {
+    if (!name) return null;
+    const q = name.toLowerCase().trim();
+    return (
+      dictionary.find(
+        (d) =>
+          d.name.toLowerCase() === q ||
+          d.name.toLowerCase().includes(q) ||
+          q.includes(d.name.toLowerCase()),
+      ) ?? null
+    );
+  };
 
   /* ─── Helpers ─────────────────────────────── */
 
@@ -201,7 +363,6 @@ export function RoutineBuilder({
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      // Clean up any empty strings from sets or restSeconds
       const cleanedForm = {
         ...form,
         days: form.days.map((d) => ({
@@ -408,73 +569,98 @@ export function RoutineBuilder({
                   </h4>
                 </div>
 
-                {day.exercises.map((ex, exIdx) => (
-                  <div
-                    key={exIdx}
-                    className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4 transition-all hover:bg-white/[0.04]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <Badge variant="default" className="text-sm px-3 py-1 bg-white/10 text-white">#{exIdx + 1}</Badge>
-                      {day.exercises.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeExercise(activeDayIdx, exIdx)}
-                          className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
-                        >
-                          Eliminar
-                        </button>
-                      )}
-                    </div>
+                {day.exercises.map((ex, exIdx) => {
+                  const matchedEntry = findDictEntry(ex.name);
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Input
-                        label="Nombre"
-                        placeholder="Ej: Press banca plano"
-                        value={ex.name}
-                        list="exercise-dictionary"
-                        onChange={(e) => {
-                          const newName = e.target.value;
-                          const match = dictionary.find(
-                            (d) => d.name === newName,
-                          );
-                          updateExercise(activeDayIdx, exIdx, {
-                            name: newName,
-                            ...(match
-                              ? { muscleGroup: match.muscleGroup }
-                              : {}),
-                          });
-                        }}
-                      />
-                      <div className="space-y-1.5 flex flex-col justify-end">
-                        <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
-                          Grupo muscular
-                        </label>
-                        {dictionary.some(
-                          (d) => d.name.toLowerCase() === ex.name.toLowerCase(),
-                        ) ? (
-                          <div
-                            className="w-full rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-slate-400 cursor-not-allowed flex items-center justify-between"
-                            title="El grupo muscular se asigna automáticamente al seleccionar un ejercicio del diccionario."
+                  return (
+                    <div
+                      key={exIdx}
+                      className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4 transition-all hover:bg-white/[0.04]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Badge variant="default" className="text-sm px-3 py-1 bg-white/10 text-white">#{exIdx + 1}</Badge>
+                        {day.exercises.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeExercise(activeDayIdx, exIdx)}
+                            className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
                           >
-                            <span className="flex items-center gap-2 font-semibold tracking-wide">
-                              <span className="text-lg">{MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS]?.icon}</span>
-                              {MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS]?.label || "No definido"}
-                            </span>
-                            <svg
-                              className="h-4 w-4 opacity-50"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                              />
-                            </svg>
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Live GIF & Technique Preview Banner */}
+                      {matchedEntry && (
+                        <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-primary-500/10 border border-primary-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="relative h-20 w-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={matchedEntry.gifUrl || matchedEntry.imageUrl || ''}
+                              alt={matchedEntry.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                            {matchedEntry.gifUrl && (
+                              <span className="absolute bottom-1 right-1 text-[8px] font-extrabold text-emerald-400 bg-black/80 px-1 py-0.5 rounded border border-emerald-500/30">
+                                GIF
+                              </span>
+                            )}
                           </div>
-                        ) : (
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black uppercase tracking-wider text-primary-400">
+                                {MUSCLE_GROUPS[matchedEntry.muscleGroup as keyof typeof MUSCLE_GROUPS]?.icon}{" "}
+                                {MUSCLE_GROUPS[matchedEntry.muscleGroup as keyof typeof MUSCLE_GROUPS]?.label || matchedEntry.muscleGroup}
+                              </span>
+                              {matchedEntry.equipment && (
+                                <span className="text-[10px] text-slate-300 capitalize bg-white/10 px-2 py-0.5 rounded border border-white/10">
+                                  {matchedEntry.equipment}
+                                </span>
+                              )}
+                            </div>
+                            {matchedEntry.instructionsEs ? (
+                              <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                                {matchedEntry.instructionsEs}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-slate-400 italic">
+                                Ejercicio del catálogo vinculado correctamente con GIF.
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewExercise(matchedEntry)}
+                            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all shrink-0"
+                            title="Ver técnica completa en pantalla grande"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <ExerciseAutocomplete
+                          value={ex.name}
+                          dictionary={dictionary}
+                          onChange={(newName, match) => {
+                            updateExercise(activeDayIdx, exIdx, {
+                              name: newName,
+                              ...(match
+                                ? { muscleGroup: match.muscleGroup }
+                                : {}),
+                            });
+                          }}
+                          onOpenPicker={() =>
+                            setPickerTarget({ dayIdx: activeDayIdx, exIdx })
+                          }
+                        />
+
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
+                            Grupo muscular
+                          </label>
                           <select
                             value={ex.muscleGroup}
                             onChange={(e) =>
@@ -482,7 +668,6 @@ export function RoutineBuilder({
                                 muscleGroup: e.target.value,
                               })
                             }
-                            title="Selecciona el grupo muscular ya que este ejercicio no está en el diccionario."
                             className="w-full rounded-2xl border border-white/12 bg-[#1a1c23] px-4 py-3 text-sm text-white transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 appearance-none font-semibold tracking-wide"
                           >
                             {Object.entries(MUSCLE_GROUPS).map(([key, val]) => (
@@ -491,125 +676,125 @@ export function RoutineBuilder({
                               </option>
                             ))}
                           </select>
-                        )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <Input
-                        label="Series"
-                        type="number"
-                        min={1}
-                        value={ex.sets}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateExercise(activeDayIdx, exIdx, {
-                            sets: val === "" ? "" : Number(val),
-                          });
-                        }}
-                        onBlur={() => {
-                          if (ex.sets === "") {
-                            updateExercise(activeDayIdx, exIdx, { sets: 1 });
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Input
+                          label="Series"
+                          type="number"
+                          min={1}
+                          value={ex.sets}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateExercise(activeDayIdx, exIdx, {
+                              sets: val === "" ? "" : Number(val),
+                            });
+                          }}
+                          onBlur={() => {
+                            if (ex.sets === "") {
+                              updateExercise(activeDayIdx, exIdx, { sets: 1 });
+                            }
+                          }}
+                        />
+                        <Input
+                          label="Reps"
+                          placeholder="8-12"
+                          value={ex.reps}
+                          onChange={(e) =>
+                            updateExercise(activeDayIdx, exIdx, {
+                              reps: e.target.value,
+                            })
                           }
-                        }}
-                      />
+                        />
+                        <div className="space-y-1.5">
+                          <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
+                            Descanso
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={59}
+                              placeholder="0"
+                              className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                              value={
+                                ex.restSeconds === ""
+                                  ? ""
+                                  : Math.floor(Number(ex.restSeconds) / 60) || ""
+                              }
+                              onChange={(e) => {
+                                const mins =
+                                  e.target.value === ""
+                                    ? 0
+                                    : parseInt(e.target.value, 10);
+                                const currentSecs =
+                                  ex.restSeconds === ""
+                                    ? 0
+                                    : Number(ex.restSeconds) % 60;
+                                updateExercise(activeDayIdx, exIdx, {
+                                  restSeconds: mins * 60 + currentSecs,
+                                });
+                              }}
+                            />
+                            <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                              min
+                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={59}
+                              placeholder="0"
+                              className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                              value={
+                                ex.restSeconds === ""
+                                  ? ""
+                                  : Number(ex.restSeconds) % 60 || ""
+                              }
+                              onChange={(e) => {
+                                const secs =
+                                  e.target.value === ""
+                                    ? 0
+                                    : Math.min(
+                                        59,
+                                        parseInt(e.target.value, 10),
+                                      );
+                                const currentMins =
+                                  ex.restSeconds === ""
+                                    ? 0
+                                    : Math.floor(Number(ex.restSeconds) / 60);
+                                updateExercise(activeDayIdx, exIdx, {
+                                  restSeconds: currentMins * 60 + secs,
+                                });
+                              }}
+                              onBlur={() => {
+                                if (ex.restSeconds === "") {
+                                  updateExercise(activeDayIdx, exIdx, {
+                                    restSeconds: 0,
+                                  });
+                                }
+                              }}
+                            />
+                            <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                              seg
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
                       <Input
-                        label="Reps"
-                        placeholder="8-12"
-                        value={ex.reps}
+                        label="Observaciones"
+                        placeholder="Técnica, notas, variaciones..."
+                        value={ex.observations}
                         onChange={(e) =>
                           updateExercise(activeDayIdx, exIdx, {
-                            reps: e.target.value,
+                            observations: e.target.value,
                           })
                         }
                       />
-                      <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
-                          Descanso
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={0}
-                            max={59}
-                            placeholder="0"
-                            className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                            value={
-                              ex.restSeconds === ""
-                                ? ""
-                                : Math.floor(Number(ex.restSeconds) / 60) || ""
-                            }
-                            onChange={(e) => {
-                              const mins =
-                                e.target.value === ""
-                                  ? 0
-                                  : parseInt(e.target.value, 10);
-                              const currentSecs =
-                                ex.restSeconds === ""
-                                  ? 0
-                                  : Number(ex.restSeconds) % 60;
-                              updateExercise(activeDayIdx, exIdx, {
-                                restSeconds: mins * 60 + currentSecs,
-                              });
-                            }}
-                          />
-                          <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
-                            min
-                          </span>
-                          <input
-                            type="number"
-                            min={0}
-                            max={59}
-                            placeholder="0"
-                            className="w-16 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-center text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                            value={
-                              ex.restSeconds === ""
-                                ? ""
-                                : Number(ex.restSeconds) % 60 || ""
-                            }
-                            onChange={(e) => {
-                              const secs =
-                                e.target.value === ""
-                                  ? 0
-                                  : Math.min(
-                                      59,
-                                      parseInt(e.target.value, 10),
-                                    );
-                              const currentMins =
-                                ex.restSeconds === ""
-                                  ? 0
-                                  : Math.floor(Number(ex.restSeconds) / 60);
-                              updateExercise(activeDayIdx, exIdx, {
-                                restSeconds: currentMins * 60 + secs,
-                              });
-                            }}
-                            onBlur={() => {
-                              if (ex.restSeconds === "") {
-                                updateExercise(activeDayIdx, exIdx, {
-                                  restSeconds: 0,
-                                });
-                              }
-                            }}
-                          />
-                          <span className="text-sm font-bold uppercase tracking-wider text-slate-500 shrink-0">
-                            seg
-                          </span>
-                        </div>
-                      </div>
                     </div>
-
-                    <Input
-                      label="Observaciones"
-                      placeholder="Técnica, notas, variaciones..."
-                      value={ex.observations}
-                      onChange={(e) =>
-                        updateExercise(activeDayIdx, exIdx, {
-                          observations: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                ))}
+                  );
+                })}
 
                 <button
                   type="button"
@@ -634,11 +819,27 @@ export function RoutineBuilder({
         </Button>
       </div>
 
-      <datalist id="exercise-dictionary">
-        {dictionary.map((d) => (
-          <option key={d.id} value={d.name} />
-        ))}
-      </datalist>
+      {/* Exercise Picker Modal for Trainers */}
+      {pickerTarget && (
+        <ExercisePickerModal
+          isOpen={!!pickerTarget}
+          dictionary={dictionary}
+          onClose={() => setPickerTarget(null)}
+          onSelect={(selectedEx) => {
+            updateExercise(pickerTarget.dayIdx, pickerTarget.exIdx, {
+              name: selectedEx.name,
+              muscleGroup: selectedEx.muscleGroup,
+            });
+          }}
+        />
+      )}
+
+      {/* Exercise Preview Modal */}
+      <ExerciseInfoModal
+        exercise={previewExercise}
+        isOpen={!!previewExercise}
+        onClose={() => setPreviewExercise(null)}
+      />
     </div>
   );
 }

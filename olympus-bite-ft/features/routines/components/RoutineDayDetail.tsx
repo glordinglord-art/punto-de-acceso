@@ -1,26 +1,69 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { MUSCLE_GROUPS } from '@/shared/lib/constants';
 import { formatRest } from '@/shared/lib/utils';
 import type { Exercise, RoutineDay } from '../types/routines.types';
 import { Card } from '@/shared/components/ui/Card';
+import {
+  exerciseDictionaryService,
+  type ExerciseDict,
+} from '../services/exercise-dictionary.service';
+import { ExerciseInfoModal } from './ExerciseInfoModal';
+import { Eye, Dumbbell } from 'lucide-react';
 
 interface RoutineDayDetailProps {
   day: RoutineDay;
 }
 
-function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number }) {
+function ExerciseRow({
+  exercise,
+  index,
+  dictEntry,
+  onPreview,
+}: {
+  exercise: Exercise;
+  index: number;
+  dictEntry?: ExerciseDict | null;
+  onPreview: (exercise: ExerciseDict) => void;
+}) {
   const muscleInfo = MUSCLE_GROUPS[exercise.muscleGroup as keyof typeof MUSCLE_GROUPS];
 
   return (
     <tr className="border-b border-slate-200 last:border-0 transition-colors hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/[0.02]">
       <td className="py-4 pr-3 text-xs text-slate-500 tabular-nums text-center dark:text-slate-400">{index + 1}</td>
       <td className="py-4 pr-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{muscleInfo?.icon ?? '💪'}</span>
-          <span className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
-            {exercise.name}
-          </span>
+        <div className="flex items-center gap-3">
+          {/* Thumbnail */}
+          {dictEntry?.imageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={dictEntry.imageUrl}
+              alt=""
+              className="h-9 w-9 rounded-lg object-cover bg-black/30 border border-white/5 shrink-0 hidden sm:block"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-lg bg-white/5 border border-white/5 items-center justify-center shrink-0 hidden sm:flex">
+              <Dumbbell className="w-3.5 h-3.5 text-slate-600" />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{muscleInfo?.icon ?? '💪'}</span>
+            <span className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
+              {exercise.name}
+            </span>
+            {dictEntry && (
+              <button
+                type="button"
+                onClick={() => onPreview(dictEntry)}
+                className="p-1 rounded-md text-slate-500 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
+                title="Ver guía del ejercicio"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </td>
       <td className="py-4 pr-3">
@@ -45,6 +88,19 @@ function ExerciseRow({ exercise, index }: { exercise: Exercise; index: number })
 }
 
 export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
+  const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
+  const [previewExercise, setPreviewExercise] = useState<ExerciseDict | null>(null);
+
+  useEffect(() => {
+    exerciseDictionaryService.getAll().then(setDictionary).catch(console.error);
+  }, []);
+
+  const dictByName = useMemo(() => {
+    const map = new Map<string, ExerciseDict>();
+    dictionary.forEach((d) => map.set(d.name.toLowerCase(), d));
+    return map;
+  }, [dictionary]);
+
   if (day.isRestDay) {
     return (
       <Card className="border-primary-500/30 bg-primary-900/10 p-6 relative overflow-hidden group">
@@ -99,11 +155,23 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
           </thead>
           <tbody>
             {day.exercises.map((exercise, idx) => (
-              <ExerciseRow key={exercise.id} exercise={exercise} index={idx} />
+              <ExerciseRow
+                key={exercise.id}
+                exercise={exercise}
+                index={idx}
+                dictEntry={dictByName.get(exercise.name.toLowerCase())}
+                onPreview={setPreviewExercise}
+              />
             ))}
           </tbody>
         </table>
       </div>
+
+      <ExerciseInfoModal
+        exercise={previewExercise}
+        isOpen={!!previewExercise}
+        onClose={() => setPreviewExercise(null)}
+      />
     </Card>
   );
 }

@@ -7,6 +7,9 @@ export interface Exercise {
   restSeconds: number;
   observations: string | null;
   order: number;
+  gifUrl?: string | null;
+  imageUrl?: string | null;
+  instructionsEs?: string | null;
 }
 
 export interface RoutineDay {

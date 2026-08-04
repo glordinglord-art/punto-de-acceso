@@ -22,6 +22,7 @@ import { EXERCISE_DICTIONARY_REPOSITORY } from '../domain/ports/exercise-diction
 import { CreateDictExerciseUseCase } from '../application/use-cases/create-dict-exercise.use-case';
 import { GetDictExercisesUseCase } from '../application/use-cases/get-dict-exercises.use-case';
 import { DeleteDictExerciseUseCase } from '../application/use-cases/delete-dict-exercise.use-case';
+import { SearchDictExercisesUseCase } from '../application/use-cases/search-dict-exercises.use-case';
 
 @Module({
   controllers: [RoutinesController, ExerciseDictionaryController],
@@ -49,6 +50,7 @@ import { DeleteDictExerciseUseCase } from '../application/use-cases/delete-dict-
     CreateDictExerciseUseCase,
     GetDictExercisesUseCase,
     DeleteDictExerciseUseCase,
+    SearchDictExercisesUseCase,
   ],
   exports: [ROUTINE_REPOSITORY, EXERCISE_DICTIONARY_REPOSITORY],
 })

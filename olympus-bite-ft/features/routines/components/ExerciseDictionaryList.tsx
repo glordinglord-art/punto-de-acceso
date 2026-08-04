@@ -11,15 +11,44 @@ import {
   exerciseDictionaryService,
   ExerciseDict,
 } from "@/features/routines/services/exercise-dictionary.service";
+import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import toast from "react-hot-toast";
 import { Spinner } from "@/shared/components/ui/Spinner";
-import { Search, Plus, Trash2, Video, PlayCircle } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Video,
+  Filter,
+  Dumbbell,
+  X,
+} from "lucide-react";
+import { cn } from "@/shared/lib/utils";
+
+/* ─── Equipment options (from the dataset) ─── */
+const EQUIPMENT_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "body weight", label: "Peso corporal" },
+  { value: "dumbbell", label: "Mancuerna" },
+  { value: "barbell", label: "Barra" },
+  { value: "cable", label: "Cable" },
+  { value: "leverage machine", label: "Máquina" },
+  { value: "band", label: "Banda" },
+  { value: "smith machine", label: "Smith" },
+  { value: "kettlebell", label: "Kettlebell" },
+  { value: "stability ball", label: "Pelota" },
+  { value: "ez barbell", label: "Barra EZ" },
+];
 
 export function ExerciseDictionaryList() {
   const [exercises, setExercises] = useState<ExerciseDict[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("");
+  const [equipmentFilter, setEquipmentFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [previewExercise, setPreviewExercise] = useState<ExerciseDict | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -79,29 +108,155 @@ export function ExerciseDictionaryList() {
     }
   };
 
-  const filtered = exercises.filter((ex) =>
-    ex.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = exercises.filter((ex) => {
+    const matchSearch = search
+      ? ex.name.toLowerCase().includes(search.toLowerCase())
+      : true;
+    const matchMuscle = muscleFilter
+      ? ex.muscleGroup === muscleFilter
+      : true;
+    const matchEquipment = equipmentFilter
+      ? ex.equipment?.toLowerCase() === equipmentFilter.toLowerCase()
+      : true;
+    return matchSearch && matchMuscle && matchEquipment;
+  });
+
+  const activeFilterCount =
+    (muscleFilter ? 1 : 0) + (equipmentFilter ? 1 : 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="w-full md:w-96 relative">
-          <Input
-            placeholder="Buscar ejercicio..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4" />}
-          />
+      {/* Search + Filter bar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="w-full md:w-96 relative">
+            <Input
+              placeholder="Buscar entre 1,324 ejercicios..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={<Search className="w-4 h-4" />}
+            />
+          </div>
+          <div className="flex gap-3 shrink-0 w-full md:w-auto">
+            <Button
+              variant={showFilters ? "primary" : "secondary"}
+              onClick={() => setShowFilters(!showFilters)}
+              className="font-condensed uppercase tracking-wider font-bold relative"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="shrink-0 w-full md:w-auto font-condensed uppercase tracking-wider font-bold"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Nuevo
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="shrink-0 w-full md:w-auto font-condensed uppercase tracking-wider font-bold"
-        >
-          <Plus className="w-4 h-4 mr-2" /> Nuevo Ejercicio
-        </Button>
+
+        {/* Filter pills */}
+        {showFilters && (
+          <div className="flex flex-col gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.02] animate-in slide-in-from-top-2 duration-200">
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                Grupo muscular
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMuscleFilter("")}
+                  className={cn(
+                    "rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-all",
+                    !muscleFilter
+                      ? "bg-primary-500 text-white border-primary-500"
+                      : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10",
+                  )}
+                >
+                  Todos
+                </button>
+                {(
+                  Object.entries(MUSCLE_GROUPS) as [
+                    string,
+                    { icon: string; label: string },
+                  ][]
+                ).map(([key, val]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() =>
+                      setMuscleFilter(muscleFilter === key ? "" : key)
+                    }
+                    className={cn(
+                      "rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-all",
+                      muscleFilter === key
+                        ? "bg-primary-500 text-white border-primary-500"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10",
+                    )}
+                  >
+                    {val.icon} {val.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                Equipo
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {EQUIPMENT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() =>
+                      setEquipmentFilter(
+                        equipmentFilter === opt.value ? "" : opt.value,
+                      )
+                    }
+                    className={cn(
+                      "rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-all",
+                      equipmentFilter === opt.value
+                        ? "bg-blue-500 text-white border-blue-500"
+                        : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10",
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMuscleFilter("");
+                  setEquipmentFilter("");
+                }}
+                className="self-start inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
+              >
+                <X className="w-3 h-3" /> Limpiar filtros
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Result count */}
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          {filtered.length.toLocaleString()} ejercicio
+          {filtered.length !== 1 ? "s" : ""}
+          {(search || muscleFilter || equipmentFilter) &&
+            ` de ${exercises.length.toLocaleString()}`}
+        </p>
       </div>
 
+      {/* Exercise grid */}
       {loading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
@@ -126,30 +281,60 @@ export function ExerciseDictionaryList() {
             const mg =
               MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
             return (
-              <Card key={ex.id} hover className="flex justify-between items-start group">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-white text-base leading-tight font-condensed uppercase tracking-wide">
+              <Card
+                key={ex.id}
+                hover
+                className="flex gap-3 items-start group cursor-pointer"
+                onClick={() => setPreviewExercise(ex)}
+              >
+                {/* Thumbnail */}
+                {ex.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={ex.imageUrl}
+                    alt=""
+                    className="h-14 w-14 rounded-xl object-cover bg-black/30 border border-white/5 shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-5 h-5 text-slate-500" />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0 space-y-1">
+                  <h3 className="font-bold text-white text-sm leading-tight font-condensed uppercase tracking-wide truncate">
                     {ex.name}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-primary-400 font-bold uppercase tracking-wider font-condensed">
                     <span>{mg?.icon || "💪"}</span>
                     <span>{mg?.label || ex.muscleGroup}</span>
                   </div>
-                  {ex.videoUrl && (
-                    <a
-                      href={ex.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex mt-3 text-xs text-blue-400 hover:text-blue-300 font-medium items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-colors border border-blue-500/20"
-                    >
-                      <PlayCircle className="w-3.5 h-3.5" />
-                      Ver video
-                    </a>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {ex.equipment && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                        {ex.equipment}
+                      </span>
+                    )}
+                    {ex.gifUrl && (
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        GIF
+                      </span>
+                    )}
+                    {ex.instructionsEs && (
+                      <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                        ES
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 <button
-                  onClick={() => handleDelete(ex.id)}
-                  className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(ex.id);
+                  }}
+                  className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 shrink-0"
                   aria-label="Eliminar"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -160,6 +345,7 @@ export function ExerciseDictionaryList() {
         </div>
       )}
 
+      {/* Create exercise modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -234,6 +420,13 @@ export function ExerciseDictionaryList() {
           </div>
         </form>
       </Modal>
+
+      {/* Exercise preview modal */}
+      <ExerciseInfoModal
+        exercise={previewExercise}
+        isOpen={!!previewExercise}
+        onClose={() => setPreviewExercise(null)}
+      />
     </div>
   );
 }

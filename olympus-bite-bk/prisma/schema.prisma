@@ -255,12 +255,21 @@ model WorkoutLog {
 }
 
 model ExerciseDictionary {
-  id          String      @id @default(uuid())
-  name        String      @unique
-  muscleGroup MuscleGroup @map("muscle_group")
-  videoUrl    String?     @map("video_url")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id                 String      @id @default(uuid())
+  name               String      @unique
+  muscleGroup        MuscleGroup @map("muscle_group")
+  videoUrl           String?     @map("video_url")
+  equipment          String?     // "barbell", "dumbbell", "body weight", etc.
+  category           String?     // "upper arms", "chest", "back", etc. (body_part del dataset)
+  target             String?     // "biceps", "pectoralis major", "abs", etc.
+  gifUrl             String?     @map("gif_url")
+  imageUrl           String?     @map("image_url")
+  instructionsEs     String?     @map("instructions_es") @db.Text
+  instructionStepsEs String[]    @default([]) @map("instruction_steps_es")
+  secondaryMuscles   String[]    @default([]) @map("secondary_muscles")
+  attribution        String?
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
 
   @@map("exercise_dictionary")
 }
