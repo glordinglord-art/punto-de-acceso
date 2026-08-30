@@ -16,6 +16,7 @@ import type { User } from "@/shared/types/common.types";
 import { cn, getLocalDateString, localDateToRange } from "@/shared/lib/utils";
 import { Calendar, ChevronLeft, ChevronRight, Activity, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useBackgroundAnalysis } from "@/features/meals/contexts/BackgroundAnalysisContext";
 
 import { useRouter } from "next/navigation";
 import { MEAL_TYPES } from "@/shared/lib/constants";
@@ -34,6 +35,7 @@ export default function MealsPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerDefaultType, setScannerDefaultType] = useState("breakfast");
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const { pendingMeals, startAnalysis } = useBackgroundAnalysis();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
@@ -82,45 +84,23 @@ export default function MealsPage() {
     }
   };
 
-  const handleBackgroundAnalysis = async (imagesBase64: string[], description: string, mealType: string) => {
+  const handleBackgroundAnalysis = (imagesBase64: string[], description: string, mealType: string) => {
     setShowScanner(false);
-    const toastId = toast.loading("Analizando comida con IA...");
-    try {
-      // 1. Analyze
-      const res = await mealsService.analyzePhoto(imagesBase64, {
-        goal: user?.dietaryGoal || "No especificado",
-        description,
+    startAnalysis({
+      imagesBase64,
+      description,
+      mealType,
+      userId: user!.id,
+      userContext: {
+        dietaryGoal: user?.dietaryGoal || "No especificado",
         weight: user?.weight ?? undefined,
         height: user?.height ?? undefined,
         experienceLevel: user?.experienceLevel || undefined,
         medicalConditions: user?.medicalConditions || undefined,
         dietaryPreferences: user?.dietaryPreferences || undefined,
-      });
-      const analysis = res.data;
-      
-      // 2. Create directly
-      await mealsService.create(user!.id, {
-        name: analysis.description ? analysis.foods.slice(0, 2).join(" + ") : analysis.foods.slice(0, 2).join(" + "),
-        description: analysis.description,
-        mealType,
-        imagesBase64: imagesBase64.length > 0 ? imagesBase64 : undefined,
-        foods: analysis.foods,
-        calories: analysis.nutritionalInfo.calories,
-        protein: analysis.nutritionalInfo.protein,
-        carbs: analysis.nutritionalInfo.carbs,
-        fat: analysis.nutritionalInfo.fat,
-        fiber: analysis.nutritionalInfo.fiber,
-        sugar: analysis.nutritionalInfo.sugar,
-        recommendation: analysis.recommendation,
-        goalRating: analysis.goalRating,
-        date: new Date().toISOString(), // Use current time for the meal
-      });
-
-      toast.success("¡Comida registrada exitosamente!", { id: toastId });
-      loadMeals();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error analizando comida", { id: toastId });
-    }
+      },
+      onComplete: loadMeals,
+    });
   };
 
   const MEAL_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -134,12 +114,14 @@ export default function MealsPage() {
   const totals = useMemo(() => {
     return meals.reduce(
       (acc, m) => ({
-        calories: acc.calories + m.calories,
-        protein: acc.protein + m.protein,
-        carbs: acc.carbs + m.carbs,
-        fat: acc.fat + m.fat,
+        calories: acc.calories + (m.calories || 0),
+        protein: acc.protein + (m.protein || 0),
+        carbs: acc.carbs + (m.carbs || 0),
+        fat: acc.fat + (m.fat || 0),
+        fiber: acc.fiber + (m.fiber || 0),
+        sugar: acc.sugar + (m.sugar || 0),
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 },
     );
   }, [meals]);
 
@@ -243,6 +225,8 @@ export default function MealsPage() {
             protein={totals.protein}
             carbs={totals.carbs}
             fat={totals.fat}
+            fiber={totals.fiber}
+            sugar={totals.sugar}
             calorieGoal={user?.targetCalories || 2200}
           />
 
@@ -313,26 +297,7 @@ export default function MealsPage() {
                 />
               ))}
             </div>
-          ) : mealsByType.length === 0 ? (
-            <div className="rounded-[28px] border-2 border-dashed border-slate-200/80 bg-white/30 p-12 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.02]">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-500/10 border border-primary-500/15">
-                <span className="text-3xl">🍽️</span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-wide font-condensed">
-                Sin comidas registradas
-              </h3>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                {isToday
-                  ? "Registra tu primera comida del día con una foto o manualmente."
-                  : "No hay registros para este día."}
-              </p>
-              {isToday && (
-                <Button onClick={() => setShowScanner(true)} className="mt-6">
-                  + Registrar comida
-                </Button>
-              )}
-            </div>
-          ) : (
+          ) : (mealsByType.length > 0 || pendingMeals.length > 0) ? (
             <div>
               <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 pb-3 mb-4 mt-2">
                 <div className="flex items-center gap-2">
@@ -342,10 +307,33 @@ export default function MealsPage() {
                   </h2>
                 </div>
                 <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary-500/10 text-primary-500 border border-primary-500/10 shadow-sm">
-                  {mealsByType.length} {mealsByType.length === 1 ? "comida" : "comidas"}
+                  {mealsByType.length + pendingMeals.length} {mealsByType.length + pendingMeals.length === 1 ? "comida" : "comidas"}
                 </span>
               </div>
               <div className="space-y-3">
+                {pendingMeals.map((pending) => (
+                  <div key={pending.id} className="flex items-center gap-4 p-4 rounded-[28px] bg-white/5 border border-white/5 shadow-sm relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                    <div className="w-16 h-16 rounded-2xl bg-white/10 shrink-0 overflow-hidden relative border border-white/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={pending.imageBase64} alt="Analizando" className="w-full h-full object-cover opacity-60" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xl animate-spin">✨</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider font-condensed mb-1">
+                        Analizando {MEAL_TYPES[pending.mealType as keyof typeof MEAL_TYPES]?.label || "comida"}...
+                      </h3>
+                      <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-500 rounded-full w-2/3 animate-pulse" />
+                      </div>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest mt-2 font-bold">
+                        Calculando macronutrientes
+                      </p>
+                    </div>
+                  </div>
+                ))}
                 {mealsByType.map((meal) => (
                   <MealCard
                     key={meal.id}
@@ -355,7 +343,7 @@ export default function MealsPage() {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 

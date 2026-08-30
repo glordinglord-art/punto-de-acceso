@@ -255,7 +255,7 @@ export function MobileNav() {
             >
               {/* Subtle glow background on active */}
               {isActive && (
-                <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/15 shadow-[0_0_20px_rgba(16,185,129,0.12)]" />
+                <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/15" />
               )}
 
               <div className={cn(
@@ -274,7 +274,7 @@ export function MobileNav() {
 
               {/* Active dot indicator */}
               {isActive && (
-                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary-500" />
               )}
             </Link>
           );

@@ -11,6 +11,7 @@ import { SettingsTrigger } from "@/shared/components/ui/SettingsTrigger";
 import { GlobalAiAssistant } from "@/shared/components/ui/GlobalAiAssistant";
 import { NotificationPrompt } from "@/features/notifications/components/NotificationPrompt";
 import { cn } from "@/shared/lib/utils";
+import { BackgroundAnalysisProvider } from "@/features/meals/contexts/BackgroundAnalysisContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,24 +38,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50/60 text-slate-950 dark:bg-[#090b0e] dark:text-white">
-      <Sidebar />
-      <main
-        className={cn(
-          "transition-all duration-300 min-w-0 flex flex-col",
-          layout === "mini" ? "lg:pt-20 lg:pl-0" : "lg:pl-72",
-        )}
-      >
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-28 lg:pb-12 min-w-0 w-full flex-1">
-          {children}
-        </div>
-      </main>
-      <MobileNav />
-      {/* Modal para clientes nuevos */}
-      <OnboardingSurveyModal />
-      <SettingsTrigger />
-      <GlobalAiAssistant />
-      <NotificationPrompt />
-    </div>
+    <BackgroundAnalysisProvider>
+      <div className="min-h-screen overflow-x-hidden bg-slate-50/60 text-slate-950 dark:bg-[#090b0e] dark:text-white">
+        <Sidebar />
+        <main
+          className={cn(
+            "transition-all duration-300 min-w-0 flex flex-col",
+            layout === "mini" ? "lg:pt-20 lg:pl-0" : "lg:pl-72",
+          )}
+        >
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-28 lg:pb-12 min-w-0 w-full flex-1">
+            {children}
+          </div>
+        </main>
+        <MobileNav />
+        {/* Modal para clientes nuevos */}
+        <OnboardingSurveyModal />
+        <SettingsTrigger />
+        <GlobalAiAssistant />
+        <NotificationPrompt />
+      </div>
+    </BackgroundAnalysisProvider>
   );
 }
