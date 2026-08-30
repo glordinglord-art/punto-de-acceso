@@ -14,6 +14,8 @@ import type { User } from "@/shared/types/common.types";
 import { formatDate } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
 import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useConfirm } from "@/shared/contexts/ConfirmContext";
+import { toast } from "react-hot-toast";
 
 interface InvCode {
   id: string;
@@ -485,14 +487,20 @@ export default function ClientsPage() {
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
         onDelete={async (clientId) => {
-          if (confirm("¿Estás seguro de eliminar a este cliente? Se borrarán sus rutinas, comidas y datos. Esta acción no se puede deshacer.")) {
-            try {
-              await clientsService.deleteClient(clientId);
-              setSelectedClient(null);
-              await loadClients();
-            } catch (err) {
-              alert("Error eliminando cliente: " + (err instanceof Error ? err.message : "Error"));
-            }
+          const ok = await confirm({
+            title: '¿Eliminar cliente?',
+            description: 'Se borrarán sus rutinas, comidas y datos permanentemente. Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar cliente',
+            variant: 'danger',
+          });
+          if (!ok) return;
+          try {
+            await clientsService.deleteClient(clientId);
+            setSelectedClient(null);
+            await loadClients();
+            toast.success('Cliente eliminado exitosamente');
+          } catch (err) {
+            toast.error('Error eliminando cliente: ' + (err instanceof Error ? err.message : 'Error'));
           }
         }}
       />

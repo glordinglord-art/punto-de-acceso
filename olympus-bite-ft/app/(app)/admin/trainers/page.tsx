@@ -23,7 +23,12 @@ import {
   Phone,
   Target,
   Flame,
+  ShieldCheck,
+  Shield,
+  Trash2,
 } from 'lucide-react';
+import { useConfirm } from '@/shared/contexts/ConfirmContext';
+import { toast } from 'react-hot-toast';
 
 export default function AdminTrainersPage() {
   const [trainers, setTrainers] = useState<TrainerRosterItem[]>([]);
@@ -92,6 +97,8 @@ export default function AdminTrainersPage() {
     }
   };
 
+  const { confirm } = useConfirm();
+
   const handleToggleRole = async (trainer: TrainerRosterItem) => {
     const newRole = trainer.role === 'super_admin' ? 'trainer' : 'super_admin';
     const confirmMsg =
@@ -99,23 +106,38 @@ export default function AdminTrainersPage() {
         ? `¿Deseas otorgar permisos de Super Admin a ${trainer.name}? Podrá gestionar sedes y entrenadores.`
         : `¿Deseas revocar permisos de Super Admin a ${trainer.name}? Pasará a ser entrenador estándar.`;
 
-    if (!window.confirm(confirmMsg)) return;
+    const ok = await confirm({
+      title: 'Cambiar Rol de Usuario',
+      description: confirmMsg,
+      confirmText: newRole === 'super_admin' ? 'Otorgar Super Admin' : 'Revocar Permisos',
+      variant: 'warning',
+    });
+    if (!ok) return;
 
     try {
       await adminService.updateUserRole(trainer.id, newRole);
       await loadData();
+      toast.success('Rol actualizado con éxito');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al cambiar el rol');
+      toast.error(err instanceof Error ? err.message : 'Error al cambiar el rol');
     }
   };
 
   const handleDeleteTrainer = async (trainerId: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar a este entrenador? Se perderán sus datos y los clientes quedarán sin entrenador asignado. Esta acción no se puede deshacer.')) return;
+    const ok = await confirm({
+      title: '¿Eliminar entrenador?',
+      description: 'Se perderán sus datos y los clientes quedarán sin entrenador asignado. Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar entrenador',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
     try {
       await adminService.deleteUser(trainerId);
       await loadData();
+      toast.success('Entrenador eliminado con éxito');
     } catch (err) {
-      alert('Error eliminando entrenador: ' + (err instanceof Error ? err.message : 'Error'));
+      toast.error('Error eliminando entrenador: ' + (err instanceof Error ? err.message : 'Error'));
     }
   };
 

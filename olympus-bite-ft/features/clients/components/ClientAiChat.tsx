@@ -4,6 +4,7 @@ import { mealsService } from "@/features/meals/services/meals.service";
 import type { User } from "@/shared/types/common.types";
 import ReactMarkdown from "react-markdown";
 import { Trash2, Send, Sparkles, UserCircle } from "lucide-react";
+import { useConfirm } from "@/shared/contexts/ConfirmContext";
 
 interface ClientAiChatProps {
   client: User;
@@ -55,9 +56,16 @@ export function ClientAiChat({ client }: ClientAiChatProps) {
     fetchHistory();
   }, [client.id]);
 
+  const { confirm } = useConfirm();
+
   const handleClearHistory = async () => {
-    if (!confirm("¿Seguro que deseas borrar el historial de chat con esta IA?"))
-      return;
+    const ok = await confirm({
+      title: '¿Borrar historial?',
+      description: 'Se eliminarán todos los mensajes de esta conversación con la IA.',
+      confirmText: 'Borrar historial',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       setIsLoading(true);
       await mealsService.clearChatHistory(client.id);

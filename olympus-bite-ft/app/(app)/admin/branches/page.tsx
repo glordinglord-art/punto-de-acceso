@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   Trash2,
 } from 'lucide-react';
+import { useConfirm } from '@/shared/contexts/ConfirmContext';
+import { toast } from 'react-hot-toast';
 
 export default function AdminBranchesPage() {
   const [gyms, setGyms] = useState<Gym[]>([]);
@@ -109,13 +111,23 @@ export default function AdminBranchesPage() {
     }
   };
 
+  const { confirm } = useConfirm();
+
   const handleDeleteBranch = async (gymId: string, branchId: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta sede? Perderás la sede y todos los usuarios asignados a esta sede quedarán sin sede asignada.')) return;
+    const ok = await confirm({
+      title: '¿Eliminar sede?',
+      description: 'Perderás la sede y todos los usuarios asignados a esta sede quedarán sin sede asignada.',
+      confirmText: 'Eliminar sede',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
     try {
       await gymsService.deleteBranch(gymId, branchId);
       await loadData();
+      toast.success('Sede eliminada con éxito');
     } catch (err) {
-      alert('Error eliminando sede: ' + (err instanceof Error ? err.message : 'Error'));
+      toast.error('Error eliminando sede: ' + (err instanceof Error ? err.message : 'Error'));
     }
   };
 

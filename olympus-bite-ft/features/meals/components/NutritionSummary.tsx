@@ -17,24 +17,6 @@ interface NutritionSummaryProps {
   fatGoal?: number;
 }
 
-/* ── Circular Mini Ring ────────────────────────────── */
-function MiniRing({ pct, color, size = 44 }: { pct: number; color: string; size?: number }) {
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const filled = circ * (1 - Math.min(pct, 1));
-  return (
-    <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={5} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth={5}
-        strokeDasharray={circ} strokeDashoffset={filled}
-        strokeLinecap="round"
-        className="transition-all duration-1000"
-      />
-    </svg>
-  );
-}
 
 export function NutritionSummary({
   calories,
@@ -136,16 +118,16 @@ export function NutritionSummary({
           </div>
         </div>
 
-        {/* Macro horizontal bars */}
-        <div className="space-y-3">
+        {/* Macro horizontal bars (2x2 Grid) */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
           {[
-            { label: 'Proteínas', value: protein, target: targetP, remaining: remainingProtein, color: 'bg-indigo-400', track: 'bg-indigo-400/15' },
-            { label: 'Carbs', value: carbs, target: targetC, remaining: remainingCarbs, color: 'bg-amber-400', track: 'bg-amber-400/15' },
-            { label: 'Grasas', value: fat, target: targetF, remaining: remainingFat, color: 'bg-orange-400', track: 'bg-orange-400/15' },
-            { label: 'Fibra', value: fiber, target: 25, remaining: Math.max(25 - fiber, 0), color: 'bg-emerald-400', track: 'bg-emerald-400/15' },
+            { label: 'Proteínas', value: protein, target: targetP, remaining: remainingProtein, color: 'bg-indigo-400', track: 'bg-indigo-400/15', text: 'text-indigo-400' },
+            { label: 'Carbs', value: carbs, target: targetC, remaining: remainingCarbs, color: 'bg-amber-400', track: 'bg-amber-400/15', text: 'text-amber-400' },
+            { label: 'Grasas', value: fat, target: targetF, remaining: remainingFat, color: 'bg-orange-400', track: 'bg-orange-400/15', text: 'text-orange-400' },
+            { label: 'Fibra', value: fiber, target: 25, remaining: Math.max(25 - fiber, 0), color: 'bg-emerald-400', track: 'bg-emerald-400/15', text: 'text-emerald-400' },
           ].map((m) => (
-            <div key={m.label}>
-              <div className="flex items-center justify-between mb-1">
+            <div key={m.label} className="bg-white/[0.02] p-2.5 rounded-2xl border border-white/5 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] text-white/50 uppercase tracking-widest font-bold">{m.label}</span>
                 <span className="text-[11px] font-bold text-white/70 tabular-nums">
                   {Math.round(m.value)}g <span className="text-white/30 font-normal">/ {m.target}g</span>
@@ -183,13 +165,13 @@ export function NutritionSummary({
 
     // ── Slide 2: Full Nutritional Details (Scrollable) ──
     (
-      <div key="details" className="px-1 max-h-[420px] overflow-y-auto scrollbar-thin pr-1">
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white/35 mb-4 sticky top-0 bg-[#18181A] py-1 z-10">Detalles completos</p>
+      <div key="details" className="px-1 h-[305px] overflow-y-auto scrollbar-thin pr-1">
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white/35 mb-2.5 sticky top-0 bg-[#18181A] py-1 z-10">Detalles completos</p>
 
         {/* Calorie breakdown */}
-        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 mb-4">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">🔥 Energía</h4>
-          <div className="space-y-2.5">
+        <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 mb-2.5">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">🔥 Energía</h4>
+          <div className="space-y-2">
             {[
               { label: 'Consumidas', value: `${calories.toLocaleString()} kcal`, highlight: false },
               { label: 'Objetivo', value: `${calorieGoal.toLocaleString()} kcal`, highlight: false },
@@ -206,9 +188,9 @@ export function NutritionSummary({
         </div>
 
         {/* Macronutrients */}
-        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 mb-4">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">💪 Macronutrientes</h4>
-          <div className="space-y-2.5">
+        <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 mb-2.5">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">💪 Macronutrientes</h4>
+          <div className="space-y-2">
             {[
               { label: 'Proteínas', value: `${Math.round(protein)}g`, target: `${targetP}g`, pct: Math.round((protein / targetP) * 100), color: 'text-indigo-400' },
               { label: 'Carbohidratos', value: `${Math.round(carbs)}g`, target: `${targetC}g`, pct: Math.round((carbs / targetC) * 100), color: 'text-amber-400' },
@@ -230,9 +212,9 @@ export function NutritionSummary({
         </div>
 
         {/* Vitamins (estimated) */}
-        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 mb-4">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">🧬 Vitaminas (estimado)</h4>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 mb-2.5">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">🧬 Vitaminas (estimado)</h4>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             {[
               { label: 'Vitamina A', value: `${Math.round(calories * 0.4)}μg`, daily: '900μg' },
               { label: 'Vitamina C', value: `${Math.round(fiber * 3.2)}mg`, daily: '90mg' },
@@ -252,9 +234,9 @@ export function NutritionSummary({
         </div>
 
         {/* Minerals (estimated) */}
-        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 mb-4">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">⚡ Minerales (estimado)</h4>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 mb-2.5">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">⚡ Minerales (estimado)</h4>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             {[
               { label: 'Calcio', value: `${Math.round(calories * 0.45)}mg`, daily: '1000mg' },
               { label: 'Hierro', value: `${(protein * 0.07).toFixed(1)}mg`, daily: '8mg' },
@@ -274,8 +256,8 @@ export function NutritionSummary({
         </div>
 
         {/* Hydration */}
-        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5 mb-4">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">💧 Hidratación</h4>
+        <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 mb-2.5">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">💧 Hidratación</h4>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white/50">Vasos de agua</span>
             <span className="text-sm font-bold text-cyan-400 tabular-nums">{waterGlasses} / 8</span>
@@ -296,7 +278,7 @@ export function NutritionSummary({
         </div>
 
         {/* AI Insight */}
-        <div className="bg-gradient-to-br from-primary-900/30 to-transparent border border-primary-500/20 rounded-2xl p-4 flex gap-3 items-start mb-2">
+        <div className="bg-gradient-to-br from-primary-900/30 to-transparent border border-primary-500/20 rounded-2xl p-3.5 flex gap-3 items-start mb-1">
           <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">✨</div>
           <div>
             <h4 className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Coach IA</h4>
@@ -309,14 +291,14 @@ export function NutritionSummary({
 
   return (
     <div
-      className="w-full bg-[#18181A] rounded-[32px] p-6 text-white shadow-sm relative overflow-hidden"
+      className="w-full bg-[#18181A] rounded-[28px] p-5 text-white shadow-sm relative overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Slides container */}
       <div className="overflow-hidden">
         <div
-          className="flex transition-transform duration-300 ease-out"
+          className="flex transition-transform duration-300 ease-out items-start"
           style={{ transform: `translateX(-${activeSlide * 100}%)` }}
         >
           {slides.map((slide, i) => (
@@ -328,7 +310,7 @@ export function NutritionSummary({
       </div>
 
       {/* Dots */}
-      <div className="flex justify-center gap-2 mt-5">
+      <div className="flex justify-center gap-2 mt-3.5">
         {slides.map((_, i) => (
           <button
             key={i}

@@ -14,6 +14,7 @@ import {
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import toast from "react-hot-toast";
 import { Spinner } from "@/shared/components/ui/Spinner";
+import { useConfirm } from "@/shared/contexts/ConfirmContext";
 import {
   Search,
   Plus,
@@ -97,8 +98,16 @@ export function ExerciseDictionaryList() {
     }
   };
 
+  const { confirm } = useConfirm();
+
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este ejercicio?")) return;
+    const ok = await confirm({
+      title: '¿Eliminar ejercicio?',
+      description: 'El ejercicio será eliminado de la biblioteca.',
+      confirmText: 'Eliminar',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       await exerciseDictionaryService.delete(id);
       toast.success("Ejercicio eliminado");

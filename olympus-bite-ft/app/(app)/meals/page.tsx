@@ -17,6 +17,7 @@ import { cn, getLocalDateString, localDateToRange } from "@/shared/lib/utils";
 import { Calendar, ChevronLeft, ChevronRight, Activity, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useBackgroundAnalysis } from "@/features/meals/contexts/BackgroundAnalysisContext";
+import { useConfirm } from "@/shared/contexts/ConfirmContext";
 
 import { useRouter } from "next/navigation";
 import { MEAL_TYPES } from "@/shared/lib/constants";
@@ -68,19 +69,29 @@ export default function MealsPage() {
     }
   }, [loadMeals, activeMode]);
 
+  const { confirm } = useConfirm();
+
   const handleMealSaved = () => {
     setShowScanner(false);
     loadMeals();
   };
 
   const handleDeleteMeal = async (id: string) => {
-    if (!confirm("¿Eliminar esta comida?")) return;
+    const ok = await confirm({
+      title: '¿Eliminar comida?',
+      description: 'Esta comida será eliminada permanentemente de tu registro.',
+      confirmText: 'Eliminar',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       await mealsService.remove(id);
       setSelectedMeal(null);
       loadMeals();
+      toast.success('Comida eliminada');
     } catch (err) {
       console.error(err);
+      toast.error('Error al eliminar comida');
     }
   };
 
