@@ -28,6 +28,18 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  @IsString()
+  @IsOptional()
+  gymId?: string;
+
+  @IsString()
+  @IsOptional()
+  branchId?: string;
+
+  @IsString()
+  @IsOptional()
+  trainerId?: string;
 }
 
 export class UpdateUserDto {
@@ -39,6 +51,21 @@ export class UpdateUserDto {
   @IsOptional()
   @Transform(({ value }) => (value === '' ? null : value))
   phone?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  gymId?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  branchId?: string | null;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  trainerId?: string | null;
 
   @IsString()
   @IsOptional()

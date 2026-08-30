@@ -8,9 +8,13 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "trainer" | "client";
+  role: "super_admin" | "admin" | "trainer" | "client";
   avatarUrl: string | null;
   phone: string | null;
+  gymId?: string | null;
+  branchId?: string | null;
+  gymName?: string | null;
+  branchName?: string | null;
   dietaryGoal?: string | null;
   weight?: number | null;
   height?: number | null;
@@ -26,9 +30,13 @@ export interface User {
   createdAt: string;
 }
 
-/** El entrenador registra con code 9966 → role=trainer. trainer IS the admin. */
-export function isAdmin(role: string): boolean {
-  return role === "admin" || role === "trainer";
+export function isSuperAdmin(role?: string | null): boolean {
+  return role === "super_admin";
+}
+
+/** El entrenador registra con code 9966 → role=trainer. trainer IS admin/trainer. */
+export function isAdmin(role?: string | null): boolean {
+  return role === "super_admin" || role === "admin" || role === "trainer";
 }
 
 export interface NutritionalInfo {

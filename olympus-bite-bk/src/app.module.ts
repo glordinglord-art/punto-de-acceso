@@ -7,6 +7,8 @@ import { RoutinesModule } from './modules/routines/infrastructure/routines.modul
 import { DashboardModule } from './modules/dashboard/infrastructure/dashboard.module';
 import { TasksModule } from './modules/tasks/infrastructure/tasks.module';
 import { NotificationsModule } from './modules/notifications/infrastructure/notifications.module';
+import { GymsModule } from './modules/gyms/infrastructure/gyms.module';
+import { AdminModule } from './modules/admin/infrastructure/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -20,6 +22,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     DashboardModule,
     TasksModule,
     NotificationsModule,
+    GymsModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

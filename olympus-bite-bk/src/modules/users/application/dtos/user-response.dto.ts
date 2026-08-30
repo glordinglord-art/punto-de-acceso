@@ -19,6 +19,9 @@ export class UserResponseDto {
   medicalConditions: string | null;
   dietaryPreferences: string | null;
 
+  trainerId: string | null;
+  gymId: string | null;
+  branchId: string | null;
   isActive: boolean;
   createdAt: Date;
 
@@ -30,6 +33,9 @@ export class UserResponseDto {
     dto.role = user.role;
     dto.avatarUrl = user.avatarUrl;
     dto.phone = user.phone;
+    dto.trainerId = user.trainerId;
+    dto.gymId = user.gymId;
+    dto.branchId = user.branchId;
     dto.dietaryGoal = user.dietaryGoal;
     dto.targetCalories = user.targetCalories;
     dto.weight = user.weight;

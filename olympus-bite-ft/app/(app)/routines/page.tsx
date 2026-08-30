@@ -22,10 +22,21 @@ import { cn } from "@/shared/lib/utils";
 type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine";
 type OverviewTab = "cards" | "calendar";
 
-export default function RoutinesPage() {
-  const { isTrainer } = useAuth();
+import { useRouter } from 'next/navigation';
 
-  if (!isTrainer) {
+export default function RoutinesPage() {
+  const { activeMode } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeMode === 'superadmin') {
+      router.push('/admin');
+    }
+  }, [activeMode, router]);
+
+  if (activeMode === 'superadmin') return null;
+
+  if (activeMode === 'client') {
     return <ClientRoutinesView />;
   }
 
@@ -162,20 +173,6 @@ function TrainerRoutinesPage() {
     return map;
   }, [clients, user]);
 
-  /* ─── My Routine view (trainer as client) ─── */
-  if (view === "myRoutine") {
-    return (
-      <div>
-        <div className="mb-4">
-          <Button variant="ghost" size="md" onClick={() => setView("overview")}>
-            ← Volver a rutinas
-          </Button>
-        </div>
-        <ClientRoutinesView />
-      </div>
-    );
-  }
-
   /* ─── Create view ─────────────────────────── */
   if (view === "create") {
     return (
@@ -223,14 +220,9 @@ function TrainerRoutinesPage() {
             loading ? "Cargando..." : `${routines.length} rutinas creadas`
           }
           action={
-            <div className="flex gap-2">
-              <Button variant="ghost" size="md" onClick={() => setView("myRoutine")}>
-                🏋️ Mi Rutina
-              </Button>
-              <Button size="md" onClick={() => setView("create")}>
-                + Nueva rutina
-              </Button>
-            </div>
+            <Button size="md" onClick={() => setView("create")}>
+              + Nueva rutina
+            </Button>
           }
         />
 

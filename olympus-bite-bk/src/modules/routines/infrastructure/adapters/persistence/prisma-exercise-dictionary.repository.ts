@@ -58,7 +58,9 @@ export class PrismaExerciseDictionaryRepository implements ExerciseDictionaryRep
     return this.toDomain(record);
   }
 
-  async upsertByName(exercise: ExerciseDictionary): Promise<ExerciseDictionary> {
+  async upsertByName(
+    exercise: ExerciseDictionary,
+  ): Promise<ExerciseDictionary> {
     const data = this.toData(exercise);
     const record = await this.prisma.exerciseDictionary.upsert({
       where: { name: exercise.name },

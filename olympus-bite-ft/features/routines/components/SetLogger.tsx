@@ -20,15 +20,21 @@ export function SetLogger({
 }) {
   const [weight, setWeight] = useState(previousWeight?.toString() ?? "20");
   const [reps, setReps] = useState(previousReps?.toString() ?? "10");
+  const [prevKey, setPrevKey] = useState({ setNumber, previousWeight, previousReps });
 
-  useEffect(() => {
+  if (
+    prevKey.setNumber !== setNumber ||
+    prevKey.previousWeight !== previousWeight ||
+    prevKey.previousReps !== previousReps
+  ) {
+    setPrevKey({ setNumber, previousWeight, previousReps });
     if (previousWeight !== null && previousWeight !== undefined) {
       setWeight(previousWeight.toString());
     }
     if (previousReps !== null && previousReps !== undefined) {
       setReps(previousReps.toString());
     }
-  }, [previousWeight, previousReps, setNumber]);
+  }
 
   const numWeight = parseFloat(weight) || 0;
   const numReps = parseInt(reps, 10) || 0;

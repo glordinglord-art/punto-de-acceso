@@ -14,12 +14,25 @@ import { mealsService } from "@/features/meals/services/meals.service";
 import type { Meal } from "@/features/meals/types/meals.types";
 import type { User } from "@/shared/types/common.types";
 import { cn, getLocalDateString, localDateToRange } from "@/shared/lib/utils";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Activity, Plus } from "lucide-react";
+import { toast } from "react-hot-toast";
+
+import { useRouter } from "next/navigation";
+import { MEAL_TYPES } from "@/shared/lib/constants";
 
 export default function MealsPage() {
-  const { user, isTrainer } = useAuth();
+  const { user, isTrainer, activeMode } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeMode === 'superadmin') {
+      router.push('/admin');
+    }
+  }, [activeMode, router]);
+
   const [tab, setTab] = useState<"mine" | "clients">("mine");
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerDefaultType, setScannerDefaultType] = useState("breakfast");
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,12 +42,11 @@ export default function MealsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      // Load meals for the selected date
       const { start, end } = localDateToRange(selectedDate);
       const res = await mealsService.getByDateRange(user.id, start, end);
       setMeals(res.data ?? []);
     } catch {
-      // Fallback: load all meals and filter client-side
+      // Fallback
       try {
         const res = await mealsService.getByUser(user.id);
         const all = res.data ?? [];
@@ -49,22 +61,73 @@ export default function MealsPage() {
   }, [user, selectedDate]);
 
   useEffect(() => {
-    loadMeals();
-  }, [loadMeals]);
+    if (activeMode === 'client') {
+      loadMeals();
+    }
+  }, [loadMeals, activeMode]);
 
   const handleMealSaved = () => {
     setShowScanner(false);
     loadMeals();
   };
 
-  const handleDeleteMeal = async (mealId: string) => {
+  const handleDeleteMeal = async (id: string) => {
+    if (!confirm("¿Eliminar esta comida?")) return;
     try {
-      await mealsService.remove(mealId);
+      await mealsService.remove(id);
       setSelectedMeal(null);
       loadMeals();
-    } catch {
-      // Error silencioso — podría mejorarse con un toast
+    } catch (err) {
+      console.error(err);
     }
+  };
+
+  const handleBackgroundAnalysis = async (imagesBase64: string[], description: string, mealType: string) => {
+    setShowScanner(false);
+    const toastId = toast.loading("Analizando comida con IA...");
+    try {
+      // 1. Analyze
+      const res = await mealsService.analyzePhoto(imagesBase64, {
+        goal: user?.dietaryGoal || "No especificado",
+        description,
+        weight: user?.weight ?? undefined,
+        height: user?.height ?? undefined,
+        experienceLevel: user?.experienceLevel || undefined,
+        medicalConditions: user?.medicalConditions || undefined,
+        dietaryPreferences: user?.dietaryPreferences || undefined,
+      });
+      const analysis = res.data;
+      
+      // 2. Create directly
+      await mealsService.create(user!.id, {
+        name: analysis.description ? analysis.foods.slice(0, 2).join(" + ") : analysis.foods.slice(0, 2).join(" + "),
+        description: analysis.description,
+        mealType,
+        imagesBase64: imagesBase64.length > 0 ? imagesBase64 : undefined,
+        foods: analysis.foods,
+        calories: analysis.nutritionalInfo.calories,
+        protein: analysis.nutritionalInfo.protein,
+        carbs: analysis.nutritionalInfo.carbs,
+        fat: analysis.nutritionalInfo.fat,
+        fiber: analysis.nutritionalInfo.fiber,
+        sugar: analysis.nutritionalInfo.sugar,
+        recommendation: analysis.recommendation,
+        goalRating: analysis.goalRating,
+        date: new Date().toISOString(), // Use current time for the meal
+      });
+
+      toast.success("¡Comida registrada exitosamente!", { id: toastId });
+      loadMeals();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error analizando comida", { id: toastId });
+    }
+  };
+
+  const MEAL_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+    breakfast: { bg: 'bg-amber-500/10', text: 'text-amber-500' },
+    lunch: { bg: 'bg-blue-500/10', text: 'text-blue-500' },
+    dinner: { bg: 'bg-indigo-500/10', text: 'text-indigo-500' },
+    snack: { bg: 'bg-rose-500/10', text: 'text-rose-500' },
   };
 
   /* ─── Totals ────────────────────────────── */
@@ -139,39 +202,10 @@ export default function MealsPage() {
         }
       />
 
-      {/* Tabs for trainer */}
-      {isTrainer && (
-        <div className="flex items-center gap-1 mb-5 p-1 bg-white/50 dark:bg-white/[0.04] backdrop-blur-md rounded-2xl w-fit border border-slate-200/50 dark:border-white/8 shadow-sm">
-          <button
-            onClick={() => setTab("mine")}
-            className={cn(
-              "rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200",
-              tab === "mine"
-                ? "bg-primary-500/12 text-primary-600 border border-primary-500/20 shadow-sm dark:text-primary-400 dark:border-primary-500/15"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5 border border-transparent",
-            )}
-          >
-            🍽️ Mis comidas
-          </button>
-          <button
-            onClick={() => setTab("clients")}
-            className={cn(
-              "rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200",
-              tab === "clients"
-                ? "bg-primary-500/12 text-primary-600 border border-primary-500/20 shadow-sm dark:text-primary-400 dark:border-primary-500/15"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5 border border-transparent",
-            )}
-          >
-            👥 Clientes
-          </button>
-        </div>
-      )}
-
-      {/* Clients view */}
-      {tab === "clients" && user && <ClientMealsView trainerId={user.id} />}
-
-      {/* My meals view */}
-      {tab === "mine" && (
+      {/* Clients view (Trainer Mode) */}
+      {activeMode === 'trainer' && user ? (
+        <ClientMealsView trainerId={user.id} />
+      ) : (
         <div className="space-y-6">
           {/* Date Navigation */}
           <div className="flex items-center justify-center gap-1.5 p-1.5 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/5 w-fit mx-auto shadow-sm">
@@ -211,6 +245,63 @@ export default function MealsPage() {
             fat={totals.fat}
             calorieGoal={user?.targetCalories || 2200}
           />
+
+          {/* Quick Log Grids */}
+          {isToday && (
+            <div className="bg-[#18181A] rounded-[32px] p-6 shadow-sm border border-white/5">
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Diario de Comidas</h3>
+                  <p className="text-sm text-white/50 mt-1">Registra lo que has comido hoy para alcanzar tu meta.</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {['breakfast', 'lunch', 'dinner', 'snack'].map((type) => {
+                  const hasRecorded = meals.some(m => m.mealType === type);
+                  const mealColor = MEAL_TYPE_COLORS[type];
+                  
+                  return (
+                    <div 
+                      key={type}
+                      onClick={() => {
+                        setScannerDefaultType(type);
+                        setShowScanner(true);
+                      }}
+                      className="group flex h-full flex-col justify-between rounded-[24px] bg-white/5 border border-white/5 p-5 transition-all hover:bg-white/10 hover:border-white/10 cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={cn(
+                          'inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
+                          mealColor?.bg ?? 'bg-white/5',
+                          mealColor?.text ?? 'text-white',
+                        )}>
+                          {MEAL_TYPES[type as keyof typeof MEAL_TYPES]?.label || type}
+                        </span>
+                        {hasRecorded ? (
+                          <div className="h-6 w-6 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center">
+                            <Activity className="h-3 w-3" />
+                          </div>
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-white/5 text-white/40 flex items-center justify-center group-hover:bg-white/20 group-hover:text-white transition-colors">
+                            <Plus className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        {hasRecorded ? (
+                          <p className="text-sm font-bold text-white">Registrado</p>
+                        ) : (
+                          <p className="text-sm font-bold text-white/40">Sin registrar</p>
+                        )}
+                        <p className="text-[10px] uppercase tracking-wider text-white/30 font-bold mt-1">Toca para añadir</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Meals List */}
           {loading ? (
@@ -275,10 +366,12 @@ export default function MealsPage() {
         title="Registrar comida"
         size="lg"
       >
-        {user && (
+        {user && showScanner && (
           <FoodScanner
             userId={user.id}
             onMealSaved={handleMealSaved}
+            defaultMealType={scannerDefaultType}
+            onAnalyzeBackground={handleBackgroundAnalysis}
           />
         )}
       </Modal>

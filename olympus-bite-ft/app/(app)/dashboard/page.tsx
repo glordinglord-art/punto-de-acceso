@@ -15,31 +15,31 @@ import { ClientDashboardView } from '@/features/dashboard/components/ClientDashb
 import { dashboardService } from '@/features/dashboard/services/dashboard.service';
 import type { DashboardStats } from '@/features/dashboard/types/dashboard.types';
 
-export default function DashboardPage() {
-  const { isTrainer } = useAuth();
-  const [view, setView] = useState<'trainer' | 'client'>('trainer');
+import { useRouter } from 'next/navigation';
 
-  // Client dashboard
-  if (!isTrainer) {
+export default function DashboardPage() {
+  const { activeMode } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeMode === 'superadmin') {
+      router.push('/admin');
+    }
+  }, [activeMode, router]);
+
+  if (activeMode === 'superadmin') {
+    return null; // or a loading spinner
+  }
+
+  if (activeMode === 'client') {
     return <ClientDashboardView />;
   }
 
-  if (view === 'client') {
-    return (
-      <ClientDashboardView
-        trainerSwitchAction={
-          <Button variant="secondary" size="sm" onClick={() => setView('trainer')} className="border-primary-500/30 text-primary-400 hover:bg-primary-500/10">
-            🏋️ Ver Dashboard Entrenador
-          </Button>
-        }
-      />
-    );
-  }
-
-  return <TrainerDashboard onSwitchToClient={() => setView('client')} />;
+  // Trainer mode
+  return <TrainerDashboard />;
 }
 
-function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }) {
+function TrainerDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,29 +114,16 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
         }).format(now)}
         action={
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={onSwitchToClient} className="border-primary-500/30 text-primary-400 hover:bg-primary-500/10">
-              👤 Mi Dashboard Personal
-            </Button>
+            {/* Any other buttons could go here */}
           </div>
         }
       />
 
       <div className="space-y-6 max-w-full overflow-hidden">
-        {/* Row 0: Hero with activity rings */}
+        {/* Row 0: Hero with activity rings & weekly metrics */}
         {stats && <TrainerHeroCard stats={stats} />}
 
-        {/* Row 1: Stat Cards */}
-        <StatsOverview
-          totalClients={stats?.totalClients ?? 0}
-          activeMealsToday={stats?.activeMealsToday ?? 0}
-          totalRoutines={stats?.totalRoutines ?? 0}
-          activeRoutines={stats?.activeRoutines ?? 0}
-          avgCaloriesToday={stats?.avgCaloriesToday ?? 0}
-          mealsThisWeek={stats?.mealsThisWeek ?? 0}
-          mealsLastWeek={stats?.mealsLastWeek ?? 0}
-        />
-
-        {/* Row 2: Charts */}
+        {/* Row 1: Charts */}
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] items-stretch">
           <div className="min-w-0">
             <WeeklyChart data={stats?.weeklyTrend ?? []} />
@@ -149,7 +136,7 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
           </div>
         </div>
 
-        {/* Row 3: Clients + Activity */}
+        {/* Row 2: Clients + Activity */}
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="min-w-0 h-full">
             <ClientsList clients={stats?.clientsOverview ?? []} />
@@ -159,7 +146,7 @@ function TrainerDashboard({ onSwitchToClient }: { onSwitchToClient: () => void }
           </div>
         </div>
 
-        {/* Row 4: Top Foods */}
+        {/* Row 3: Top Foods */}
         {(stats?.topFoods?.length ?? 0) > 0 && (
           <div className="max-w-md">
             <TopFoods foods={stats?.topFoods ?? []} />

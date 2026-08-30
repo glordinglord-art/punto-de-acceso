@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/");
+      router.replace("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
@@ -37,15 +37,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-100/35 text-slate-950 dark:bg-neutral-950 dark:text-white">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50/60 text-slate-950 dark:bg-[#090b0e] dark:text-white">
       <Sidebar />
       <main
         className={cn(
           "transition-all duration-300 min-w-0 flex flex-col",
-          layout === "mini" ? "lg:pt-16 lg:pl-0" : "lg:pl-64",
+          layout === "mini" ? "lg:pt-20 lg:pl-0" : "lg:pl-72",
         )}
       >
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 pb-24 lg:pb-8 min-w-0 w-full flex-1">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-28 lg:pb-12 min-w-0 w-full flex-1">
           {children}
         </div>
       </main>

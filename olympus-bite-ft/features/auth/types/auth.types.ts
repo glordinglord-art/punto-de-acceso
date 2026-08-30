@@ -17,7 +17,9 @@ export interface AuthResponse {
     id: string;
     email: string;
     name: string;
-    role: "admin" | "trainer" | "client";
+    role: "super_admin" | "admin" | "trainer" | "client";
+    gymId?: string | null;
+    branchId?: string | null;
     dietaryGoal?: string | null;
     weight?: number | null;
     height?: number | null;

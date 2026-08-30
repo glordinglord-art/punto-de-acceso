@@ -12,15 +12,50 @@ type NavItem = {
   label: string;
   icon: React.ReactNode;
   trainerOnly?: boolean;
+  superAdminOnly?: boolean;
 };
 
 type NavGroup = {
   title: string;
   items: NavItem[];
   trainerOnly?: boolean;
+  superAdminOnly?: boolean;
 };
 
 const navGroups: NavGroup[] = [
+  {
+    title: "Super Admin",
+    superAdminOnly: true,
+    items: [
+      {
+        href: "/admin",
+        label: "Centro de Mando",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        ),
+      },
+      {
+        href: "/admin/branches",
+        label: "Sedes & Gyms",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        ),
+      },
+      {
+        href: "/admin/trainers",
+        label: "Entrenadores",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        ),
+      },
+    ],
+  },
   {
     title: "General",
     items: [
@@ -187,16 +222,48 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { logout, user, isTrainer } = useAuth();
+  const { logout, user, activeMode, setActiveMode, availableModes, isSuperAdmin, isTrainer } = useAuth();
   const { layout } = useSettings();
 
   const filteredGroups = navGroups
-    .filter((group) => !group.trainerOnly || isTrainer)
+    .filter((group) => {
+      if (group.superAdminOnly) return activeMode === 'superadmin';
+      if (group.trainerOnly) return activeMode === 'trainer';
+      if (group.title === 'Mi Plan' && activeMode === 'superadmin') return false;
+      return true;
+    })
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.trainerOnly || isTrainer),
+      title: group.title === 'Mi Plan' && activeMode === 'trainer' ? 'Planes & Dietas' : group.title,
+      items: group.items.filter((item) => {
+        if (item.superAdminOnly) return activeMode === 'superadmin';
+        if (item.trainerOnly) return activeMode === 'trainer';
+        return true;
+      }),
     }))
     .filter((group) => group.items.length > 0);
+
+  const getRoleBadge = () => {
+    if (isSuperAdmin) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-500 dark:text-amber-400">
+          👑 Super Admin
+        </span>
+      );
+    }
+    if (isTrainer) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-primary-500/15 border border-primary-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary-600 dark:text-primary-400">
+          🏋️ Entrenador
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-500 dark:text-blue-400">
+        ⚡ Atleta
+      </span>
+    );
+  };
 
   return (
     <aside
@@ -232,7 +299,7 @@ export function Sidebar() {
         className={cn(
           layout === "mini"
             ? "flex-1 flex items-center gap-6 px-8"
-            : "flex-1 px-4 py-8 overflow-y-auto scrollbar-hide"
+            : "flex-1 px-4 py-6 overflow-y-auto scrollbar-hide"
         )}
       >
         {filteredGroups.map((group) => (
@@ -255,11 +322,32 @@ export function Sidebar() {
         )}
       >
         {user && layout !== "mini" && (
-          <div className="mb-4 px-2 w-full text-center">
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-950 truncate dark:text-white">
+          <div className="mb-2 px-2 w-full text-center">
+            <div className="mb-2 flex justify-center">{getRoleBadge()}</div>
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-900 truncate dark:text-white">
               {user.name}
             </p>
-            <p className="text-xs font-semibold text-slate-500 truncate mt-1">{user.email}</p>
+            <p className="text-xs font-semibold text-slate-500 truncate mt-0.5">{user.email}</p>
+            
+            {/* Mode Switcher */}
+            {availableModes.length > 1 && (
+              <div className="mt-4 flex flex-col gap-1">
+                {availableModes.map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setActiveMode(mode)}
+                    className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all",
+                      activeMode === mode
+                        ? "bg-primary-500/10 text-primary-500 border-primary-500/20"
+                        : "bg-transparent text-slate-400 border-transparent hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-slate-300"
+                    )}
+                  >
+                    Modo {mode === 'client' ? 'Atleta' : mode === 'trainer' ? 'Entrenador' : 'Super Admin'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <button
@@ -267,7 +355,7 @@ export function Sidebar() {
             "flex items-center justify-center gap-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all border",
             layout === "mini"
               ? "p-3 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
-              : "w-full py-3.5 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
+              : "w-full py-3 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
           )}
           onClick={logout}
           title="Cerrar sesión"

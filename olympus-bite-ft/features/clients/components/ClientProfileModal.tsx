@@ -18,12 +18,14 @@ interface ClientProfileModalProps {
     clientId: string,
     data: { dietaryGoal?: string; targetCalories?: number | null; password?: string },
   ) => Promise<void>;
+  onDelete?: (clientId: string) => Promise<void>;
 }
 
 export function ClientProfileModal({
   client,
   onClose,
   onSave,
+  onDelete,
 }: ClientProfileModalProps) {
   const [goal, setGoal] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
@@ -300,6 +302,26 @@ export function ClientProfileModal({
                   </p>
                 </div>
               </div>
+              
+              {/* Danger Zone */}
+              {onDelete && (
+                <div className="bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-500/20 p-5 shadow-sm">
+                  <h3 className="text-sm font-condensed font-bold uppercase tracking-wide text-red-900 dark:text-red-400 mb-2 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4" /> Zona de Peligro
+                  </h3>
+                  <p className="text-[11px] font-medium text-red-700 dark:text-red-300 mb-4 leading-relaxed">
+                    Eliminar a este cliente borrará de forma permanente todo su historial de rutinas, comidas y datos de progreso.
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-red-600 dark:text-red-400 bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/30 font-condensed font-bold uppercase tracking-wider"
+                    onClick={() => onDelete(client.id)}
+                  >
+                    Eliminar Cliente
+                  </Button>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-6 border-t border-neutral-200 dark:border-white/10">
                 <Button variant="ghost" size="lg" className="w-full font-condensed font-bold uppercase tracking-wider" onClick={onClose}>

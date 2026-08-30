@@ -11,6 +11,7 @@ datasource db {
 // ─── Enums ───────────────────────────────────────────────
 
 enum UserRole {
+  super_admin
   admin
   trainer
   client
@@ -58,6 +59,42 @@ enum DayOfWeek {
 
 // ─── Models ──────────────────────────────────────────────
 
+model Gym {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logoUrl     String?  @map("logo_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  branches    Branch[]
+  users       User[]
+
+  @@map("gyms")
+}
+
+model Branch {
+  id          String   @id @default(uuid())
+  gymId       String   @map("gym_id")
+  name        String   // "Sede Poblado", "Sede Laureles", "Sede Central", etc.
+  slug        String
+  address     String?
+  city        String?  @default("Medellín")
+  phone       String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  gym         Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  users       User[]
+  invitationCodes InvitationCode[]
+
+  @@unique([gymId, slug])
+  @@map("branches")
+}
+
 model User {
   id                  String   @id @default(uuid())
   email               String   @unique
@@ -65,6 +102,8 @@ model User {
   password            String
   role                UserRole @default(client)
   trainerId           String?  @map("trainer_id")
+  gymId               String?  @map("gym_id")
+  branchId            String?  @map("branch_id")
   avatarUrl           String?  @map("avatar_url")
   phone               String?
   dietaryGoal         String?  @map("dietary_goal") // Usado para el objetivo fitness
@@ -89,6 +128,8 @@ model User {
   // Relaciones
   trainer User?  @relation("TrainerClients", fields: [trainerId], references: [id])
   clients User[] @relation("TrainerClients")
+  gym     Gym?   @relation(fields: [gymId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
 
   meals             Meal[]
   dietChatMessages  DietChatMessage[]
@@ -105,6 +146,8 @@ model User {
   notificationPrefs  NotificationPreference?
 
   @@index([trainerId, isActive])
+  @@index([branchId, isActive])
+  @@index([gymId, isActive])
   @@map("users")
 }
 
@@ -112,6 +155,7 @@ model InvitationCode {
   id           String   @id @default(uuid())
   code         String   @unique
   trainerId    String   @map("trainer_id")
+  branchId     String?  @map("branch_id")
   isUsed       Boolean  @default(false) @map("is_used")
   usedByUserId String?  @unique @map("used_by_user_id")
   expiresAt    DateTime @map("expires_at")
@@ -119,8 +163,9 @@ model InvitationCode {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relaciones
-  trainer User  @relation("TrainerCodes", fields: [trainerId], references: [id])
-  usedBy  User? @relation("UsedByUser", fields: [usedByUserId], references: [id])
+  trainer User    @relation("TrainerCodes", fields: [trainerId], references: [id])
+  usedBy  User?   @relation("UsedByUser", fields: [usedByUserId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
 
   @@map("invitation_codes")
 }

@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { CreateUserUseCase } from '../../../application/use-cases/create-user.use-case';
@@ -101,5 +102,13 @@ export class UsersController {
         'No se encontró ningún usuario con ese email',
       );
     return { success: true, data: UserResponseDto.fromEntity(user) };
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string) {
+    const user = await this.userRepository.findById(id);
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    await this.userRepository.delete(id);
+    return { success: true };
   }
 }

@@ -9,6 +9,9 @@ interface NutritionSummaryProps {
   carbs: number;
   fat: number;
   calorieGoal?: number;
+  proteinGoal?: number;
+  carbsGoal?: number;
+  fatGoal?: number;
 }
 
 export function NutritionSummary({
@@ -16,112 +19,87 @@ export function NutritionSummary({
   protein,
   carbs,
   fat,
-  calorieGoal = 2200,
+  calorieGoal = 2000,
+  proteinGoal,
+  carbsGoal,
+  fatGoal,
 }: NutritionSummaryProps) {
-  const progress = Math.min((calories / calorieGoal) * 100, 100);
-  const isOverGoal = calories > calorieGoal;
-  const totalMacros = protein + carbs + fat;
+  // Smart macro targets if not explicitly given
+  const targetP = proteinGoal || Math.round((calorieGoal * 0.30) / 4); // 30% protein
+  const targetC = carbsGoal || Math.round((calorieGoal * 0.45) / 4);   // 45% carbs
+  const targetF = fatGoal || Math.round((calorieGoal * 0.25) / 9);     // 25% fat
 
-  const macros = [
-    { label: 'Proteínas', value: protein, color: 'bg-blue-500', glow: 'shadow-[0_0_10px_rgba(59,130,246,0.5)]', textStyle: 'text-blue-500', pct: totalMacros > 0 ? (protein / totalMacros) * 100 : 0 },
-    { label: 'Carbos', value: carbs, color: 'bg-amber-500', glow: 'shadow-[0_0_10px_rgba(245,158,11,0.5)]', textStyle: 'text-amber-500', pct: totalMacros > 0 ? (carbs / totalMacros) * 100 : 0 },
-    { label: 'Grasas', value: fat, color: 'bg-rose-500', glow: 'shadow-[0_0_10px_rgba(244,63,94,0.5)]', textStyle: 'text-rose-500', pct: totalMacros > 0 ? (fat / totalMacros) * 100 : 0 },
-  ];
+  const remainingCalories = Math.max(calorieGoal - calories, 0);
+  const remainingProtein = Math.max(targetP - protein, 0);
+  const remainingCarbs = Math.max(targetC - carbs, 0);
+  const remainingFat = Math.max(targetF - fat, 0);
 
   return (
-    <Card className="relative overflow-hidden border border-neutral-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-xl group">
-      {/* Cinematic background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+    <div className="w-full bg-[#18181A] dark:bg-[#18181A] rounded-[32px] p-6 text-white shadow-sm relative overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2 opacity-60">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+          <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span className="text-sm font-medium">kcal restantes</span>
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+          <circle cx="5" cy="12" r="2" />
+          <circle cx="12" cy="12" r="2" />
+          <circle cx="19" cy="12" r="2" />
+        </svg>
+      </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10 p-2">
-        {/* Animated Calorie Ring */}
-        <div className="relative h-36 w-36 shrink-0 flex items-center justify-center">
-          {/* Subtle Outer Glow based on progress */}
-          <div className={cn(
-            "absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-1000",
-            isOverGoal ? "bg-red-500" : "bg-primary-500"
-          )} />
-          
-          <svg className="absolute inset-0 h-full w-full -rotate-90 drop-shadow-md" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="6"
-              className="text-neutral-100 dark:text-neutral-800/80"
+      {/* Main Calories */}
+      <div className="text-center mb-6">
+        <h2 className="text-4xl font-bold tracking-tight">{remainingCalories.toLocaleString()}</h2>
+        
+        {/* Progress Slider (Decorative/Visual representation) */}
+        <div className="mt-4 px-4 relative">
+          <div className="h-1 bg-white/10 rounded-full w-full relative">
+            {/* Range markers */}
+            <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-0.5 h-3 bg-white/20" />
+            <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-0.5 h-3 bg-white/20" />
+            
+            {/* Active progress (example, centered) */}
+            <div 
+              className="absolute top-1/2 -translate-y-1/2 w-1.5 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+              style={{ left: `${Math.min(Math.max((calories / calorieGoal) * 100, 5), 95)}%` }}
             />
-            <circle
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray={`${progress * 2.51} 251`}
-              className={cn(
-                "transition-all duration-1000 ease-out",
-                isOverGoal ? "text-red-500" : "text-primary-500"
-              )}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
-            <span className={cn(
-              "text-3xl font-black font-condensed tracking-tighter drop-shadow-md",
-              isOverGoal ? "text-red-500" : "text-neutral-900 dark:text-white"
-            )}>
-              {calories}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 -mt-1">kcal</span>
           </div>
-        </div>
-
-        {/* Info / Macros */}
-        <div className="flex-1 w-full space-y-5">
-          <div className="flex items-end justify-between border-b border-neutral-100 dark:border-white/5 pb-2">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Resumen Diario</p>
-              <p className="text-xs font-semibold text-neutral-500">
-                {calorieGoal - calories > 0 
-                  ? <span className="text-primary-500 font-bold">{calorieGoal - calories} kcal restantes</span> 
-                  : <span className="text-red-500 font-bold">Límite excedido por {calories - calorieGoal} kcal</span>}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Objetivo</p>
-              <p className="text-base font-bold text-neutral-800 dark:text-white font-condensed tracking-wide">{calorieGoal} kcal</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {macros.map((macro) => (
-              <div key={macro.label} className="space-y-1.5">
-                <div className="flex justify-between items-baseline text-xs">
-                  <span className="font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">{macro.label}</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className={cn("text-base font-black font-condensed tracking-tight", macro.textStyle)}>{macro.value}g</span>
-                    <span className="font-semibold text-[10px] text-neutral-400">{Math.round(macro.pct)}%</span>
-                  </div>
-                </div>
-                <div className="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800/80 overflow-hidden shadow-inner border border-white/5">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-1000 ease-out relative",
-                      macro.color,
-                      macro.glow
-                    )}
-                    style={{ width: `${macro.pct}%` }}
-                  >
-                     <div className="absolute inset-0 bg-white/20" />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex justify-between text-[11px] text-white/40 mt-2 px-8 font-medium">
+            <span>{Math.round(calorieGoal * 0.9).toLocaleString()}</span>
+            <span>{Math.round(calorieGoal * 1.1).toLocaleString()}</span>
           </div>
         </div>
       </div>
-    </Card>
+
+      {/* Macros */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="flex flex-col items-center">
+          <span className="text-sm text-white/60 mb-1">Proteínas</span>
+          <div className="font-semibold text-[15px] border-b-2 border-white/20 pb-1 px-1">
+            {remainingProtein} g resta...
+          </div>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-sm text-white/60 mb-1">Carbs</span>
+          <div className="font-semibold text-[15px] border-b-2 border-white/20 pb-1 px-1">
+            {remainingCarbs} g resta...
+          </div>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-sm text-white/60 mb-1">Grasas</span>
+          <div className="font-semibold text-[15px] border-b-2 border-white/20 pb-1 px-1">
+            {remainingFat} g resta...
+          </div>
+        </div>
+      </div>
+
+      {/* Button */}
+      <button className="w-full bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors rounded-full py-4 text-center font-semibold text-white/40 tracking-wide">
+        Terminar Día
+      </button>
+    </div>
   );
 }

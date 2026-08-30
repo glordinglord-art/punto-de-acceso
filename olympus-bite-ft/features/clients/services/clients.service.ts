@@ -27,4 +27,7 @@ export const clientsService = {
 
   linkClient: (trainerId: string, email: string) =>
     api.patch<ApiResponse<User>>(`/users/trainer/${trainerId}/link-client`, { email }),
+    
+  deleteClient: (id: string) =>
+    api.delete<ApiResponse<void>>(`/users/${id}`),
 };

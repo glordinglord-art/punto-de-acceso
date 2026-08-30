@@ -265,17 +265,28 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
           <div className="flex-1 min-w-0 text-center md:text-left">
             <h2 className="text-3xl font-condensed font-bold uppercase tracking-wide text-slate-900 truncate drop-shadow-sm dark:text-white dark:drop-shadow-md">{client.name}</h2>
             <p className="text-primary-400 font-medium text-sm mb-2">{client.email}</p>
-            {goalInfo && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-bold text-slate-900 uppercase tracking-wider font-condensed mt-2 dark:bg-white/5 dark:border-white/10 dark:text-white">
-                <span className="text-base">{goalInfo.icon}</span> {goalInfo.label}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
+              {goalInfo && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-bold text-slate-900 uppercase tracking-wider font-condensed dark:bg-white/5 dark:border-white/10 dark:text-white">
+                  <span className="text-base">{goalInfo.icon}</span> {goalInfo.label}
+                </span>
+              )}
+              {client.phone && (
+                <a
+                  href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Hola ${client.name}! Te escribo desde Punto de Inflexión para revisar tu progreso de hoy 💪`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 transition-all font-condensed uppercase tracking-wider"
+                >
+                  💬 WhatsApp: {client.phone}
+                </a>
+              )}
+            </div>
           </div>
           
           <div className="text-center md:text-right flex flex-col items-center md:items-end justify-center">
             <div className="flex items-baseline gap-1">
               <p className="text-5xl font-condensed font-bold text-slate-900 drop-shadow-sm leading-none dark:text-white dark:drop-shadow-lg">{dashboard.caloriesToday.toLocaleString()}</p>
-              <span className="text-sm font-bold text-neutral-500 font-condensed tracking-widest uppercase">Kcal</span>
             </div>
             <p className="text-xs text-primary-400 font-bold uppercase tracking-widest mt-1">
               {targetCal > 0 ? `De ${targetCal.toLocaleString()} META (${calPct}%)` : 'Consumidas Hoy'}

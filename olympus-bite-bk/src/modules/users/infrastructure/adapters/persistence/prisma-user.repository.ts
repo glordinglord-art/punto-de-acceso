@@ -19,6 +19,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatarUrl: raw.avatarUrl ?? undefined,
         phone: raw.phone ?? undefined,
         trainerId: raw.trainerId ?? undefined,
+        gymId: (raw as any).gymId ?? undefined,
+        branchId: (raw as any).branchId ?? undefined,
         dietaryGoal: raw.dietaryGoal ?? undefined,
         weight: raw.weight ?? undefined,
         height: raw.height ?? undefined,
@@ -70,6 +72,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatarUrl: entity.avatarUrl,
         phone: entity.phone,
         trainerId: entity.trainerId,
+        gymId: entity.gymId,
+        branchId: entity.branchId,
         dietaryGoal: entity.dietaryGoal,
         weight: entity.weight,
         height: entity.height,
@@ -98,6 +102,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatarUrl: entity.avatarUrl,
         phone: entity.phone,
         trainerId: entity.trainerId,
+        gymId: entity.gymId,
+        branchId: entity.branchId,
         dietaryGoal: entity.dietaryGoal,
         weight: entity.weight,
         height: entity.height,
@@ -116,7 +122,26 @@ export class PrismaUserRepository implements UserRepositoryPort {
   }
 
   async delete(id: string): Promise<void> {
-    await this.prisma.user.delete({ where: { id } });
+    await this.prisma.$transaction([
+      // Delete user's records manually to avoid FK constraint errors if not cascade in schema
+      this.prisma.meal.deleteMany({ where: { userId: id } }),
+      this.prisma.routine.deleteMany({ where: { clientId: id } }),
+      this.prisma.routine.deleteMany({ where: { trainerId: id } }),
+      this.prisma.workoutLog.deleteMany({ where: { userId: id } }),
+      this.prisma.invitationCode.deleteMany({ where: { usedByUserId: id } }),
+      this.prisma.invitationCode.deleteMany({ where: { trainerId: id } }),
+      this.prisma.dietChatMessage.deleteMany({ where: { userId: id } }),
+      this.prisma.dailyTask.deleteMany({ where: { userId: id } }),
+      this.prisma.taskLog.deleteMany({ where: { userId: id } }),
+      this.prisma.waterLog.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationSubscription.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationPreference.deleteMany({ where: { userId: id } }),
+      this.prisma.user.updateMany({
+        where: { trainerId: id },
+        data: { trainerId: null }
+      }),
+      this.prisma.user.delete({ where: { id } }),
+    ]);
   }
 
   async linkToTrainer(email: string, trainerId: string): Promise<User | null> {

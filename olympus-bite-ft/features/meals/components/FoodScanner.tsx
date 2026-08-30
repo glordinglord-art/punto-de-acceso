@@ -15,6 +15,8 @@ import { Sparkles, Camera, FileText, ArrowLeft, RefreshCw } from "lucide-react";
 interface FoodScannerProps {
   userId: string;
   onMealSaved: () => void;
+  defaultMealType?: string;
+  onAnalyzeBackground?: (images: string[], text: string, mealType: string) => void;
 }
 
 type Mode = "choose" | "scan" | "manual";
@@ -22,6 +24,8 @@ type Mode = "choose" | "scan" | "manual";
 export function FoodScanner({
   userId,
   onMealSaved,
+  defaultMealType = "breakfast",
+  onAnalyzeBackground,
 }: FoodScannerProps) {
   const [mode, setMode] = useState<Mode>("choose");
 
@@ -31,7 +35,7 @@ export function FoodScanner({
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
   const [savingFromScan, setSavingFromScan] = useState(false);
-  const [scanMealType, setScanMealType] = useState<string>("lunch");
+  const [scanMealType, setScanMealType] = useState<string>(defaultMealType);
   const [scanName, setScanName] = useState("");
   const { user } = useAuth();
   const [scanDate, setScanDate] = useState(() => getLocalDateString());
@@ -78,6 +82,13 @@ export function FoodScanner({
 
   const handleAnalyze = async () => {
     if (!imagesBase64.length) return;
+    
+    // If we support background processing, just dispatch and return
+    if (onAnalyzeBackground) {
+      onAnalyzeBackground(imagesBase64, userDescription, scanMealType);
+      return;
+    }
+
     setAnalyzing(true);
     setError("");
     try {

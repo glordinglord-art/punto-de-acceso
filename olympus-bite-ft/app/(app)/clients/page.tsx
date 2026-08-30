@@ -484,6 +484,17 @@ export default function ClientsPage() {
         client={selectedClient}
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
+        onDelete={async (clientId) => {
+          if (confirm("¿Estás seguro de eliminar a este cliente? Se borrarán sus rutinas, comidas y datos. Esta acción no se puede deshacer.")) {
+            try {
+              await clientsService.deleteClient(clientId);
+              setSelectedClient(null);
+              await loadClients();
+            } catch (err) {
+              alert("Error eliminando cliente: " + (err instanceof Error ? err.message : "Error"));
+            }
+          }
+        }}
       />
 
       {/* Vincular cliente existente */}

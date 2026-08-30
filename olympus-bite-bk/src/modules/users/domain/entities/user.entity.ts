@@ -7,6 +7,8 @@ export interface CreateUserProps {
   password: string;
   role: UserRole;
   trainerId?: string;
+  gymId?: string;
+  branchId?: string;
   avatarUrl?: string;
   phone?: string;
   dietaryGoal?: string;
@@ -28,6 +30,8 @@ export class User extends BaseEntity {
   password: string;
   role: UserRole;
   trainerId: string | null;
+  gymId: string | null;
+  branchId: string | null;
   avatarUrl: string | null;
   phone: string | null;
   dietaryGoal: string | null;
@@ -53,6 +57,8 @@ export class User extends BaseEntity {
     this.password = props.password;
     this.role = props.role;
     this.trainerId = props.trainerId ?? null;
+    this.gymId = props.gymId ?? null;
+    this.branchId = props.branchId ?? null;
     this.avatarUrl = props.avatarUrl ?? null;
     this.phone = props.phone ?? null;
     this.dietaryGoal = props.dietaryGoal ?? null;
@@ -69,12 +75,20 @@ export class User extends BaseEntity {
     this.isActive = true;
   }
 
+  isSuperAdmin(): boolean {
+    return this.role === UserRole.SUPER_ADMIN;
+  }
+
   isAdmin(): boolean {
-    return this.role === UserRole.ADMIN;
+    return this.role === UserRole.ADMIN || this.role === UserRole.SUPER_ADMIN;
   }
 
   isTrainer(): boolean {
-    return this.role === UserRole.TRAINER;
+    return (
+      this.role === UserRole.TRAINER ||
+      this.role === UserRole.ADMIN ||
+      this.role === UserRole.SUPER_ADMIN
+    );
   }
 
   isClient(): boolean {
