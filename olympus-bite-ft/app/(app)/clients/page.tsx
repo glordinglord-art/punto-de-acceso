@@ -27,6 +27,7 @@ interface InvCode {
 
 export default function ClientsPage() {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [clients, setClients] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   

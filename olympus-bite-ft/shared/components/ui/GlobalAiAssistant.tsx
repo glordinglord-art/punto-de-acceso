@@ -5,8 +5,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { mealsService } from "@/features/meals/services/meals.service";
 import { cn } from "@/shared/lib/utils";
 import ReactMarkdown from "react-markdown";
-import { X, Send, Sparkles, UserCircle, Trash2, MessageSquare } from "lucide-react";
-import type { User } from "@/shared/types/common.types";
+import { X, Send, Sparkles, UserCircle, Trash2 } from "lucide-react";
 import { useConfirm } from "@/shared/contexts/ConfirmContext";
 
 interface Message {
@@ -78,6 +77,7 @@ export function GlobalAiAssistant() {
   const { confirm } = useConfirm();
 
   const handleClearHistory = async () => {
+    if (!user) return;
     const ok = await confirm({
       title: '¿Borrar conversación?',
       description: 'Se limpiará el historial de mensajes con tu Asistente IA.',
@@ -103,7 +103,7 @@ export function GlobalAiAssistant() {
 
   const handleSend = async (textToSend?: string) => {
     const promptText = textToSend || input;
-    if (!promptText.trim()) return;
+    if (!promptText.trim() || !user) return;
 
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: promptText }]);

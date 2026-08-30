@@ -110,8 +110,14 @@ function getNavConfig(activeMode: string) {
   };
 }
 
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
 // ─── "More" button with popover ──────────────────────────
-function MoreMenu({ pathname, items }: { pathname: string, items: any[] }) {
+function MoreMenu({ pathname, items }: { pathname: string; items: NavItem[] }) {
   const { activeMode, setActiveMode, availableModes } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
