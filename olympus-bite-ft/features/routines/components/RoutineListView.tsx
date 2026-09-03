@@ -996,8 +996,8 @@ export function RoutineListView({
 
         {activeTab === "routine" ? (
           <>
-            {/* Control Bar — 2 rows */}
-            <div className="mb-4 p-3 bg-white/[0.03] rounded-3xl border border-white/10 backdrop-blur-xl space-y-2.5">
+            {/* Control Bar — 2 rows (relative z-30 ensures dropdowns display above subsequent cards) */}
+            <div className="relative z-30 mb-4 p-3 bg-white/[0.03] rounded-3xl border border-white/10 backdrop-blur-xl space-y-2.5">
               {/* Row 1: Selectors */}
               <div className="flex items-center gap-2">
                 {/* Routine selector */}
@@ -1017,7 +1017,7 @@ export function RoutineListView({
                   {showRoutineDropdown && (
                     <>
                       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs" onClick={() => setShowRoutineDropdown(false)} />
-                      <div className="absolute left-0 right-0 mt-2 rounded-2xl border border-white/20 bg-[#0c0e17] p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] z-50 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute left-0 right-0 mt-2 max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 rounded-2xl border border-white/20 bg-[#0c0e17] p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] z-50 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10 mb-1 flex items-center justify-between">
                           <span>Seleccionar Rutina</span>
                           <span className="text-[9px] font-bold text-slate-500">{routines.length} disponibles</span>
@@ -1032,9 +1032,9 @@ export function RoutineListView({
                               className={cn(
                                 "flex items-center justify-between w-full rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all cursor-pointer text-left",
                                 isSelected
-                                  ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white font-black shadow-lg shadow-red-500/30"
+                                  ? "bg-red-600 border border-red-500 text-white font-black shadow-lg shadow-red-600/30"
                                   : r.isActive
-                                    ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                    ? "bg-white/10 text-white hover:bg-white/15 border border-white/15"
                                     : "text-slate-300 hover:bg-white/10 hover:text-white"
                               )}
                             >
@@ -1082,7 +1082,7 @@ export function RoutineListView({
                   {showWeekDropdown && (
                     <>
                       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs" onClick={() => setShowWeekDropdown(false)} />
-                      <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/20 bg-[#0c0e17] p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute right-0 mt-2 w-64 max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 rounded-2xl border border-white/20 bg-[#0c0e17] p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] z-50 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10 mb-1">
                           Seleccionar Semana
                         </div>
@@ -1101,7 +1101,7 @@ export function RoutineListView({
                               className={cn(
                                 "flex items-center justify-between w-full rounded-xl px-3 py-2 text-xs font-bold transition-all cursor-pointer",
                                 isSelected
-                                  ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white font-black shadow-md shadow-red-500/25"
+                                  ? "bg-red-600 border border-red-500 text-white font-black shadow-md shadow-red-600/25"
                                   : isCompleted
                                     ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                                     : "text-slate-300 hover:bg-white/10 hover:text-white"
@@ -1626,7 +1626,7 @@ export function RoutineListView({
                               <button
                                 type="button"
                                 onClick={() => onStartSession(day)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-primary-500/25 hover:shadow-primary-500/40 active:scale-95 transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 active:scale-95 transition-all cursor-pointer"
                               >
                                 ▶ Iniciar
                               </button>
