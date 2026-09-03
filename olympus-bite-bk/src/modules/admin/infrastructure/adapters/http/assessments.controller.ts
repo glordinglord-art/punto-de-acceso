@@ -10,6 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
+import { randomUUID } from 'crypto';
 
 interface PhysicalAssessmentRecord {
   id: string;
@@ -43,24 +44,77 @@ interface PhysicalAssessmentRecord {
   };
 }
 
-interface AssessmentDelegate {
-  findMany(args?: Record<string, unknown>): Promise<PhysicalAssessmentRecord[]>;
-  findUnique(
-    args: Record<string, unknown>,
-  ): Promise<PhysicalAssessmentRecord | null>;
-  create(args: Record<string, unknown>): Promise<PhysicalAssessmentRecord>;
-  update(args: Record<string, unknown>): Promise<PhysicalAssessmentRecord>;
-  delete(args: Record<string, unknown>): Promise<PhysicalAssessmentRecord>;
+interface RawDbRow {
+  id: string;
+  client_id: string;
+  trainer_id: string;
+  date: Date;
+  neck: number | null;
+  back: number | null;
+  right_arm: number | null;
+  left_arm: number | null;
+  waist: number | null;
+  hip: number | null;
+  right_thigh: number | null;
+  left_thigh: number | null;
+  right_knee: number | null;
+  left_knee: number | null;
+  right_calf: number | null;
+  left_calf: number | null;
+  weight: number | null;
+  fat_percentage: number | null;
+  muscle_percentage: number | null;
+  water_percentage: number | null;
+  bone_percentage: number | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+  trainer_name?: string | null;
+  trainer_email?: string | null;
 }
 
 @Controller('assessments')
 export class AssessmentsController {
   constructor(private readonly prisma: PrismaService) {}
 
-  private get assessmentModel(): AssessmentDelegate {
-    return (
-      this.prisma as unknown as { physicalAssessment: AssessmentDelegate }
-    ).physicalAssessment;
+  private mapRow(row: RawDbRow): PhysicalAssessmentRecord {
+    return {
+      id: row.id,
+      clientId: row.client_id,
+      trainerId: row.trainer_id,
+      date: row.date,
+      neck: row.neck !== null ? Number(row.neck) : null,
+      back: row.back !== null ? Number(row.back) : null,
+      rightArm: row.right_arm !== null ? Number(row.right_arm) : null,
+      leftArm: row.left_arm !== null ? Number(row.left_arm) : null,
+      waist: row.waist !== null ? Number(row.waist) : null,
+      hip: row.hip !== null ? Number(row.hip) : null,
+      rightThigh: row.right_thigh !== null ? Number(row.right_thigh) : null,
+      leftThigh: row.left_thigh !== null ? Number(row.left_thigh) : null,
+      rightKnee: row.right_knee !== null ? Number(row.right_knee) : null,
+      leftKnee: row.left_knee !== null ? Number(row.left_knee) : null,
+      rightCalf: row.right_calf !== null ? Number(row.right_calf) : null,
+      leftCalf: row.left_calf !== null ? Number(row.left_calf) : null,
+      weight: row.weight !== null ? Number(row.weight) : null,
+      fatPercentage:
+        row.fat_percentage !== null ? Number(row.fat_percentage) : null,
+      musclePercentage:
+        row.muscle_percentage !== null ? Number(row.muscle_percentage) : null,
+      waterPercentage:
+        row.water_percentage !== null ? Number(row.water_percentage) : null,
+      bonePercentage:
+        row.bone_percentage !== null ? Number(row.bone_percentage) : null,
+      notes: row.notes || null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      trainer: row.trainer_name
+        ? {
+            id: row.trainer_id,
+            name: row.trainer_name,
+            email: row.trainer_email || '',
+          }
+        : undefined,
+    };
   }
 
   @Get('client/:clientId')
@@ -74,17 +128,18 @@ export class AssessmentsController {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    const assessments = await this.assessmentModel.findMany({
-      where: { clientId },
-      orderBy: { date: 'desc' },
-      include: {
-        trainer: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-    });
+    const rows = await this.prisma.$queryRawUnsafe<RawDbRow[]>(
+      `SELECT a.*, u.name as trainer_name, u.email as trainer_email
+       FROM physical_assessments a
+       LEFT JOIN users u ON a.trainer_id = u.id
+       WHERE a.client_id = $1
+       ORDER BY a.date DESC`,
+      clientId,
+    );
 
-    // Compute progress comparison if at least 2 records exist
+    const assessments = rows.map((r) => this.mapRow(r));
+
+    // Calculate smart evolution if at least 2 records exist
     let progressSummary: {
       hasComparison: boolean;
       deltaWeight: number | null;
@@ -173,7 +228,7 @@ export class AssessmentsController {
     @Body()
     dto: {
       clientId: string;
-      trainerId: string;
+      trainerId?: string;
       date?: string;
       neck?: number | null;
       back?: number | null;
@@ -195,41 +250,70 @@ export class AssessmentsController {
       notes?: string | null;
     },
   ) {
-    if (!dto.clientId || !dto.trainerId) {
-      throw new BadRequestException('clientId y trainerId son requeridos');
+    if (!dto.clientId) {
+      throw new BadRequestException('clientId es requerido');
     }
 
-    const assessmentDate = dto.date ? new Date(dto.date) : new Date();
+    let finalTrainerId = dto.trainerId;
+    if (!finalTrainerId) {
+      const clientUser = await this.prisma.user.findUnique({
+        where: { id: dto.clientId },
+        select: { trainerId: true },
+      });
+      finalTrainerId = clientUser?.trainerId || '';
+    }
 
-    const created = await this.assessmentModel.create({
-      data: {
-        clientId: dto.clientId,
-        trainerId: dto.trainerId,
-        date: assessmentDate,
-        neck: dto.neck !== undefined ? dto.neck : null,
-        back: dto.back !== undefined ? dto.back : null,
-        rightArm: dto.rightArm !== undefined ? dto.rightArm : null,
-        leftArm: dto.leftArm !== undefined ? dto.leftArm : null,
-        waist: dto.waist !== undefined ? dto.waist : null,
-        hip: dto.hip !== undefined ? dto.hip : null,
-        rightThigh: dto.rightThigh !== undefined ? dto.rightThigh : null,
-        leftThigh: dto.leftThigh !== undefined ? dto.leftThigh : null,
-        rightKnee: dto.rightKnee !== undefined ? dto.rightKnee : null,
-        leftKnee: dto.leftKnee !== undefined ? dto.leftKnee : null,
-        rightCalf: dto.rightCalf !== undefined ? dto.rightCalf : null,
-        leftCalf: dto.leftCalf !== undefined ? dto.leftCalf : null,
-        weight: dto.weight !== undefined ? dto.weight : null,
-        fatPercentage:
-          dto.fatPercentage !== undefined ? dto.fatPercentage : null,
-        musclePercentage:
-          dto.musclePercentage !== undefined ? dto.musclePercentage : null,
-        waterPercentage:
-          dto.waterPercentage !== undefined ? dto.waterPercentage : null,
-        bonePercentage:
-          dto.bonePercentage !== undefined ? dto.bonePercentage : null,
-        notes: dto.notes || null,
-      },
-    });
+    if (!finalTrainerId) {
+      const fallback = await this.prisma.user.findFirst({
+        where: { role: { in: ['trainer', 'super_admin', 'admin'] } },
+        select: { id: true },
+      });
+      finalTrainerId = fallback?.id || dto.clientId;
+    }
+
+    const id = randomUUID();
+    const now = new Date();
+    const assessmentDate = dto.date ? new Date(dto.date) : now;
+
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO physical_assessments (
+        id, client_id, trainer_id, date,
+        neck, back, right_arm, left_arm, waist, hip,
+        right_thigh, left_thigh, right_knee, left_knee, right_calf, left_calf,
+        weight, fat_percentage, muscle_percentage, water_percentage, bone_percentage,
+        notes, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16,
+        $17, $18, $19, $20, $21,
+        $22, $23, $24
+      )`,
+      id,
+      dto.clientId,
+      finalTrainerId,
+      assessmentDate,
+      dto.neck !== undefined ? dto.neck : null,
+      dto.back !== undefined ? dto.back : null,
+      dto.rightArm !== undefined ? dto.rightArm : null,
+      dto.leftArm !== undefined ? dto.leftArm : null,
+      dto.waist !== undefined ? dto.waist : null,
+      dto.hip !== undefined ? dto.hip : null,
+      dto.rightThigh !== undefined ? dto.rightThigh : null,
+      dto.leftThigh !== undefined ? dto.leftThigh : null,
+      dto.rightKnee !== undefined ? dto.rightKnee : null,
+      dto.leftKnee !== undefined ? dto.leftKnee : null,
+      dto.rightCalf !== undefined ? dto.rightCalf : null,
+      dto.leftCalf !== undefined ? dto.leftCalf : null,
+      dto.weight !== undefined ? dto.weight : null,
+      dto.fatPercentage !== undefined ? dto.fatPercentage : null,
+      dto.musclePercentage !== undefined ? dto.musclePercentage : null,
+      dto.waterPercentage !== undefined ? dto.waterPercentage : null,
+      dto.bonePercentage !== undefined ? dto.bonePercentage : null,
+      dto.notes || null,
+      now,
+      now,
+    );
 
     // If weight is provided, update client's current weight
     if (dto.weight) {
@@ -239,7 +323,12 @@ export class AssessmentsController {
       });
     }
 
-    return created;
+    const insertedRows = await this.prisma.$queryRawUnsafe<RawDbRow[]>(
+      `SELECT * FROM physical_assessments WHERE id = $1`,
+      id,
+    );
+
+    return insertedRows[0] ? this.mapRow(insertedRows[0]) : { id };
   }
 
   @Put(':id')
@@ -268,73 +357,95 @@ export class AssessmentsController {
       notes?: string | null;
     },
   ) {
-    const existing = await this.assessmentModel.findUnique({
-      where: { id },
-    });
+    const existing = await this.prisma.$queryRawUnsafe<RawDbRow[]>(
+      `SELECT * FROM physical_assessments WHERE id = $1`,
+      id,
+    );
 
-    if (!existing) {
+    if (!existing || existing.length === 0) {
       throw new NotFoundException('Valoración no encontrada');
     }
 
-    const assessmentDate = dto.date ? new Date(dto.date) : existing.date;
+    const assessmentDate = dto.date
+      ? new Date(dto.date)
+      : existing[0].date;
 
-    const updated = await this.assessmentModel.update({
-      where: { id },
-      data: {
-        date: assessmentDate,
-        neck: dto.neck !== undefined ? dto.neck : existing.neck,
-        back: dto.back !== undefined ? dto.back : existing.back,
-        rightArm: dto.rightArm !== undefined ? dto.rightArm : existing.rightArm,
-        leftArm: dto.leftArm !== undefined ? dto.leftArm : existing.leftArm,
-        waist: dto.waist !== undefined ? dto.waist : existing.waist,
-        hip: dto.hip !== undefined ? dto.hip : existing.hip,
-        rightThigh:
-          dto.rightThigh !== undefined ? dto.rightThigh : existing.rightThigh,
-        leftThigh:
-          dto.leftThigh !== undefined ? dto.leftThigh : existing.leftThigh,
-        rightKnee:
-          dto.rightKnee !== undefined ? dto.rightKnee : existing.rightKnee,
-        leftKnee: dto.leftKnee !== undefined ? dto.leftKnee : existing.leftKnee,
-        rightCalf:
-          dto.rightCalf !== undefined ? dto.rightCalf : existing.rightCalf,
-        leftCalf: dto.leftCalf !== undefined ? dto.leftCalf : existing.leftCalf,
-        weight: dto.weight !== undefined ? dto.weight : existing.weight,
-        fatPercentage:
-          dto.fatPercentage !== undefined
-            ? dto.fatPercentage
-            : existing.fatPercentage,
-        musclePercentage:
-          dto.musclePercentage !== undefined
-            ? dto.musclePercentage
-            : existing.musclePercentage,
-        waterPercentage:
-          dto.waterPercentage !== undefined
-            ? dto.waterPercentage
-            : existing.waterPercentage,
-        bonePercentage:
-          dto.bonePercentage !== undefined
-            ? dto.bonePercentage
-            : existing.bonePercentage,
-        notes: dto.notes !== undefined ? dto.notes : existing.notes,
-      },
-    });
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE physical_assessments SET
+        date = $2,
+        neck = $3,
+        back = $4,
+        right_arm = $5,
+        left_arm = $6,
+        waist = $7,
+        hip = $8,
+        right_thigh = $9,
+        left_thigh = $10,
+        right_knee = $11,
+        left_knee = $12,
+        right_calf = $13,
+        left_calf = $14,
+        weight = $15,
+        fat_percentage = $16,
+        muscle_percentage = $17,
+        water_percentage = $18,
+        bone_percentage = $19,
+        notes = $20,
+        updated_at = NOW()
+      WHERE id = $1`,
+      id,
+      assessmentDate,
+      dto.neck !== undefined ? dto.neck : existing[0].neck,
+      dto.back !== undefined ? dto.back : existing[0].back,
+      dto.rightArm !== undefined ? dto.rightArm : existing[0].right_arm,
+      dto.leftArm !== undefined ? dto.leftArm : existing[0].left_arm,
+      dto.waist !== undefined ? dto.waist : existing[0].waist,
+      dto.hip !== undefined ? dto.hip : existing[0].hip,
+      dto.rightThigh !== undefined ? dto.rightThigh : existing[0].right_thigh,
+      dto.leftThigh !== undefined ? dto.leftThigh : existing[0].left_thigh,
+      dto.rightKnee !== undefined ? dto.rightKnee : existing[0].right_knee,
+      dto.leftKnee !== undefined ? dto.leftKnee : existing[0].left_knee,
+      dto.rightCalf !== undefined ? dto.rightCalf : existing[0].right_calf,
+      dto.leftCalf !== undefined ? dto.leftCalf : existing[0].left_calf,
+      dto.weight !== undefined ? dto.weight : existing[0].weight,
+      dto.fatPercentage !== undefined
+        ? dto.fatPercentage
+        : existing[0].fat_percentage,
+      dto.musclePercentage !== undefined
+        ? dto.musclePercentage
+        : existing[0].muscle_percentage,
+      dto.waterPercentage !== undefined
+        ? dto.waterPercentage
+        : existing[0].water_percentage,
+      dto.bonePercentage !== undefined
+        ? dto.bonePercentage
+        : existing[0].bone_percentage,
+      dto.notes !== undefined ? dto.notes : existing[0].notes,
+    );
 
-    return updated;
+    const updatedRows = await this.prisma.$queryRawUnsafe<RawDbRow[]>(
+      `SELECT * FROM physical_assessments WHERE id = $1`,
+      id,
+    );
+
+    return updatedRows[0] ? this.mapRow(updatedRows[0]) : { id };
   }
 
   @Delete(':id')
   async deleteAssessment(@Param('id') id: string) {
-    const existing = await this.assessmentModel.findUnique({
-      where: { id },
-    });
+    const existing = await this.prisma.$queryRawUnsafe<RawDbRow[]>(
+      `SELECT id FROM physical_assessments WHERE id = $1`,
+      id,
+    );
 
-    if (!existing) {
+    if (!existing || existing.length === 0) {
       throw new NotFoundException('Valoración no encontrada');
     }
 
-    await this.assessmentModel.delete({
-      where: { id },
-    });
+    await this.prisma.$executeRawUnsafe(
+      `DELETE FROM physical_assessments WHERE id = $1`,
+      id,
+    );
 
     return { success: true, message: 'Valoración eliminada correctamente' };
   }

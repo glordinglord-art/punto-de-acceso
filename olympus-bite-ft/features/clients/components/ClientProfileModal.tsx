@@ -74,9 +74,9 @@ export function ClientProfileModal({
       isOpen={!!client}
       onClose={onClose}
       title=""
-      size="lg"
+      size="xl"
       noPadding={true}
-      className="overflow-hidden max-w-4xl"
+      className="overflow-hidden max-w-5xl"
     >
       <div className="relative">
         {/* Banner with VITALFIT crimson titanium gradient */}
