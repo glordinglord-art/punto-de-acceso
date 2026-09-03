@@ -32,6 +32,14 @@ export class ExerciseDto {
   @IsString()
   @IsOptional()
   videoUrl?: string;
+
+  @IsNumber()
+  @IsOptional()
+  targetWeight?: number;
+
+  @IsString()
+  @IsOptional()
+  intensity?: string;
 }
 
 export class RoutineDayDto {

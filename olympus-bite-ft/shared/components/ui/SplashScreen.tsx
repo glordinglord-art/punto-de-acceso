@@ -16,17 +16,24 @@ export function SplashScreen({
   autoCloseTimeoutMs = 2800,
   forceShow = false,
 }: SplashScreenProps) {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    if (forceShow) return true;
+  const [visible, setVisible] = useState(false);
+  const [animatingOut, setAnimatingOut] = useState(false);
+
+  useEffect(() => {
+    if (forceShow) {
+      const timer = setTimeout(() => setVisible(true), 0);
+      return () => clearTimeout(timer);
+    }
     try {
       const hasShown = sessionStorage.getItem("vf_splash_shown");
-      return !hasShown;
+      if (!hasShown) {
+        const timer = setTimeout(() => setVisible(true), 0);
+        return () => clearTimeout(timer);
+      }
     } catch {
-      return false;
+      /* ignore */
     }
-  });
-  const [animatingOut, setAnimatingOut] = useState(false);
+  }, [forceShow]);
 
   const handleDismiss = useCallback(() => {
     setAnimatingOut(true);
@@ -62,7 +69,7 @@ export function SplashScreen({
         animatingOut ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
       )}
     >
-      {/* Top Status Simulation Bar (as in reference image) */}
+      {/* Top Status Simulation Bar */}
       <div className="absolute top-0 inset-x-0 h-16 flex items-center justify-between px-6 z-20 text-white/40">
         <button
           onClick={(e) => {
@@ -97,9 +104,7 @@ export function SplashScreen({
 
       {/* Ambient Red & White Light Flares */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-96 pointer-events-none overflow-visible">
-        {/* Soft White Left Flare */}
         <div className="absolute left-[20%] top-1/2 -translate-y-1/2 w-72 h-44 rounded-full bg-white/20 blur-[90px] mix-blend-screen animate-pulse" />
-        {/* Deep Crimson Right Flare */}
         <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-72 h-48 rounded-full bg-red-600/35 blur-[90px] mix-blend-screen animate-pulse" />
       </div>
 

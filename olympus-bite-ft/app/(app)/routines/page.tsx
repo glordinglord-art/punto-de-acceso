@@ -10,6 +10,9 @@ import { WeeklyTracker } from "@/features/routines/components/WeeklyTracker";
 import { RoutineBuilder, RoutineForm } from "@/features/routines/components/RoutineBuilder";
 import { RoutineCalendar } from "@/features/routines/components/RoutineCalendar";
 import { ClientRoutinesView } from "@/features/routines/components/ClientRoutinesView";
+import { RoutineTemplateModal } from "@/features/routines/components/RoutineTemplateModal";
+import { CustomTemplatesView } from "@/features/routines/components/CustomTemplatesView";
+import type { RoutinePreset } from "@/features/routines/data/preset-routines";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { clientsService } from "@/features/clients/services/clients.service";
 import type {
@@ -18,9 +21,10 @@ import type {
 } from "@/features/routines/types/routines.types";
 import type { User } from "@/shared/types/common.types";
 import { cn } from "@/shared/lib/utils";
+import { Sparkles } from "lucide-react";
 
 type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine";
-type OverviewTab = "cards" | "calendar";
+type OverviewTab = "calendar" | "cards" | "templates";
 
 import { useRouter } from 'next/navigation';
 
@@ -54,6 +58,8 @@ function TrainerRoutinesPage() {
   const [overviewTab, setOverviewTab] = useState<OverviewTab>("calendar");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showGlobalTemplates, setShowGlobalTemplates] = useState(false);
+  const [preselectedPreset, setPreselectedPreset] = useState<RoutinePreset | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -75,6 +81,20 @@ function TrainerRoutinesPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "templates") {
+        setOverviewTab("templates");
+      } else if (tabParam === "cards") {
+        setOverviewTab("cards");
+      } else if (tabParam === "calendar") {
+        setOverviewTab("calendar");
+      }
+    }
+  }, []);
 
   const handleRoutineClick = async (routine: Routine) => {
     setSelectedRoutine(routine);
@@ -179,13 +199,17 @@ function TrainerRoutinesPage() {
       <>
         <Header
           title="Nueva Rutina"
-          subtitle="Crea una rutina personalizada para tu cliente"
+          subtitle="Crea una rutina personalizada para tu cliente o usa una plantilla"
         />
         <RoutineBuilder
           clients={clients}
           trainerId={user?.id}
           onSubmit={handleCreateRoutine}
-          onCancel={() => setView("overview")}
+          onCancel={() => {
+            setPreselectedPreset(null);
+            setView("overview");
+          }}
+          initialPreset={preselectedPreset}
         />
       </>
     );
@@ -220,37 +244,74 @@ function TrainerRoutinesPage() {
             loading ? "Cargando..." : `${routines.length} rutinas creadas`
           }
           action={
-            <Button size="md" onClick={() => setView("create")}>
-              + Nueva rutina
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOverviewTab("templates")}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 border",
+                  overviewTab === "templates"
+                    ? "bg-red-600 text-white border-red-500 shadow-red-600/30"
+                    : "bg-white/10 hover:bg-white/15 text-slate-300 hover:text-white border-white/10",
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Personalizadas</span>
+              </button>
+              <Button
+                size="md"
+                onClick={() => {
+                  setPreselectedPreset(null);
+                  setView("create");
+                }}
+              >
+                + Nueva rutina
+              </Button>
+            </div>
           }
         />
 
-        {/* Tab toggle: Calendario / Tarjetas */}
-        {!loading && routines.length > 0 && (
-          <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1">
-            {[
-              { key: "calendar" as OverviewTab, label: "📅 Calendario" },
-              { key: "cards" as OverviewTab, label: "🗂️ Tarjetas" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setOverviewTab(tab.key)}
-                className={cn(
-                  "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
-                  overviewTab === tab.key
-                    ? "bg-white/10 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200",
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Tab toggle: Calendario / Rutinas Clientes / Personalizadas */}
+        <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1 overflow-x-auto max-w-full">
+          {[
+            { key: "calendar" as OverviewTab, label: "📅 Calendario" },
+            { key: "cards" as OverviewTab, label: `🗂️ Rutinas Clientes (${routines.length})` },
+            { key: "templates" as OverviewTab, label: "⭐ Personalizadas (Plantillas)" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setOverviewTab(tab.key)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0",
+                overviewTab === tab.key
+                  ? "bg-red-600 text-white shadow-md shadow-red-600/30"
+                  : "text-slate-400 hover:text-white hover:bg-white/5",
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {loading ? (
+        {overviewTab === "templates" ? (
+          <CustomTemplatesView
+            clients={clients}
+            trainerId={user?.id}
+            onAssignTemplate={async (clientId, routineName, template) => {
+              if (!user) return;
+              const routineForm: RoutineForm = {
+                name: routineName,
+                description: template.description,
+                clientId,
+                weekCount: template.weekCount,
+                days: template.days,
+              };
+              await handleCreateRoutine(routineForm);
+              setOverviewTab("cards");
+            }}
+          />
+        ) : loading ? (
           <div className="grid gap-4 md:grid-cols-2">
             {[1, 2].map((i) => (
               <div
@@ -265,14 +326,23 @@ function TrainerRoutinesPage() {
               <span className="text-3xl">💪</span>
             </div>
             <h3 className="text-lg font-semibold text-white">
-              Sin rutinas aún
+              Sin rutinas asignadas aún
             </h3>
             <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
-              Crea la primera rutina personalizada para uno de tus clientes.
+              Crea una rutina desde cero o asigna una plantilla personalizada a tus alumnos.
             </p>
-            <Button onClick={() => setView("create")} className="mt-6">
-              + Crear primera rutina
-            </Button>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Button onClick={() => setView("create")}>
+                + Crear desde cero
+              </Button>
+              <button
+                type="button"
+                onClick={() => setOverviewTab("templates")}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 transition-all cursor-pointer"
+              >
+                ⭐ Ver Plantillas Personalizadas
+              </button>
+            </div>
           </div>
         ) : overviewTab === "calendar" ? (
           <RoutineCalendar
@@ -297,6 +367,16 @@ function TrainerRoutinesPage() {
             ))}
           </div>
         )}
+
+        <RoutineTemplateModal
+          isOpen={showGlobalTemplates}
+          onClose={() => setShowGlobalTemplates(false)}
+          onSelectPreset={(preset) => {
+            setPreselectedPreset(preset);
+            setShowGlobalTemplates(false);
+            setView("create");
+          }}
+        />
       </>
     );
   }

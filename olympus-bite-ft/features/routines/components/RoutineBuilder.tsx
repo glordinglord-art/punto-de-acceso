@@ -5,6 +5,7 @@ import {
   exerciseDictionaryService,
   type ExerciseDict,
 } from "../services/exercise-dictionary.service";
+import { findPreciseDictEntry } from "../utils/exercise-matching";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Card, CardTitle } from "@/shared/components/ui/Card";
@@ -15,7 +16,9 @@ import type { User } from "@/shared/types/common.types";
 import type { Routine } from "@/features/routines/types/routines.types";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ExercisePickerModal } from "./ExercisePickerModal";
-import { Dumbbell, Eye, Search, Sparkles } from "lucide-react";
+import { RoutineTemplateModal } from "./RoutineTemplateModal";
+import type { RoutinePreset } from "../data/preset-routines";
+import { Dumbbell, Eye, Search, Sparkles, Bookmark } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────── */
 
@@ -26,6 +29,8 @@ export interface ExerciseForm {
   reps: string;
   restSeconds: number | string;
   observations: string;
+  targetWeight?: number | string | null;
+  intensity?: "relax" | "medium" | "failure";
 }
 
 export interface DayForm {
@@ -50,6 +55,8 @@ interface RoutineBuilderProps {
   onCancel: () => void;
   /** Pass an existing routine to pre-fill the form (edit mode) */
   initialData?: Routine;
+  /** Pass a preset routine to pre-fill the form */
+  initialPreset?: RoutinePreset | null;
   /** Trainer's user id — adds "Para mí" option in client select */
   trainerId?: string;
 }
@@ -61,6 +68,8 @@ const emptyExercise = (): ExerciseForm => ({
   reps: "10-12",
   restSeconds: 60,
   observations: "",
+  targetWeight: "",
+  intensity: "medium",
 });
 
 const emptyDay = (dayNumber: number): DayForm => ({
@@ -217,11 +226,21 @@ export function RoutineBuilder({
   onSubmit,
   onCancel,
   initialData,
+  initialPreset,
   trainerId,
 }: RoutineBuilderProps) {
   const isEditing = !!initialData;
 
   const buildInitialForm = (): RoutineForm => {
+    if (initialPreset && !initialData) {
+      return {
+        name: initialPreset.name,
+        description: initialPreset.description,
+        clientId: "",
+        weekCount: initialPreset.weekCount,
+        days: initialPreset.days,
+      };
+    }
     if (!initialData) {
       return {
         name: "",
@@ -254,6 +273,8 @@ export function RoutineBuilder({
                     reps: e.reps,
                     restSeconds: e.restSeconds,
                     observations: e.observations ?? "",
+                    targetWeight: e.targetWeight ?? "",
+                    intensity: (e.intensity as ExerciseForm["intensity"]) || "medium",
                   }))
               : [emptyExercise()],
         })),
@@ -274,22 +295,57 @@ export function RoutineBuilder({
     dayIdx: number;
     exIdx: number;
   } | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+
+  const handleSelectPreset = (preset: RoutinePreset) => {
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name ? prev.name : preset.name,
+      description: prev.description ? prev.description : preset.description,
+      weekCount: preset.weekCount,
+      days: preset.days,
+    }));
+    setActiveDayIdx(0);
+    if (form.clientId) {
+      setStep("days");
+    }
+  };
+
+  const handleSaveAsCustomPreset = () => {
+    if (!form.name || form.days.length === 0) {
+      alert("Por favor asigna un nombre a la rutina antes de guardarla como plantilla.");
+      return;
+    }
+    try {
+      const stored = localStorage.getItem("ob_custom_routine_presets");
+      const list: RoutinePreset[] = stored ? JSON.parse(stored) : [];
+      const newPreset: RoutinePreset = {
+        id: `custom-${Date.now()}`,
+        name: form.name,
+        category: "hipertrofia",
+        difficulty: "Intermedio",
+        description: form.description || `Plantilla personalizada creada por coach`,
+        weekCount: form.weekCount,
+        daysPerWeek: form.days.filter((d) => !d.isRestDay).length,
+        tags: ["Personalizada", "Coach"],
+        days: form.days,
+      };
+      localStorage.setItem("ob_custom_routine_presets", JSON.stringify([...list, newPreset]));
+      alert(`¡"${form.name}" se guardó con éxito como Plantilla Predeterminada! Ahora podrás seleccionarla para cualquier cliente.`);
+    } catch {
+      alert("Error guardando plantilla");
+    }
+  };
 
   useEffect(() => {
     exerciseDictionaryService.getAll().then(setDictionary).catch(console.error);
   }, []);
 
+  const dictByName = new Map<string, ExerciseDict>();
+  dictionary.forEach((d) => dictByName.set(d.name.toLowerCase(), d));
+
   const findDictEntry = (name: string): ExerciseDict | null => {
-    if (!name) return null;
-    const q = name.toLowerCase().trim();
-    return (
-      dictionary.find(
-        (d) =>
-          d.name.toLowerCase() === q ||
-          d.name.toLowerCase().includes(q) ||
-          q.includes(d.name.toLowerCase()),
-      ) ?? null
-    );
+    return findPreciseDictEntry(name, dictByName, dictionary);
   };
 
   /* ─── Helpers ─────────────────────────────── */
@@ -375,6 +431,11 @@ export function RoutineBuilder({
               typeof e.restSeconds === "string" && e.restSeconds === ""
                 ? 0
                 : Number(e.restSeconds),
+            targetWeight:
+              typeof e.targetWeight === "string" && e.targetWeight === ""
+                ? null
+                : Number(e.targetWeight),
+            intensity: e.intensity || "medium",
           })),
         })),
       };
@@ -389,6 +450,33 @@ export function RoutineBuilder({
   if (step === "info") {
     return (
       <div className="space-y-6">
+        {/* Preset Routine Banner for Coaches */}
+        {!isEditing && (
+          <div className="p-4 sm:p-5 rounded-3xl bg-red-600/10 border border-red-500/30 backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center text-white text-xl shrink-0 shadow-lg shadow-red-600/30">
+                ⚡
+              </div>
+              <div>
+                <h4 className="text-base font-black text-white">
+                  ¿Quieres ahorrar tiempo? Usa una Rutina Predeterminada
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Plantillas de élite (PPL 6 Días, Torso/Pierna 4 Días, Full Body) con ejercicios, GIFs, series y descansos listos.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 active:scale-95 text-xs font-black uppercase tracking-wider transition-all shadow-md shrink-0 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-red-600" />
+              <span>Ver Plantillas Predeterminadas</span>
+            </button>
+          </div>
+        )}
+
         <Card>
           <CardTitle className="uppercase tracking-wider text-xl mb-4">{isEditing ? "Editar rutina" : "Nueva rutina"}</CardTitle>
           <div className="mt-4 space-y-4">
@@ -468,6 +556,12 @@ export function RoutineBuilder({
             Siguiente: Configurar días →
           </Button>
         </div>
+
+        <RoutineTemplateModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onSelectPreset={handleSelectPreset}
+        />
       </div>
     );
   }
@@ -478,6 +572,33 @@ export function RoutineBuilder({
 
   return (
     <div className="space-y-6">
+      {/* Template Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-300 hidden sm:inline">
+            ⚡ Plantillas:
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Cargar Plantilla Predeterminada</span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSaveAsCustomPreset}
+          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+          title="Guardar esta rutina para reutilizarla con otros clientes"
+        >
+          <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+          <span className="hidden sm:inline">Guardar como Plantilla</span>
+        </button>
+      </div>
+
       {/* Day pills */}
       <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide">
         {form.days.map((d, i) => (
@@ -782,6 +903,90 @@ export function RoutineBuilder({
                         </div>
                       </div>
 
+                      {/* Peso Asignado y Semáforo de Intensidad */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/8">
+                        {/* Peso Asignado por el Coach */}
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                            🔒 Peso Fijo Asignado (kg)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.5"
+                              min="0"
+                              placeholder="Ej. 40 (0 = corporal)"
+                              value={ex.targetWeight ?? ""}
+                              onChange={(e) =>
+                                updateExercise(activeDayIdx, exIdx, {
+                                  targetWeight: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 font-bold"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">
+                              kg
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">
+                            El alumno no podrá modificar este peso en su rutina.
+                          </p>
+                        </div>
+
+                        {/* Semáforo de Intensidad / Estrictez */}
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                            🚦 Semáforo de Intensidad
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/10">
+                            {/* Verde Relax */}
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(activeDayIdx, exIdx, { intensity: "relax" })}
+                              className={cn(
+                                "flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border text-center",
+                                ex.intensity === "relax"
+                                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-500/20 font-black"
+                                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              )}
+                            >
+                              <span className="text-xs">🟢 Relax</span>
+                              <span className="text-[9px] opacity-75">Calentamiento</span>
+                            </button>
+
+                            {/* Amarillo Media */}
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(activeDayIdx, exIdx, { intensity: "medium" })}
+                              className={cn(
+                                "flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border text-center",
+                                (!ex.intensity || ex.intensity === "medium")
+                                  ? "bg-amber-500/20 border-amber-500 text-amber-400 shadow-md shadow-amber-500/20 font-black"
+                                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              )}
+                            >
+                              <span className="text-xs">🟡 Media</span>
+                              <span className="text-[9px] opacity-75">Estricto</span>
+                            </button>
+
+                            {/* Rojo Al Fallo */}
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(activeDayIdx, exIdx, { intensity: "failure" })}
+                              className={cn(
+                                "flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border text-center",
+                                ex.intensity === "failure"
+                                  ? "bg-red-500/25 border-red-500 text-red-400 shadow-md shadow-red-500/30 font-black"
+                                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                              )}
+                            >
+                              <span className="text-xs">🔴 Al Fallo</span>
+                              <span className="text-[9px] opacity-75">Máx. esfuerzo</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       <Input
                         label="Observaciones"
                         placeholder="Técnica, notas, variaciones..."
@@ -839,6 +1044,13 @@ export function RoutineBuilder({
         exercise={previewExercise}
         isOpen={!!previewExercise}
         onClose={() => setPreviewExercise(null)}
+      />
+
+      {/* Routine Preset Template Modal */}
+      <RoutineTemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelectPreset={handleSelectPreset}
       />
     </div>
   );

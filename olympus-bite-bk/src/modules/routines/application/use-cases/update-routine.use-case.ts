@@ -36,6 +36,8 @@ export class UpdateRoutineUseCase {
             observations: e.observations,
             videoUrl: e.videoUrl,
             order: index + 1,
+            targetWeight: e.targetWeight,
+            intensity: e.intensity,
           }),
       );
 

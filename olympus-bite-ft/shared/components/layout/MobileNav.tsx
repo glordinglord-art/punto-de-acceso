@@ -4,125 +4,113 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  LogOut,
+  X,
+  CreditCard,
+  Building2,
+  Users,
+  LayoutDashboard,
+  Dumbbell,
+  Utensils,
+  CheckSquare,
+  Activity,
+  BarChart3,
+  User,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 
 // ─── Icons ───────────────────────────────────────────────
 const Icons = {
-  home: (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  routines: (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    </svg>
-  ),
-  meals: (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-    </svg>
-  ),
-  tasks: (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-    </svg>
-  ),
-  admin: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  ),
-  branches: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  ),
-  trainers: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  ),
-  clients: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-    </svg>
-  ),
-  summary: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-    </svg>
-  ),
-  exercises: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 10v4M17 10v4M4 8v8M20 8v8" />
-    </svg>
-  ),
-  profile: (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  ),
+  home: <LayoutDashboard className="h-5 w-5" />,
+  routines: <Dumbbell className="h-5 w-5" />,
+  meals: <Utensils className="h-5 w-5" />,
+  tasks: <CheckSquare className="h-5 w-5" />,
+  admin: <Activity className="h-5 w-5" />,
+  branches: <Building2 className="h-5 w-5" />,
+  trainers: <Users className="h-5 w-5" />,
+  clients: <Users className="h-5 w-5" />,
+  summary: <BarChart3 className="h-5 w-5" />,
+  exercises: <Dumbbell className="h-5 w-5" />,
+  finances: <CreditCard className="h-5 w-5" />,
+  profile: <User className="h-5 w-5" />,
 };
-
-// ─── Dynamic Nav Configuration ──────────────────────────────
-function getNavConfig(activeMode: string) {
-  if (activeMode === 'superadmin') {
-    return {
-      main: [
-        { href: "/admin", label: "Mando", icon: Icons.admin },
-        { href: "/admin/branches", label: "Sedes", icon: Icons.branches },
-        { href: "/admin/trainers", label: "Equipos", icon: Icons.trainers },
-      ],
-      overflow: [
-        { href: "/profile", label: "Perfil", icon: Icons.profile },
-      ],
-    };
-  }
-
-  if (activeMode === 'trainer') {
-    return {
-      main: [
-        { href: "/dashboard", label: "Inicio", icon: Icons.home },
-        { href: "/clients", label: "Clientes", icon: Icons.clients },
-        { href: "/routines", label: "Rutinas", icon: Icons.routines },
-        { href: "/meals", label: "Dietas", icon: Icons.meals },
-      ],
-      overflow: [
-        { href: "/exercises", label: "Ejercicios", icon: Icons.exercises },
-        { href: "/summary", label: "Resumen", icon: Icons.summary },
-        { href: "/profile", label: "Perfil", icon: Icons.profile },
-      ],
-    };
-  }
-
-  // Client
-  return {
-    main: [
-      { href: "/dashboard", label: "Inicio", icon: Icons.home },
-      { href: "/routines", label: "Rutinas", icon: Icons.routines },
-      { href: "/meals", label: "Comidas", icon: Icons.meals },
-      { href: "/tasks", label: "Tareas", icon: Icons.tasks },
-    ],
-    overflow: [
-      { href: "/profile", label: "Perfil", icon: Icons.profile },
-    ],
-  };
-}
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  description?: string;
 }
 
-// ─── "More" button with popover ──────────────────────────
-function MoreMenu({ pathname, items }: { pathname: string; items: NavItem[] }) {
-  const { activeMode, setActiveMode, availableModes } = useAuth();
+// ─── Navigation Configuration per Role (No Duplication) ───────
+function getNavConfig(activeMode: string) {
+  if (activeMode === "superadmin") {
+    const bar: NavItem[] = [
+      { href: "/admin", label: "Mando", icon: Icons.admin },
+      { href: "/admin/branches", label: "Sedes", icon: Icons.branches },
+      { href: "/admin/trainers", label: "Equipos", icon: Icons.trainers },
+      { href: "/admin/finances", label: "Cuentas", icon: Icons.finances },
+    ];
+
+    // Only modules NOT visible in the bottom bar
+    const moreModules: NavItem[] = [
+      { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Seguridad y cuenta de administrador" },
+    ];
+
+    return { bar, moreModules };
+  }
+
+  if (activeMode === "trainer") {
+    const bar: NavItem[] = [
+      { href: "/dashboard", label: "Inicio", icon: Icons.home },
+      { href: "/clients", label: "Clientes", icon: Icons.clients },
+      { href: "/routines", label: "Rutinas", icon: Icons.routines },
+      { href: "/meals", label: "Dietas", icon: Icons.meals },
+    ];
+
+    // Only modules NOT visible in the bottom bar
+    const moreModules: NavItem[] = [
+      { href: "/tasks", label: "Tareas Diarias", icon: Icons.tasks, description: "Hábitos y control de estrés de atletas" },
+      { href: "/exercises", label: "Banco de Ejercicios", icon: Icons.exercises, description: "Catálogo de técnica y biblioteca" },
+      { href: "/summary", label: "Resumen Global", icon: Icons.summary, description: "Métricas y cumplimiento general" },
+      { href: "/finances", label: "Mis Cuentas", icon: Icons.finances, description: "Pagos de alumnos y balances" },
+      { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Datos y configuración de entrenador" },
+    ];
+
+    return { bar, moreModules };
+  }
+
+  // Client / Athlete Mode
+  const bar: NavItem[] = [
+    { href: "/dashboard", label: "Inicio", icon: Icons.home },
+    { href: "/routines", label: "Rutinas", icon: Icons.routines },
+    { href: "/meals", label: "Comidas", icon: Icons.meals },
+    { href: "/tasks", label: "Tareas", icon: Icons.tasks },
+  ];
+
+  // Only modules NOT visible in the bottom bar
+  const moreModules: NavItem[] = [
+    { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Mis datos personales y medidas corporales" },
+  ];
+
+  return { bar, moreModules };
+}
+
+// ─── "More" Liquid Glass Water Action Sheet ──────────────────────────
+function MoreMenu({
+  pathname,
+  moreModules,
+}: {
+  pathname: string;
+  moreModules: NavItem[];
+}) {
+  const { activeMode, setActiveMode, availableModes, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const hasActiveChild = items.some((item) => pathname === item.href);
+  const hasActiveChild = moreModules.some((item) => pathname === item.href);
 
   // Close on outside click
   useEffect(() => {
@@ -146,46 +134,92 @@ function MoreMenu({ pathname, items }: { pathname: string; items: NavItem[] }) {
 
   return (
     <div ref={ref} className="relative flex flex-col items-center flex-1 w-full">
-      {/* Backdrop overlay */}
+      {/* Liquid Backdrop Blur */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-[65] bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Popover panel */}
+      {/* ─── Apple "Modo Agua" Liquid Crystal Glass Sheet ─── */}
       {open && (
-        <div className="absolute bottom-full mb-3 right-0 z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_16px_48px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-white/10 dark:bg-[#14161a]/95 dark:shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
-          {items.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all",
-                  isActive
-                    ? "bg-primary-500/12 text-primary-500 dark:text-primary-400"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/8 dark:hover:text-white"
-                )}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            );
-          })}
-          
-          {/* Mode Switcher inside Mobile More Menu */}
+        <div className="fixed bottom-24 right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-[70] w-72 sm:w-80 max-w-[calc(100vw-32px)] max-h-[78vh] flex flex-col rounded-[32px] border border-white/25 bg-neutral-950/80 shadow-[0_24px_60px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.4),inset_0_-1px_2px_rgba(255,255,255,0.08)] backdrop-blur-3xl backdrop-saturate-[220%] p-3.5 animate-in slide-in-from-bottom-5 duration-300 overflow-hidden">
+          {/* Top Liquid Water Refraction Sheen */}
+          <div className="absolute inset-x-6 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white/10 via-white/5 to-transparent rounded-t-[32px] pointer-events-none" />
+
+          {/* Header */}
+          <div className="relative z-10 flex items-center justify-between pb-3 border-b border-white/10 px-1.5">
+            <div>
+              <span className="font-condensed font-black uppercase tracking-wider text-white text-sm flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                Más Opciones
+              </span>
+              <p className="text-[10px] text-neutral-400 font-medium">
+                Herramientas adicionales de la cuenta
+              </p>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition-all border border-white/10"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* List of Remaining Modules (NO DUPLICATES) */}
+          <div className="relative z-10 flex-1 overflow-y-auto py-2.5 space-y-1.5 custom-scrollbar pr-1">
+            <p className="text-[10px] font-condensed font-bold uppercase tracking-widest text-neutral-400 px-2 pt-0.5 pb-1">
+              Módulos Adicionales
+            </p>
+            {moreModules.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-2xl p-2.5 transition-all text-left group border",
+                    isActive
+                      ? "bg-red-600/25 border-red-500/40 text-white shadow-[0_4px_16px_rgba(239,68,68,0.25),inset_0_1px_1px_rgba(255,255,255,0.2)]"
+                      : "bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200 border-white/10 hover:border-white/20"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all border",
+                      isActive
+                        ? "bg-red-500 text-white border-red-400 shadow-md shadow-red-500/40"
+                        : "bg-white/10 text-neutral-300 border-white/10 group-hover:text-white group-hover:bg-white/15"
+                    )}
+                  >
+                    {item.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-condensed font-bold uppercase tracking-wider truncate">
+                      {item.label}
+                    </p>
+                    {item.description && (
+                      <p className="text-[10px] text-neutral-400 truncate leading-tight mt-0.5">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Mode Switcher with Liquid Capsules */}
           {availableModes.length > 1 && (
-            <>
-              <div className="my-2 border-t border-slate-200 dark:border-white/10" />
-              <div className="px-2 pb-1 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 pl-2">
-                  Cambiar Vista
-                </p>
-                {availableModes.map(mode => (
+            <div className="relative z-10 pt-2.5 border-t border-white/10 mt-1">
+              <p className="text-[10px] font-condensed font-bold uppercase tracking-widest text-neutral-400 px-2 mb-1.5">
+                Cambiar Vista
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 px-0.5">
+                {availableModes.map((mode) => (
                   <button
                     key={mode}
                     onClick={() => {
@@ -193,43 +227,65 @@ function MoreMenu({ pathname, items }: { pathname: string; items: NavItem[] }) {
                       setOpen(false);
                     }}
                     className={cn(
-                      "w-full text-left rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all",
+                      "rounded-xl py-2 px-2 text-[10px] font-condensed font-bold uppercase tracking-wider transition-all text-center border backdrop-blur-md",
                       activeMode === mode
-                        ? "bg-primary-500/20 text-primary-600 dark:text-primary-400 border border-primary-500/30"
-                        : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5 border border-transparent"
+                        ? "bg-red-600/90 border-red-400 text-white shadow-[0_4px_16px_rgba(239,68,68,0.4),inset_0_1px_2px_rgba(255,255,255,0.4)]"
+                        : "bg-white/[0.04] border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.08]"
                     )}
                   >
-                    Modo {mode === 'client' ? 'Atleta' : mode === 'trainer' ? 'Entrenador' : 'Super Admin'}
+                    {mode === "client" ? "Atleta" : mode === "trainer" ? "Coach" : "Admin"}
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
+
+          {/* Logout Button (Liquid Red Capsule) */}
+          <div className="relative z-10 pt-2.5 border-t border-white/10 mt-2 px-0.5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                logout();
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-2 px-3 bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-xs font-condensed font-bold uppercase tracking-wider transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Trigger button */}
+      {/* Trigger Button ("Más") */}
       <button
-        onClick={() => setOpen(!open)}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((prev) => !prev);
+        }}
         className={cn(
-          "flex flex-col items-center justify-center gap-1.5 rounded-2xl w-full py-2 transition-all duration-300 relative",
+          "flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-2 transition-all duration-300 relative cursor-pointer",
           hasActiveChild && !open
-            ? "text-primary-500"
-            : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+            ? "text-red-500"
+            : "text-slate-400 hover:text-white"
         )}
       >
-        {hasActiveChild && !open && (
-          <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/20" />
-        )}
         <div className="relative z-10 transition-transform duration-300">
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+            />
           </svg>
         </div>
-        <span className={cn(
-          "text-[10px] font-bold uppercase tracking-wider relative z-10 transition-all duration-300",
-          hasActiveChild ? "opacity-100" : "opacity-70"
-        )}>
+        <span
+          className={cn(
+            "text-[10px] font-condensed font-bold uppercase tracking-wider relative z-10 transition-all duration-300",
+            open ? "text-red-500" : "opacity-80"
+          )}
+        >
           Más
         </span>
       </button>
@@ -237,16 +293,19 @@ function MoreMenu({ pathname, items }: { pathname: string; items: NavItem[] }) {
   );
 }
 
-// ─── Main Nav ─────────────────────────────────────────────
+// ─── Main Nav Bar (Apple Liquid Water Glassmorphism) ───────────
 export function MobileNav() {
   const pathname = usePathname();
   const { activeMode } = useAuth();
   const config = getNavConfig(activeMode);
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg rounded-3xl border border-slate-200/80 bg-white/85 shadow-[0_12px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-[#0c0d10]/85 dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
-      <div className="flex items-center justify-between p-1.5">
-        {config.main.map((item) => {
+    <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg rounded-[28px] border border-white/25 bg-black/45 shadow-[0_20px_50px_rgba(0,0,0,0.75),inset_0_1.5px_2px_rgba(255,255,255,0.4),inset_0_-1px_1.5px_rgba(255,255,255,0.08)] backdrop-blur-3xl backdrop-saturate-[220%] lg:hidden">
+      {/* Top Water Refraction Highlight */}
+      <div className="absolute inset-x-6 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none" />
+
+      <div className="flex items-center justify-between p-1.5 relative z-10">
+        {config.bar.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -254,40 +313,42 @@ export function MobileNav() {
               href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 rounded-2xl flex-1 py-2 transition-all duration-300 relative",
-                isActive
-                  ? "text-primary-500"
-                  : "text-slate-500 active:text-slate-800 dark:active:text-slate-300"
+                isActive ? "text-red-500" : "text-neutral-400 active:text-white"
               )}
             >
-              {/* Subtle glow background on active */}
+              {/* Active Liquid Drop Glow */}
               {isActive && (
-                <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-500/10 border border-primary-500/15" />
+                <div className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-red-500/15 border border-red-500/30 shadow-[0_2px_12px_rgba(239,68,68,0.25),inset_0_1px_1px_rgba(255,255,255,0.3)]" />
               )}
 
-              <div className={cn(
-                "relative z-10 transition-all duration-300",
-                isActive && "-translate-y-0.5"
-              )}>
+              <div
+                className={cn(
+                  "relative z-10 transition-all duration-300",
+                  isActive && "-translate-y-0.5"
+                )}
+              >
                 {item.icon}
               </div>
 
-              <span className={cn(
-                "text-[10px] font-bold uppercase tracking-wider relative z-10 transition-all duration-300",
-                isActive ? "opacity-100" : "opacity-60"
-              )}>
+              <span
+                className={cn(
+                  "text-[10px] font-condensed font-bold uppercase tracking-wider relative z-10 transition-all duration-300",
+                  isActive ? "opacity-100 font-black text-red-400" : "opacity-70"
+                )}
+              >
                 {item.label}
               </span>
 
-              {/* Active dot indicator */}
+              {/* Water droplet indicator */}
               {isActive && (
-                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary-500" />
+                <div className="absolute bottom-0.5 h-1 w-1 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,1)]" />
               )}
             </Link>
           );
         })}
 
-        {/* More menu */}
-        <MoreMenu pathname={pathname} items={config.overflow} />
+        {/* More menu with ONLY non-duplicated modules */}
+        <MoreMenu pathname={pathname} moreModules={config.moreModules} />
       </div>
     </nav>
   );

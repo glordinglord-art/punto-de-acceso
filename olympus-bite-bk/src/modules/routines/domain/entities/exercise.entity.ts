@@ -31,6 +31,8 @@ export class Exercise extends BaseEntity {
   observations: string | null; // "180'' descanso", "Por pierna", "En polea"
   videoUrl: string | null;
   order: number;
+  targetWeight: number | null;
+  intensity: string | null;
 
   constructor(
     props: {
@@ -42,6 +44,8 @@ export class Exercise extends BaseEntity {
       observations?: string;
       videoUrl?: string;
       order: number;
+      targetWeight?: number;
+      intensity?: string;
     },
     id?: string,
   ) {
@@ -54,5 +58,7 @@ export class Exercise extends BaseEntity {
     this.observations = props.observations ?? null;
     this.videoUrl = props.videoUrl ?? null;
     this.order = props.order;
+    this.targetWeight = props.targetWeight ?? null;
+    this.intensity = props.intensity ?? 'medium';
   }
 }

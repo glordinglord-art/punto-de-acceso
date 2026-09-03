@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { FastForward } from "lucide-react";
 
-const RADIUS = 40;
+const RADIUS = 48;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function beep() {
@@ -46,36 +47,60 @@ export function RestTimer({
   const ss = (remaining % 60).toString().padStart(2, "0");
 
   return (
-    <div className="flex flex-col items-center gap-2 py-4">
-      <div className="relative">
-        <svg width="100" height="100" viewBox="0 0 100 100">
+    <div className="flex flex-col items-center justify-center gap-4 py-6 px-4 rounded-3xl bg-gradient-to-b from-white/[0.08] to-black/60 border border-white/12 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-300 w-full max-w-sm mx-auto">
+      {/* Timer Circular Ring */}
+      <div className="relative flex items-center justify-center">
+        <svg width="120" height="120" viewBox="0 0 120 120" className="-rotate-90">
           <circle
-            cx="50" cy="50" r={RADIUS}
-            fill="none" strokeWidth="6"
-            className="stroke-primary-900/40"
+            cx="60"
+            cy="60"
+            r={RADIUS}
+            fill="none"
+            strokeWidth="7"
+            className="stroke-white/10"
           />
           <circle
-            cx="50" cy="50" r={RADIUS}
-            fill="none" strokeWidth="6" strokeLinecap="round"
-            className="stroke-primary-500"
+            cx="60"
+            cy="60"
+            r={RADIUS}
+            fill="none"
+            strokeWidth="7"
+            strokeLinecap="round"
+            className="stroke-amber-500 transition-all duration-700 ease-linear shadow-[0_0_15px_rgba(245,158,11,0.5)]"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={dashoffset}
-            transform="rotate(-90 50 50)"
-            style={{ transition: "stroke-dashoffset 0.9s linear" }}
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-xl font-bold tabular-nums">
-          {mm}:{ss}
-        </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-black text-white tabular-nums tracking-tight">
+            {mm}:{ss}
+          </span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">
+            Descanso
+          </span>
+        </div>
       </div>
-      <p className="text-xs text-slate-400 uppercase tracking-widest">Descanso en curso</p>
-      <button
-        type="button"
-        onClick={onSkip}
-        className="text-xs text-primary-400 hover:text-primary-300 underline"
-      >
-        Saltar
-      </button>
+
+      <div className="text-center space-y-0.5">
+        <p className="text-sm font-black text-white">
+          Respira y recupera fuerzas
+        </p>
+        <p className="text-xs text-slate-400">
+          Prepárate para la siguiente serie
+        </p>
+      </div>
+
+      {/* Quick Action Button */}
+      <div className="flex items-center gap-3 w-full pt-1">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="flex-1 py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+        >
+          <FastForward className="w-4 h-4 text-amber-400" />
+          <span>Saltar</span>
+        </button>
+      </div>
     </div>
   );
 }

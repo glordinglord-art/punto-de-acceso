@@ -9,6 +9,8 @@ interface ExerciseResponse {
   restSeconds: number;
   observations: string | null;
   order: number;
+  targetWeight: number | null;
+  intensity: string | null;
 }
 
 interface RoutineDayResponse {
@@ -59,6 +61,8 @@ export class RoutineResponseDto {
           restSeconds: e.restSeconds,
           observations: e.observations,
           order: e.order,
+          targetWeight: e.targetWeight ?? null,
+          intensity: e.intensity ?? 'medium',
         })),
       }));
     dto.createdAt = routine.createdAt;

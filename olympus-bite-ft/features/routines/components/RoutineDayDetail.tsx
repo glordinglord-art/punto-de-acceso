@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { MUSCLE_GROUPS } from '@/shared/lib/constants';
-import { formatRest } from '@/shared/lib/utils';
-import type { Exercise, RoutineDay } from '../types/routines.types';
-import { Card } from '@/shared/components/ui/Card';
+import { useState, useEffect, useMemo } from "react";
+import { MUSCLE_GROUPS } from "@/shared/lib/constants";
+import { formatRest } from "@/shared/lib/utils";
+import type { Exercise, RoutineDay } from "../types/routines.types";
 import {
   exerciseDictionaryService,
   type ExerciseDict,
-} from '../services/exercise-dictionary.service';
-import { ExerciseInfoModal } from './ExerciseInfoModal';
-import { Eye, Dumbbell } from 'lucide-react';
+} from "../services/exercise-dictionary.service";
+import { findPreciseDictEntry } from "../utils/exercise-matching";
+import { ExerciseInfoModal } from "./ExerciseInfoModal";
+import { Eye, Dumbbell, Lock } from "lucide-react";
 
 interface RoutineDayDetailProps {
   day: RoutineDay;
@@ -27,61 +27,86 @@ function ExerciseRow({
   dictEntry?: ExerciseDict | null;
   onPreview: (exercise: ExerciseDict) => void;
 }) {
-  const muscleInfo = MUSCLE_GROUPS[exercise.muscleGroup as keyof typeof MUSCLE_GROUPS];
+  const muscleInfo =
+    MUSCLE_GROUPS[exercise.muscleGroup as keyof typeof MUSCLE_GROUPS];
+  const thumbUrl = dictEntry?.imageUrl || dictEntry?.gifUrl || undefined;
 
   return (
-    <tr className="border-b border-slate-200 last:border-0 transition-colors hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/[0.02]">
-      <td className="py-4 pr-3 text-xs text-slate-500 tabular-nums text-center dark:text-slate-400">{index + 1}</td>
-      <td className="py-4 pr-3">
+    <tr className="border-b border-white/6 last:border-0 transition-colors hover:bg-white/[0.02]">
+      <td className="py-3.5 pr-3 text-xs text-slate-400 tabular-nums text-center font-bold">
+        {index + 1}
+      </td>
+      <td className="py-3.5 pr-3">
         <div className="flex items-center gap-3">
-          {/* Thumbnail */}
-          {dictEntry?.imageUrl ? (
+          {thumbUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={dictEntry.imageUrl}
+              src={thumbUrl}
               alt=""
-              className="h-9 w-9 rounded-lg object-cover bg-black/30 border border-white/5 shrink-0 hidden sm:block"
+              className="h-10 w-10 rounded-xl object-contain bg-black/50 border border-white/10 shrink-0 hidden sm:block p-0.5"
               loading="lazy"
             />
           ) : (
-            <div className="h-9 w-9 rounded-lg bg-white/5 border border-white/5 items-center justify-center shrink-0 hidden sm:flex">
-              <Dumbbell className="w-3.5 h-3.5 text-slate-600" />
+            <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/8 items-center justify-center shrink-0 hidden sm:flex">
+              <Dumbbell className="w-4 h-4 text-slate-400" />
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{muscleInfo?.icon ?? '💪'}</span>
-            <span className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base">{muscleInfo?.icon ?? "💪"}</span>
+            <span className="text-sm font-black tracking-wide text-white truncate">
               {exercise.name}
             </span>
             {dictEntry && (
               <button
                 type="button"
                 onClick={() => onPreview(dictEntry)}
-                className="p-1 rounded-md text-slate-500 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
-                title="Ver guía del ejercicio"
+                className="p-1 rounded-lg text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 transition-all cursor-pointer shrink-0"
+                title="Ver GIF y técnica"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-4 h-4" />
               </button>
             )}
           </div>
         </div>
       </td>
-      <td className="py-4 pr-3">
-        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600 border border-slate-200 dark:bg-white/10 dark:text-slate-300 dark:border-white/5">
+      <td className="py-3.5 pr-3">
+        <span className="inline-flex items-center rounded-lg bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-300 border border-white/8">
           {muscleInfo?.label ?? exercise.muscleGroup}
         </span>
       </td>
-      <td className="py-4 pr-3 text-center text-sm font-semibold tabular-nums text-primary-400">
-        {exercise.sets}
+      <td className="py-3.5 pr-3 text-center text-xs font-black tabular-nums text-white">
+        {exercise.sets} × {exercise.reps}
       </td>
-      <td className="py-4 pr-3 text-center text-sm font-semibold text-primary-400">
-        {exercise.reps}
+      <td className="py-3.5 pr-3 text-center text-xs font-bold text-amber-400 tabular-nums">
+        <span className="inline-flex items-center gap-1">
+          <Lock className="w-3 h-3 text-amber-400" />
+          {exercise.targetWeight && exercise.targetWeight > 0
+            ? `${exercise.targetWeight} kg`
+            : "Corporal"}
+        </span>
       </td>
-      <td className="py-4 pr-3 text-center text-sm tabular-nums text-slate-600 dark:text-slate-400">
+      <td className="py-3.5 pr-3 text-center">
+        {exercise.intensity === "failure" && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-500/20 text-red-400 border border-red-500/40 shadow-xs">
+            🔴 Fallo
+          </span>
+        )}
+        {exercise.intensity === "relax" && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            🟢 Relax
+          </span>
+        )}
+        {(!exercise.intensity || exercise.intensity === "medium") && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            🟡 Media
+          </span>
+        )}
+      </td>
+      <td className="py-3.5 pr-3 text-center text-xs tabular-nums text-slate-400 font-bold">
         {formatRest(exercise.restSeconds)}
       </td>
-      <td className="py-4 text-sm text-slate-600 max-w-50 truncate dark:text-slate-400">
-        {exercise.observations ?? '—'}
+      <td className="py-3.5 text-xs text-slate-400 max-w-44 truncate italic">
+        {exercise.observations || "—"}
       </td>
     </tr>
   );
@@ -89,7 +114,9 @@ function ExerciseRow({
 
 export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
-  const [previewExercise, setPreviewExercise] = useState<ExerciseDict | null>(null);
+  const [previewExercise, setPreviewExercise] = useState<ExerciseDict | null>(
+    null,
+  );
 
   useEffect(() => {
     exerciseDictionaryService.getAll().then(setDictionary).catch(console.error);
@@ -103,54 +130,56 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
 
   if (day.isRestDay) {
     return (
-      <Card className="border-primary-500/30 bg-primary-900/10 p-6 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-primary-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-cyan-500/10 p-6 relative overflow-hidden backdrop-blur-xl">
         <div className="relative flex items-center gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/20 text-xl font-bold text-primary-400 shadow-[0_0_15px_rgba(234,88,12,0.3)]">
-            {day.dayNumber}
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-xl font-black text-cyan-300 border border-cyan-500/30 shadow-md">
+            D{day.dayNumber}
           </span>
           <div>
-            <h3 className="text-lg font-bold uppercase tracking-wider text-primary-400">
-              Día de Descanso
+            <h3 className="text-base font-black uppercase tracking-wider text-cyan-400">
+              Día de Descanso y Recuperación
             </h3>
             {day.restDayNote && (
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-xs text-slate-300 mt-1">
                 {day.restDayNote}
               </p>
             )}
           </div>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-xl font-bold text-slate-900 shadow-inner dark:bg-white/10 dark:text-white">
-          {day.dayNumber}
-        </span>
-        <div>
-          <h3 className="text-lg font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-            {day.focusArea}
-          </h3>
-          <p className="text-sm font-medium text-slate-600 mt-0.5 uppercase tracking-widest dark:text-slate-400">
-            {day.exercises.length} ejercicio{day.exercises.length !== 1 ? 's' : ''}
-          </p>
+    <div className="rounded-3xl border border-white/10 bg-[#0c0e17] p-5 sm:p-6 shadow-2xl backdrop-blur-xl space-y-4">
+      <div className="flex items-center justify-between gap-4 border-b border-white/8 pb-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500/20 text-base font-black text-primary-300 border border-primary-500/30">
+            D{day.dayNumber}
+          </span>
+          <div>
+            <h3 className="text-base font-black uppercase tracking-wider text-white">
+              {day.focusArea || "Entrenamiento"}
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              {day.exercises.length} ejercicio{day.exercises.length !== 1 ? "s" : ""} asignado{day.exercises.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="overflow-x-auto -mx-2">
-        <table className="w-full min-w-[700px] text-left px-2">
+        <table className="w-full min-w-[720px] text-left px-2">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-white/10">
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500 text-center">#</th>
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500">Ejercicio</th>
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500">Músculo</th>
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500 text-center">Series</th>
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500 text-center">Reps</th>
-              <th className="pb-3 pr-3 text-xs font-bold uppercase tracking-widest text-slate-500 text-center">Descanso</th>
-              <th className="pb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Observaciones</th>
+            <tr className="border-b border-white/10">
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">#</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ejercicio</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Músculo</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Series × Reps</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Peso Fijo</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Intensidad</th>
+              <th className="pb-3 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Descanso</th>
+              <th className="pb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Instrucciones</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +188,7 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
                 key={exercise.id}
                 exercise={exercise}
                 index={idx}
-                dictEntry={dictByName.get(exercise.name.toLowerCase())}
+                dictEntry={findPreciseDictEntry(exercise.name, dictByName, dictionary)}
                 onPreview={setPreviewExercise}
               />
             ))}
@@ -172,6 +201,6 @@ export function RoutineDayDetail({ day }: RoutineDayDetailProps) {
         isOpen={!!previewExercise}
         onClose={() => setPreviewExercise(null)}
       />
-    </Card>
+    </div>
   );
 }

@@ -81,11 +81,11 @@ function DashboardHeroWidget({
 
   return (
     <div className="bg-[#1C1C1E] rounded-[32px] p-6 shadow-2xl border border-white/5 relative overflow-hidden flex flex-col items-center">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-primary-500/10 rounded-full blur-[60px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-primary-500/10 rounded-full blur-[60px] pointer-events-none" />
       
       {/* Arc Section */}
       <div className="relative flex flex-col items-center justify-center pt-8 w-full h-[180px]">
-        <svg width={size} height={size / 2 + 20} className="absolute top-4 overflow-visible">
+        <svg width={size} height={size / 2 + 20} className="absolute top-4 overflow-visible pointer-events-none">
           <defs>
             <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#f97316" />
@@ -298,7 +298,7 @@ export function ClientDashboardView({
           {/* We keep it in the DOM just in case the parent expects it to be mounted, but hide it completely since user asked to move it to MÁS */}
         </div>
       )}
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 touch-pan-y">
       {/* ── Fitia Minimalist Day Tracker Header ── */}
       <FitiaDayTracker
         selectedDate={selectedDate}
@@ -361,7 +361,7 @@ export function ClientDashboardView({
                     <div className="bg-white/10 text-white/90 text-xs font-bold px-3 py-1 rounded-lg">{todayDay.exercises.length} ejercicios</div>
                   </div>
 
-                  <div className="max-h-56 flex-1 space-y-2 overflow-y-auto pr-1">
+                  <div className="sm:max-h-56 flex-1 space-y-2 sm:overflow-y-auto pr-1">
                     {todayDay.exercises.map((ex, i) => (
                       <div key={ex.id} className="flex items-center gap-3 rounded-[16px] bg-white/5 px-4 py-3 border border-white/5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white/90">
@@ -382,7 +382,7 @@ export function ClientDashboardView({
 
             {/* Micro AI Tip Card instead of the big ones */}
             <div className="relative overflow-hidden rounded-[24px] border border-primary-500/20 bg-primary-500/5 p-4 flex items-center gap-3">
-              <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary-500/20 rounded-full blur-[20px]" />
+              <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary-500/20 rounded-full blur-[20px] pointer-events-none" />
               <span className="text-xl shrink-0">🧠</span>
               <p className="text-xs text-white/70 font-medium leading-relaxed">
                 <span className="text-primary-400 font-bold mr-1">Coach:</span> 

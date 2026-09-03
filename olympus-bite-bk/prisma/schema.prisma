@@ -274,6 +274,8 @@ model Exercise {
   observations String? // "180'' descanso", "Por pierna", "En polea"
   videoUrl     String?     @map("video_url")
   order        Int         @default(0)
+  targetWeight Float?      @map("target_weight")
+  intensity    String?     @default("medium")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 

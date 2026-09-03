@@ -7,6 +7,8 @@ export interface Exercise {
   restSeconds: number;
   observations: string | null;
   order: number;
+  targetWeight?: number | null;
+  intensity?: "relax" | "medium" | "failure" | string | null;
   gifUrl?: string | null;
   imageUrl?: string | null;
   instructionsEs?: string | null;

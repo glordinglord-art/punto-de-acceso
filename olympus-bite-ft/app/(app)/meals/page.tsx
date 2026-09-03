@@ -21,10 +21,13 @@ import { useConfirm } from "@/shared/contexts/ConfirmContext";
 
 import { useRouter } from "next/navigation";
 import { MEAL_TYPES } from "@/shared/lib/constants";
+import { calculateNutritionTargets } from "@/features/meals/utils/nutrition-calculator";
 
 export default function MealsPage() {
   const { user, isTrainer, activeMode } = useAuth();
   const router = useRouter();
+
+  const targets = useMemo(() => calculateNutritionTargets(user), [user]);
 
   useEffect(() => {
     if (activeMode === 'superadmin') {
@@ -238,7 +241,10 @@ export default function MealsPage() {
             fat={totals.fat}
             fiber={totals.fiber}
             sugar={totals.sugar}
-            calorieGoal={user?.targetCalories || 2200}
+            calorieGoal={targets.calories}
+            proteinGoal={targets.protein}
+            carbsGoal={targets.carbs}
+            fatGoal={targets.fat}
           />
 
           {/* Quick Log Grids */}

@@ -8,8 +8,9 @@ import {
   exerciseDictionaryService,
   type ExerciseDict,
 } from "../services/exercise-dictionary.service";
+import { findPreciseDictEntry } from "../utils/exercise-matching";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Trophy } from "lucide-react";
 
 export function GuidedSessionView({
   day,
@@ -38,8 +39,23 @@ export function GuidedSessionView({
   const [setIndex, setSetIndex] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
   const [sessionStart] = useState(() => Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
+
+  // Live session elapsed timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - sessionStart) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sessionStart]);
+
+  const formatElapsed = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   const exercises = day.exercises;
   const exercise = exercises[exerciseIndex];
@@ -59,41 +75,10 @@ export function GuidedSessionView({
     return map;
   }, [dictionary]);
 
-  // Enhanced dictionary lookup with fuzzy matching + muscle group fallback
+  // Precision dictionary lookup: exact or confident match only, no random fallbacks
   const getDictEntry = useCallback(
-    (exerciseName: string, muscleGroup: string): ExerciseDict | null => {
-      if (!exerciseName) return null;
-      const q = exerciseName.toLowerCase().trim();
-
-      // 1. Exact name match
-      const exact = dictByName.get(q);
-      if (exact) return exact;
-
-      // 2. Substring match in dictionary names
-      for (const d of dictionary) {
-        const dName = d.name.toLowerCase();
-        if (dName.includes(q) || q.includes(dName)) return d;
-      }
-
-      // 3. Substring match of individual words (e.g. "bench", "press", "curl", "squat")
-      const words = q.split(/\s+/).filter((w) => w.length >= 3);
-      if (words.length > 0) {
-        for (const d of dictionary) {
-          const dName = d.name.toLowerCase();
-          if (words.some((word) => dName.includes(word))) return d;
-        }
-      }
-
-      // 4. Fallback by muscleGroup
-      if (muscleGroup) {
-        const mgMatch = dictionary.find(
-          (d) => d.muscleGroup === muscleGroup && d.gifUrl,
-        );
-        if (mgMatch) return mgMatch;
-      }
-
-      // 5. General fallback: first available exercise with GIF
-      return dictionary.find((d) => d.gifUrl) ?? null;
+    (exerciseName: string): ExerciseDict | null => {
+      return findPreciseDictEntry(exerciseName, dictByName, dictionary);
     },
     [dictByName, dictionary],
   );
@@ -117,13 +102,19 @@ export function GuidedSessionView({
 
   const muscleGroups = [...new Set(exercises.map((ex) => ex.muscleGroup))];
 
+  // Countdown for rest timer
   useEffect(() => {
     if (restRemaining <= 0) return;
-    const id = window.setInterval(
-      () => setRestRemaining((n) => Math.max(n - 1, 0)),
-      1000,
-    );
-    return () => clearInterval(id);
+    const interval = setInterval(() => {
+      setRestRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [restRemaining]);
 
   const handleSetComplete = async (
@@ -132,11 +123,9 @@ export function GuidedSessionView({
     reps: number | null,
   ) => {
     if (!exercise) return;
-    const setNumber = sIdx + 1;
-    await onSaveSet(exercise, setNumber, weight, reps);
+    await onSaveSet(exercise, sIdx + 1, weight, reps);
 
     const nextSetIdx = sIdx + 1;
-
     if (nextSetIdx < exercise.sets) {
       setRestRemaining(exercise.restSeconds);
       setSetIndex(nextSetIdx);
@@ -145,7 +134,8 @@ export function GuidedSessionView({
       if (nextExIdx < exercises.length) {
         setRestRemaining(exercise.restSeconds);
         setExerciseIndex(nextExIdx);
-        setSetIndex(0);
+        const comp = getCompletedCount(exercises[nextExIdx].id);
+        setSetIndex(comp < exercises[nextExIdx].sets ? comp : Math.max(0, exercises[nextExIdx].sets - 1));
       } else {
         setShowSuccess(true);
       }
@@ -157,24 +147,33 @@ export function GuidedSessionView({
 
   if (showSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center gap-6 py-12 px-8 text-center animate-in fade-in duration-500 min-h-[85vh]">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-primary-500 to-amber-400 shadow-[0_0_50px_rgba(234,88,12,0.5)]">
-          <CheckCircle2 className="h-12 w-12 text-slate-950 stroke-[2.5]" />
+      <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 p-6 text-center bg-[#090a0f] text-white animate-in fade-in duration-500 overflow-y-auto">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-red-600 via-primary-500 to-amber-500 shadow-[0_0_60px_rgba(239,68,68,0.5)]">
+          <Trophy className="h-12 w-12 text-white stroke-[2.5]" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 max-w-sm">
           <h2 className="text-3xl font-black uppercase tracking-tight text-white">
-            ¡Rutina completada!
+            ¡Entrenamiento Completado!
           </h2>
-          <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
             {day.focusArea} · Semana {weekNumber}
           </p>
+          <p className="text-sm text-slate-300 mt-2">
+            Completaste todas tus series con la exigencia fijada por tu entrenador. ¡Gran trabajo! 🏆
+          </p>
         </div>
+
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 w-full max-w-xs space-y-1">
+          <p className="text-xs font-bold text-slate-400 uppercase">Tiempo total de sesión</p>
+          <p className="text-2xl font-black text-white tabular-nums">{formatElapsed(elapsedSeconds)}</p>
+        </div>
+
         <button
           type="button"
           onClick={onBack}
-          className="mt-2 rounded-2xl bg-gradient-to-r from-primary-500 to-amber-500 px-10 py-4 text-base font-black uppercase tracking-wider text-slate-950 shadow-xl shadow-primary-500/30 active:scale-95 transition-all"
+          className="mt-2 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 px-10 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-red-500/30 active:scale-95 transition-all cursor-pointer"
         >
-          Volver a Rutinas
+          Volver a Mis Rutinas
         </button>
       </div>
     );
@@ -183,44 +182,58 @@ export function GuidedSessionView({
   if (!exercise) return null;
 
   const completedSetCount = getCompletedCount(exercise.id);
-  const currentDictEntry = getDictEntry(exercise.name, exercise.muscleGroup);
+  const currentDictEntry = getDictEntry(exercise.name);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] max-h-screen overflow-y-auto scrollbar-none bg-[#0d0e12] justify-between pb-4">
-      {/* Mobile Clean Top Header */}
-      <div className="sticky top-0 z-40 bg-[#0d0e12]/95 backdrop-blur-xl border-b border-white/8 px-4 py-2.5">
-        <div className="flex items-center gap-3">
+    <div className="fixed inset-0 z-[60] flex flex-col justify-between overflow-y-auto scrollbar-none bg-[#090a0f] text-white select-none pb-12">
+      {/* Top Header: Clean and Immersive (No clutter, covers nav bar & assistants) */}
+      <div className="sticky top-0 z-40 bg-[#090a0f]/95 backdrop-blur-2xl border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
+          {/* Back Button */}
           <button
             type="button"
             onClick={onBack}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8 text-white hover:bg-white/15 active:scale-95 transition-all"
-            aria-label="Volver"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 hover:text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+            aria-label="Salir de la sesión"
           >
             <ArrowLeft className="h-4 w-4" />
+            <span>Salir</span>
           </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-black uppercase tracking-widest text-primary-400 truncate">
-                {day.focusArea}
-              </p>
-              <span className="text-[11px] font-bold text-slate-400">
-                Sem. {weekNumber}
+
+          {/* Session Timer & Focus */}
+          <div className="text-center">
+            <p className="text-xs font-black uppercase tracking-wider text-white truncate max-w-[170px]">
+              {day.focusArea || "Entrenamiento"}
+            </p>
+            <div className="flex items-center justify-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="text-[11px] font-bold text-slate-400 tabular-nums">
+                {formatElapsed(elapsedSeconds)}
               </span>
             </div>
-            <div className="mt-1 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-amber-400 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
           </div>
-          <span className="text-xs font-black tabular-nums text-white shrink-0">
-            {progress}%
-          </span>
+
+          {/* Progress Percentage Badge */}
+          <div className="text-right">
+            <span className="text-xs font-black tabular-nums text-white">
+              {progress}%
+            </span>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+              {completedSteps}/{totalSteps} series
+            </p>
+          </div>
+        </div>
+
+        {/* Top Mini Progress Bar */}
+        <div className="mt-2.5 h-1 w-full max-w-lg mx-auto rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
         {/* Exercise Pills Carousel */}
-        <div className="flex gap-2 overflow-x-auto pt-2 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pt-2.5 max-w-lg mx-auto scrollbar-none">
           {exercises.map((ex, idx) => {
             const done = getCompletedCount(ex.id) >= ex.sets;
             const active = idx === exerciseIndex;
@@ -230,28 +243,35 @@ export function GuidedSessionView({
                 type="button"
                 onClick={() => {
                   setExerciseIndex(idx);
-                  setSetIndex(0);
+                  const comp = getCompletedCount(exercises[idx].id);
+                  setSetIndex(comp < exercises[idx].sets ? comp : Math.max(0, exercises[idx].sets - 1));
                   setRestRemaining(0);
                 }}
                 className={cn(
-                  "shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider border transition-all flex items-center gap-1.5",
+                  "shrink-0 rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 cursor-pointer",
                   active
-                    ? "bg-primary-500 border-primary-500 text-slate-950 shadow-md shadow-primary-500/30"
+                    ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 border-red-500 text-white shadow-lg shadow-red-500/30 font-black"
                     : done
-                      ? "bg-primary-500/15 border-primary-500/30 text-primary-400"
-                      : "bg-white/5 border-white/8 text-slate-400 hover:bg-white/10 hover:text-white",
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                      : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
                 )}
               >
-                {done && <span>✓</span>}
-                <span className="truncate max-w-[110px]">{ex.name}</span>
+                {done ? (
+                  <span className="text-emerald-400 font-extrabold">✓</span>
+                ) : (
+                  <span className="text-[10px]">
+                    {ex.intensity === "failure" ? "🔴" : ex.intensity === "relax" ? "🟢" : "🟡"}
+                  </span>
+                )}
+                <span className="truncate max-w-[120px]">#{idx + 1} {ex.name}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Main Exercise Centered View */}
-      <div className="flex-1 flex flex-col justify-center py-2">
+      {/* Main Exercise Card Center Stage */}
+      <div className="flex-1 flex flex-col justify-center py-4 my-auto">
         <ExerciseCard
           exercise={exercise}
           activeSetIndex={setIndex}
@@ -266,7 +286,7 @@ export function GuidedSessionView({
       </div>
 
       {/* Calories Burned Tracker Footer */}
-      <div className="px-2">
+      <div className="px-4 max-w-md mx-auto w-full pt-2">
         <CaloriesBurnedTracker
           muscleGroups={muscleGroups}
           weightKg={userWeightKg}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { cn } from "@/shared/lib/utils";
-import { RoutineDayDetail } from "./RoutineDayDetail";
+import { cn, formatRest } from "@/shared/lib/utils";
+import { MUSCLE_GROUPS } from "@/shared/lib/constants";
 import type { Routine, RoutineDay } from "../types/routines.types";
+import { ChevronLeft, ChevronRight, Dumbbell, Calendar, Lock } from "lucide-react";
 
 interface RoutineCalendarProps {
   routines: Routine[];
@@ -34,12 +35,7 @@ interface DayInfo {
   day: RoutineDay;
 }
 
-/**
- * Maps routineDays (1-7 = Mon-Sun cycle) onto real calendar dates.
- * We project the routine's weekly cycle onto every week on the calendar.
- */
 function getDayInfoForDate(date: Date, routines: Routine[]): DayInfo[] {
-  // 0=Sun, 1=Mon... → convert to 1=Mon...7=Sun
   const jsDay = date.getDay();
   const dayOfWeek = jsDay === 0 ? 7 : jsDay; // 1-7 Mon-Sun
 
@@ -58,14 +54,12 @@ function getCalendarDays(year: number, month: number) {
   const firstOfMonth = new Date(year, month, 1);
   const lastOfMonth = new Date(year, month + 1, 0);
 
-  // Monday-based: 0=Mon, 6=Sun
   const startPad = (firstOfMonth.getDay() + 6) % 7;
   const daysInMonth = lastOfMonth.getDate();
 
   const days: (Date | null)[] = [];
   for (let i = 0; i < startPad; i++) days.push(null);
   for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
-  // Pad end to fill last row
   while (days.length % 7 !== 0) days.push(null);
 
   return days;
@@ -88,10 +82,10 @@ export function RoutineCalendar({
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [filterClient, setFilterClient] = useState<string>("all"); // 'all' | 'me' | clientId
+  const [selectedDate, setSelectedDate] = useState<Date | null>(today);
+  const [filterClient, setFilterClient] = useState<string>("all");
 
-  // Build unique client options from routines
+  // Unique client IDs
   const clientOptions = useMemo(() => {
     const ids = new Set<string>();
     routines.forEach((r) => {
@@ -100,13 +94,11 @@ export function RoutineCalendar({
     return Array.from(ids);
   }, [routines, trainerId]);
 
-  // Has trainer's own routines?
   const hasOwnRoutines = useMemo(
     () => routines.some((r) => r.clientId === trainerId),
     [routines, trainerId],
   );
 
-  // Filtered routines based on selection
   const filteredRoutines = useMemo(() => {
     if (filterClient === "all") return routines;
     if (filterClient === "me")
@@ -151,72 +143,53 @@ export function RoutineCalendar({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Calendar Card */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:border-white/8 dark:bg-white/4 dark:shadow-none">
-        {/* Header */}
+    <div className="space-y-5">
+      {/* Calendar Main Card */}
+      <div className="rounded-3xl border border-white/12 bg-[#0c0e17] p-5 sm:p-6 shadow-2xl backdrop-blur-2xl">
+        {/* Month Header & Nav */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-white">
               {MONTH_NAMES[currentMonth]} {currentYear}
             </h2>
             <button
+              type="button"
               onClick={goToday}
-              className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+              className="rounded-xl bg-primary-500/20 text-primary-300 border border-primary-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider hover:bg-primary-500/30 transition-all cursor-pointer"
             >
               Hoy
             </button>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={prevMonth}
-              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+              className="rounded-xl p-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
+              aria-label="Mes anterior"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <ChevronLeft className="h-4 w-4" />
             </button>
             <button
+              type="button"
               onClick={nextMonth}
-              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+              className="rounded-xl p-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
+              aria-label="Mes siguiente"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Client filter */}
-        <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1">
+        {/* Client filter pills */}
+        <div className="mb-5 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
             onClick={() => setFilterClient("all")}
             className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
-                filterClient === "all"
-                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
+              "shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all border cursor-pointer",
+              filterClient === "all"
+                ? "bg-red-600 border-red-500 text-white shadow-md shadow-red-600/30"
+                : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
             )}
           >
             Todos
@@ -226,10 +199,10 @@ export function RoutineCalendar({
               type="button"
               onClick={() => setFilterClient("me")}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
+                "shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all border cursor-pointer",
                 filterClient === "me"
-                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
+                  ? "bg-red-600 border-red-500 text-white shadow-md shadow-red-600/30"
+                  : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
               )}
             >
               🏋️ Yo
@@ -241,23 +214,23 @@ export function RoutineCalendar({
               type="button"
               onClick={() => setFilterClient(cid)}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all border border-slate-200 dark:border-white/8",
+                "shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all border cursor-pointer",
                 filterClient === cid
-                  ? "bg-slate-900 text-white dark:bg-white/10 dark:text-white"
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-white/5",
+                  ? "bg-red-600 border-red-500 text-white shadow-md shadow-red-600/30"
+                  : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
               )}
             >
-              {clientNames[cid] ?? "Cliente"}
+              👤 {clientNames[cid] ?? "Cliente"}
             </button>
           ))}
         </div>
 
         {/* Weekday headers */}
-        <div className="mb-2 grid grid-cols-7">
+        <div className="mb-2 grid grid-cols-7 gap-1">
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-500"
+              className="py-2 text-center text-xs font-black uppercase tracking-widest text-slate-400"
             >
               {label}
             </div>
@@ -265,7 +238,7 @@ export function RoutineCalendar({
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {calendarDays.map((date, idx) => {
             if (!date) {
               return <div key={`empty-${idx}`} className="p-1" />;
@@ -286,29 +259,27 @@ export function RoutineCalendar({
                 type="button"
                 onClick={() => setSelectedDate(date)}
                 className={cn(
-                  "relative mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-xl text-sm font-semibold transition-all mb-2",
+                  "relative mx-auto flex h-11 w-11 sm:h-13 sm:w-13 flex-col items-center justify-center rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer",
                   isSelected
-                    ? hasTraining
-                      ? "bg-primary-500 text-slate-950 shadow-[0_0_12px_rgba(52,211,153,0.4)]"
-                      : hasRest
-                        ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                        : "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
+                    ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-2 ring-white/20 scale-105"
                     : isTodayDate
-                      ? hasTraining
-                        ? "bg-primary-500/15 text-primary-700 border border-primary-500/40 dark:bg-primary-500/20 dark:text-primary-300 dark:border-primary-500/50"
-                        : "bg-slate-100 text-slate-900 border border-slate-300 dark:bg-white/10 dark:text-white dark:border-white/20"
+                      ? "border-2 border-red-500/80 bg-red-500/10 text-white shadow-sm"
                       : hasTraining
-                        ? "bg-primary-500/10 text-primary-700 hover:bg-primary-500/20 border border-primary-500/20 dark:text-primary-400"
+                        ? "bg-red-500/15 text-white border border-red-500/30 hover:bg-red-500/25 hover:border-red-500/60"
                         : hasRest
-                          ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20 dark:text-amber-400"
-                          : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5",
+                          ? "bg-white/[0.04] text-slate-300 border border-white/8 hover:bg-white/10"
+                          : "text-slate-400 hover:bg-white/10 hover:text-white border border-transparent",
                 )}
               >
                 <span className="leading-none">{date.getDate()}</span>
+                {/* Indicator dot */}
                 {!isSelected && (hasTraining || hasRest) && (
-                  <span className="absolute -bottom-0.5 mt-0.5 text-[6px] leading-none opacity-60">
-                    {hasTraining ? "💪" : "😴"}
-                  </span>
+                  <span
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full mt-1",
+                      hasTraining ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" : "bg-slate-500",
+                    )}
+                  />
                 )}
               </button>
             );
@@ -316,56 +287,132 @@ export function RoutineCalendar({
         </div>
 
         {/* Legend */}
-        <div className="mt-2 flex items-center gap-4 border-t border-slate-200 pt-4 dark:border-white/8">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            <span className="h-3 w-3 rounded-[4px] border border-primary-500/30 bg-primary-500/15" />
+        <div className="mt-4 flex items-center justify-center gap-6 border-t border-white/8 pt-3.5">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+            <span className="h-3 w-3 rounded-full bg-red-600 shadow-sm" />
             Entrenamiento
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            <span className="h-3 w-3 rounded-[4px] border border-amber-500/30 bg-amber-500/15" />
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+            <span className="h-3 w-3 rounded-full bg-white/10 border border-white/20" />
             Descanso
           </div>
         </div>
       </div>
 
-      {/* Selected day detail */}
+      {/* Selected day details */}
       {selectedDate && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-slate-900 capitalize dark:text-white">
-              {selectedDate.toLocaleDateString("es", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
+          <div className="flex items-center justify-between border-b border-white/8 pb-2">
+            <h3 className="text-base font-black text-white capitalize flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary-400" />
+              <span>
+                {selectedDate.toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </span>
             </h3>
-            {selectedDayInfos.length === 0 && (
-              <span className="text-sm text-slate-500">
-                — Sin actividad
+            {selectedDayInfos.length > 0 && (
+              <span className="text-xs font-bold text-slate-400">
+                {selectedDayInfos.length} rutina{selectedDayInfos.length !== 1 ? "s" : ""} programada{selectedDayInfos.length !== 1 ? "s" : ""}
               </span>
             )}
           </div>
 
           {selectedDayInfos.length > 0 ? (
             selectedDayInfos.map(({ routine, day }) => (
-              <div key={`${routine.id}-${day.id}`} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                    {routine.name}
-                  </span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {clientNames[routine.clientId] ?? "Cliente"}
-                  </span>
+              <div
+                key={`${routine.id}-${day.id}`}
+                className="p-5 rounded-3xl bg-[#0c0e17] border border-white/10 shadow-2xl space-y-3"
+              >
+                {/* Header */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 pb-3">
+                  <div>
+                    <span className="text-xs font-bold text-primary-400 flex items-center gap-1.5">
+                      <Dumbbell className="w-3.5 h-3.5" />
+                      <span>{routine.name}</span>
+                    </span>
+                    <h4 className="text-base font-black text-white mt-0.5">
+                      {day.isRestDay ? "🧘 Día de Descanso" : day.focusArea}
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-xl bg-white/10 text-slate-300 border border-white/10 text-xs font-bold">
+                      👤 {clientNames[routine.clientId] ?? "Cliente"}
+                    </span>
+                    {!day.isRestDay && (
+                      <span className="px-2.5 py-1 rounded-xl bg-primary-500/20 text-primary-300 border border-primary-500/30 text-xs font-black uppercase">
+                        {day.exercises.length} ej.
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <RoutineDayDetail day={day} />
+
+                {/* Day content */}
+                {day.isRestDay ? (
+                  <p className="text-xs text-slate-400 italic">
+                    {day.restDayNote || "Día de recuperación activa y descanso muscular."}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {day.exercises.map((ex, idx) => {
+                      const muscleInfo = MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
+                      return (
+                        <div
+                          key={ex.id || idx}
+                          className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-black/40 border border-white/6"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="text-xl shrink-0">{muscleInfo?.icon || "🏋️"}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-black text-white truncate">{ex.name}</p>
+                              <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
+                                <span className="text-slate-300 font-bold">{ex.sets} × {ex.reps}</span>
+                                <span>·</span>
+                                <span className="text-amber-400 font-bold flex items-center gap-0.5">
+                                  <Lock className="w-3 h-3" />
+                                  {ex.targetWeight && ex.targetWeight > 0 ? `${ex.targetWeight} kg` : "Corporal"}
+                                </span>
+                                <span>·</span>
+                                <span>⏱️ {formatRest(ex.restSeconds)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Intensity badge */}
+                          <div className="shrink-0">
+                            {ex.intensity === "failure" && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-500/20 text-red-400 border border-red-500/40">
+                                🔴 Fallo
+                              </span>
+                            )}
+                            {ex.intensity === "relax" && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                🟢 Relax
+                              </span>
+                            )}
+                            {(!ex.intensity || ex.intensity === "medium") && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                🟡 Media
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))
           ) : (
-            <div className="rounded-[24px] border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm dark:border-white/12 dark:bg-white/4 dark:shadow-none">
-              <span className="text-3xl">🏖️</span>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                No hay rutinas programadas para este día
+            <div className="rounded-3xl border border-dashed border-white/10 bg-[#0c0e17] p-8 text-center">
+              <span className="text-4xl">🏖️</span>
+              <p className="mt-2 text-sm font-bold text-white">
+                Sin rutinas programadas para este día
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Selecciona otro día en el calendario para ver los entrenamientos asignados.
               </p>
             </div>
           )}
