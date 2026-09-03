@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { authService } from "@/features/auth/services/auth.service";
 import { ArrowRight, Lock, Mail, Activity } from "lucide-react";
+import { VitalFitLogo } from "./VitalFitLogo";
 
 type Uniforms = {
   [key: string]: {
@@ -411,8 +412,8 @@ export const SignInFlow = ({ className }: SignInPageProps) => {
               animationSpeed={3}
               containerClassName="bg-slate-950"
               colors={[
-                [16, 185, 129], // Emerald 500
-                [52, 211, 153], // Emerald 400
+                [239, 68, 68], // Red 500
+                [220, 38, 38], // Red 600
               ]}
               dotSize={6}
               reverse={false}
@@ -426,8 +427,8 @@ export const SignInFlow = ({ className }: SignInPageProps) => {
               animationSpeed={4}
               containerClassName="bg-slate-950"
               colors={[
-                [16, 185, 129],
-                [52, 211, 153],
+                [239, 68, 68],
+                [220, 38, 38],
               ]}
               dotSize={6}
               reverse={true}
@@ -443,13 +444,8 @@ export const SignInFlow = ({ className }: SignInPageProps) => {
       <div className="relative z-10 flex flex-col flex-1">
         {/* Simple Header */}
         <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-              <span className="font-display text-xl font-bold text-slate-950">P</span>
-            </div>
-            <span className="font-display uppercase tracking-widest text-sm font-semibold text-white">
-              Punto de Inflexión
-            </span>
+          <Link href="/" className="flex items-center gap-2 group">
+            <VitalFitLogo size="sm" showGlow={true} glowIntensity="medium" />
           </Link>
           <Link href="/register" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
             Crear cuenta

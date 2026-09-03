@@ -12,6 +12,7 @@ import { adminService } from '@/features/admin/services/admin.service';
 import { gymsService } from '@/features/gyms/services/gyms.service';
 import type { TrainerRosterItem } from '@/features/admin/types/admin.types';
 import type { Gym } from '@/features/gyms/types/gyms.types';
+import { LinkTrainersModal } from '@/features/admin/components/LinkTrainersModal';
 import {
   Users,
   MapPin,
@@ -23,10 +24,13 @@ import {
   Phone,
   Target,
   Flame,
-  ShieldCheck,
-  Shield,
+  Link2,
+  X,
+  MoreVertical,
+  Crown,
   Trash2,
 } from 'lucide-react';
+import { cn } from '@/shared/lib/utils';
 import { useConfirm } from '@/shared/contexts/ConfirmContext';
 import { toast } from 'react-hot-toast';
 
@@ -39,11 +43,15 @@ export default function AdminTrainersPage() {
   // Selected Sede filter
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('all');
 
+  // 3-dots selected trainer for Action Sheet Modal
+  const [selectedMenuTrainer, setSelectedMenuTrainer] = useState<TrainerRosterItem | null>(null);
+
   // Expanded client roster state
   const [expandedTrainerId, setExpandedTrainerId] = useState<string | null>(null);
 
   // Assign Sede Modal
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<TrainerRosterItem | null>(null);
   const [targetBranchId, setTargetBranchId] = useState<string>('');
   const [targetGymId, setTargetGymId] = useState<string>('');
@@ -125,19 +133,37 @@ export default function AdminTrainersPage() {
 
   const handleDeleteTrainer = async (trainerId: string) => {
     const ok = await confirm({
-      title: '¿Eliminar entrenador?',
-      description: 'Se perderán sus datos y los clientes quedarán sin entrenador asignado. Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar entrenador',
+      title: 'Eliminar Entrenador',
+      description: '¿Estás seguro de eliminar este entrenador? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
       variant: 'danger',
     });
     if (!ok) return;
 
     try {
       await adminService.deleteUser(trainerId);
-      await loadData();
-      toast.success('Entrenador eliminado con éxito');
-    } catch (err) {
-      toast.error('Error eliminando entrenador: ' + (err instanceof Error ? err.message : 'Error'));
+      toast.success('Entrenador eliminado exitosamente');
+      loadData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar entrenador');
+    }
+  };
+
+  const handleQuickUnlink = async (linkId: string, trainerName: string, colleagueName: string) => {
+    const ok = await confirm({
+      title: 'Desvincular Cartera Compartida',
+      description: `¿Estás seguro de que deseas eliminar el enlace entre ${trainerName} y ${colleagueName}?`,
+      confirmText: 'Desvincular',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    try {
+      await adminService.unlinkTrainers(linkId);
+      toast.success('Enlace eliminado con éxito');
+      loadData();
+    } catch {
+      toast.error('Error al desvincular entrenadores');
     }
   };
 
@@ -155,11 +181,21 @@ export default function AdminTrainersPage() {
         title="Gestión de Entrenadores"
         subtitle="Supervisa la cartera de atletas de cada coach y asigna sedes operativas"
         action={
-          <Link href="/admin">
-            <Button variant="secondary" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver al Centro de Mando
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              onClick={() => setLinkModalOpen(true)}
+              variant="primary"
+              size="sm"
+              className="font-condensed uppercase tracking-wider font-bold shadow-md shadow-red-500/20"
+            >
+              <Link2 className="w-4 h-4 mr-1.5" /> Enlazar Entrenadores
             </Button>
-          </Link>
+            <Link href="/admin" className="w-full sm:w-auto">
+              <Button variant="secondary" size="sm" className="w-full justify-center">
+                <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -176,16 +212,16 @@ export default function AdminTrainersPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* ── Filter Bar ── */}
-          <div className="flex flex-wrap items-center gap-3 p-2 rounded-2xl bg-white/70 border border-slate-200 backdrop-blur-md dark:bg-white/[0.03] dark:border-white/5">
-            <span className="text-xs font-bold font-condensed uppercase tracking-wider text-slate-500 px-3">
+          {/* ── Filter Bar (Scrollable on mobile without clipping) ── */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/70 border border-slate-200 backdrop-blur-md dark:bg-white/[0.03] dark:border-white/5 overflow-x-auto no-scrollbar">
+            <span className="text-xs font-bold font-condensed uppercase tracking-wider text-slate-400 px-3 shrink-0">
               Filtrar Sede:
             </span>
             <button
               onClick={() => setSelectedBranchFilter('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold font-condensed uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold font-condensed uppercase tracking-wider transition-all shrink-0 ${
                 selectedBranchFilter === 'all'
-                  ? 'bg-primary-500 text-slate-950 shadow-sm'
+                  ? 'bg-red-600 text-white shadow-sm shadow-red-500/25'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5'
               }`}
             >
@@ -197,9 +233,9 @@ export default function AdminTrainersPage() {
                 <button
                   key={branch.id}
                   onClick={() => setSelectedBranchFilter(branch.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold font-condensed uppercase tracking-wider transition-all ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold font-condensed uppercase tracking-wider transition-all shrink-0 ${
                     selectedBranchFilter === branch.id
-                      ? 'bg-primary-500 text-slate-950 shadow-sm'
+                      ? 'bg-red-600 text-white shadow-sm shadow-red-500/25'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5'
                   }`}
                 >
@@ -214,7 +250,7 @@ export default function AdminTrainersPage() {
             {filteredTrainers.map((trainer) => {
               const isExpanded = expandedTrainerId === trainer.id;
               return (
-                <Card key={trainer.id} className="p-0 overflow-hidden">
+                <Card key={trainer.id} className="p-0">
                   <div className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-100 dark:border-white/5">
                     <div className="flex items-center gap-5">
                       <Avatar
@@ -254,12 +290,52 @@ export default function AdminTrainersPage() {
                               ? `${trainer.branchName} (${trainer.branchCity || 'Medellín'})`
                               : 'Sin Sede Asignada'}
                           </span>
+                          {trainer.linkedTrainers && trainer.linkedTrainers.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              {trainer.linkedTrainers.map((l) => {
+                                const isUnidir = l.mode === 'unidirectional';
+                                const isSource = l.roleInLink === 'source';
+                                return (
+                                  <span
+                                    key={l.linkId}
+                                    className={`inline-flex items-center gap-1.5 font-bold font-condensed uppercase tracking-wider px-2.5 py-1 rounded-lg text-[11px] border transition-all ${
+                                      isUnidir
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 dark:text-amber-400'
+                                        : 'bg-red-500/10 border-red-500/30 text-red-500 dark:text-red-400'
+                                    }`}
+                                  >
+                                    {isUnidir ? (
+                                      isSource ? (
+                                        <>📤 Comparte con: <strong className="text-white ml-0.5">{l.name}</strong></>
+                                      ) : (
+                                        <>📥 Recibe atletas de: <strong className="text-white ml-0.5">{l.name}</strong></>
+                                      )
+                                    ) : (
+                                      <>🔗 Enlace Mutuo: <strong className="text-white ml-0.5">{l.name}</strong></>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickUnlink(l.linkId, trainer.name, l.name);
+                                      }}
+                                      title={`Desvincular de ${l.name}`}
+                                      className="ml-1 p-0.5 rounded text-neutral-400 hover:text-red-500 hover:bg-red-500/20 transition-colors"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Stats & Actions */}
-                    <div className="flex items-center gap-3 flex-wrap">
+                    {/* Stats & Actions: Essential metrics + View Athletes + 3-dots Menu */}
+                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between sm:justify-end w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-white/5">
                       <div className="flex items-center gap-2">
                         <div className="rounded-2xl bg-slate-50 border border-slate-200 px-3.5 py-2 text-center dark:bg-white/[0.03] dark:border-white/5">
                           <p className="text-xl font-condensed font-bold text-slate-900 leading-none dark:text-white">
@@ -271,7 +347,7 @@ export default function AdminTrainersPage() {
                         </div>
 
                         <div className="rounded-2xl bg-slate-50 border border-slate-200 px-3.5 py-2 text-center dark:bg-white/[0.03] dark:border-white/5">
-                          <p className="text-xl font-condensed font-bold text-primary-500 leading-none">
+                          <p className="text-xl font-condensed font-bold text-red-500 leading-none">
                             {trainer.activeRoutinesCount}
                           </p>
                           <p className="text-[9px] font-condensed font-bold uppercase tracking-widest text-slate-400 mt-0.5">
@@ -280,52 +356,42 @@ export default function AdminTrainersPage() {
                         </div>
                       </div>
 
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleOpenAssignModal(trainer)}
-                      >
-                        <Settings className="w-4 h-4 mr-1.5" /> Sede
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={isExpanded ? 'primary' : 'secondary'}
+                          size="sm"
+                          onClick={() =>
+                            setExpandedTrainerId(isExpanded ? null : trainer.id)
+                          }
+                          className="font-condensed uppercase font-bold text-xs"
+                        >
+                          <Users className="w-3.5 h-3.5 mr-1" />
+                          {isExpanded ? 'Ocultar' : 'Ver Atletas'}
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5 ml-1" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5 ml-1" />
+                          )}
+                        </Button>
 
-                      <Button
-                        variant={trainer.role === 'super_admin' ? 'secondary' : 'primary'}
-                        size="sm"
-                        onClick={() => handleToggleRole(trainer)}
-                        title={
-                          trainer.role === 'super_admin'
-                            ? 'Quitar permisos de Super Admin'
-                            : 'Hacer Super Admin'
-                        }
-                      >
-                        {trainer.role === 'super_admin' ? 'Revocar Admin' : 'Hacer Super Admin'}
-                      </Button>
-
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 dark:hover:bg-red-500/20"
-                        onClick={() => handleDeleteTrainer(trainer.id)}
-                        title="Eliminar Entrenador"
-                      >
-                        Eliminar
-                      </Button>
-
-                      <Button
-                        variant={isExpanded ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() =>
-                          setExpandedTrainerId(isExpanded ? null : trainer.id)
-                        }
-                      >
-                        <Users className="w-4 h-4 mr-1.5" />
-                        {isExpanded ? 'Ocultar' : 'Ver Atletas'}
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 ml-1" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 ml-1" />
-                        )}
-                      </Button>
+                        {/* 3-dots Menu Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMenuTrainer(trainer);
+                          }}
+                          className={cn(
+                            "w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200",
+                            selectedMenuTrainer?.id === trainer.id
+                              ? "bg-red-500/20 border-red-500 text-red-400"
+                              : "bg-neutral-100 hover:bg-neutral-200 border-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 text-neutral-400 hover:text-white"
+                          )}
+                          title="Más opciones de administración"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -458,6 +524,117 @@ export default function AdminTrainersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* ── Modal Enlazar Entrenadores / Cartera Compartida ── */}
+      <LinkTrainersModal
+        isOpen={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        trainers={trainers}
+        onSuccess={loadData}
+      />
+
+      {/* ── Action Sheet Modal para Opciones de Entrenador (3 puntitos) ── */}
+      {selectedMenuTrainer && (
+        <Modal
+          isOpen={!!selectedMenuTrainer}
+          onClose={() => setSelectedMenuTrainer(null)}
+          title=""
+          size="sm"
+          className="p-6 bg-neutral-900 border border-white/10 rounded-3xl max-w-sm mx-auto shadow-2xl"
+        >
+          <div className="space-y-4">
+            <div className="border-b border-white/10 pb-3">
+              <span className="text-[10px] font-condensed font-bold uppercase tracking-widest text-neutral-400">
+                Opciones de Administración
+              </span>
+              <h3 className="text-lg font-condensed font-bold uppercase tracking-wide text-white mt-0.5">
+                {selectedMenuTrainer.name}
+              </h3>
+              <p className="text-xs text-neutral-400 truncate">
+                {selectedMenuTrainer.email}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const t = selectedMenuTrainer;
+                  setSelectedMenuTrainer(null);
+                  handleOpenAssignModal(t);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-condensed font-bold uppercase tracking-wider transition-colors text-left border border-white/5"
+              >
+                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-neutral-300 shrink-0">
+                  <Settings className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block text-sm">Gestionar Sede</span>
+                  <span className="text-[11px] text-neutral-400 font-normal normal-case block">
+                    {selectedMenuTrainer.branchName || 'Sin sede asignada'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const t = selectedMenuTrainer;
+                  setSelectedMenuTrainer(null);
+                  handleToggleRole(t);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-condensed font-bold uppercase tracking-wider transition-colors text-left border border-white/5"
+              >
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0">
+                  <Crown className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block text-sm">
+                    {selectedMenuTrainer.role === 'super_admin'
+                      ? 'Revocar Super Admin'
+                      : 'Hacer Super Admin'}
+                  </span>
+                  <span className="text-[11px] text-neutral-400 font-normal normal-case block">
+                    {selectedMenuTrainer.role === 'super_admin'
+                      ? 'Volver a entrenador normal'
+                      : 'Dar permisos totales'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const t = selectedMenuTrainer;
+                  setSelectedMenuTrainer(null);
+                  handleDeleteTrainer(t.id);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-condensed font-bold uppercase tracking-wider transition-colors text-left border border-red-500/20"
+              >
+                <div className="w-8 h-8 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block text-sm">Eliminar Entrenador</span>
+                  <span className="text-[11px] text-red-400/70 font-normal normal-case block">
+                    Remover cuenta del gimnasio
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="md"
+              fullWidth
+              onClick={() => setSelectedMenuTrainer(null)}
+              className="font-condensed uppercase font-bold text-xs mt-2 text-neutral-400 hover:text-white"
+            >
+              Cerrar
+            </Button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

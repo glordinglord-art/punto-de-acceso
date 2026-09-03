@@ -9,10 +9,13 @@ import { cn, formatDate } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
 import { ClientMealsProgress } from "./ClientMealsProgress";
 import { ClientAiChat } from "./ClientAiChat";
-import { Settings, Target, Flame, Activity, ShieldAlert, HeartPulse, UserCircle, LineChart, Sparkles, Key } from "lucide-react";
+import { UserComplianceModule } from "@/features/dashboard/components/UserComplianceModule";
+import { ClientAssessmentsTab } from "@/features/assessments/components/ClientAssessmentsTab";
+import { Settings, Target, Flame, Activity, ShieldAlert, HeartPulse, UserCircle, LineChart, Sparkles, Key, Ruler } from "lucide-react";
 
 interface ClientProfileModalProps {
   client: User | null;
+  initialTab?: "profile" | "assessments" | "progress" | "compliance" | "ai";
   onClose: () => void;
   onSave: (
     clientId: string,
@@ -23,6 +26,7 @@ interface ClientProfileModalProps {
 
 export function ClientProfileModal({
   client,
+  initialTab = "profile",
   onClose,
   onSave,
   onDelete,
@@ -31,8 +35,8 @@ export function ClientProfileModal({
   const [calories, setCalories] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "progress" | "ai">(
-    "profile",
+  const [activeTab, setActiveTab] = useState<"profile" | "assessments" | "progress" | "compliance" | "ai">(
+    initialTab,
   );
 
   useEffect(() => {
@@ -40,8 +44,11 @@ export function ClientProfileModal({
       setGoal(client.dietaryGoal || "");
       setCalories(client.targetCalories?.toString() || "");
       setPassword("");
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
     }
-  }, [client]);
+  }, [client, initialTab]);
 
   if (!client) return null;
 
@@ -69,30 +76,24 @@ export function ClientProfileModal({
       title=""
       size="lg"
       noPadding={true}
-      className="overflow-hidden"
+      className="overflow-hidden max-w-4xl"
     >
       <div className="relative">
-        {/* Banner with gradient */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-primary-600 via-primary-500 to-emerald-500 dark:from-primary-900 dark:via-primary-800 dark:to-emerald-900 z-0">
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-          {/* Abstract pattern */}
-          <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
-            <pattern id="pattern-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M0 40L40 0H20L0 20M40 40V20L20 40" stroke="currentColor" strokeWidth="2" fill="none" />
-            </pattern>
-            <rect x="0" y="0" width="100%" height="100%" fill="url(#pattern-grid)" />
-          </svg>
+        {/* Banner with VITALFIT crimson titanium gradient */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-[#180305] via-[#28060a] to-[#070102] border-b border-red-500/20 z-0">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(239,68,68,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(239,68,68,0.05)_1px,transparent_1px)] bg-[size:24px_24px]" />
         </div>
 
-        <div className="relative z-10 pt-16 px-6 sm:px-8 pb-8">
+        <div className="relative z-10 pt-16 px-4 sm:px-8 pb-8">
           {/* Header Profile Info */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left mb-8">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left mb-6">
             <div className="relative">
-              <Avatar name={client.name} size="xl" className="w-24 h-24 text-3xl ring-4 ring-white dark:ring-neutral-900 shadow-xl" />
+              <Avatar name={client.name} size="xl" className="w-24 h-24 text-3xl ring-4 ring-neutral-900 shadow-2xl" />
               <div className="absolute bottom-0 right-0">
                 <div className={cn(
-                  "w-5 h-5 rounded-full border-2 border-white dark:border-neutral-900 shadow-sm",
-                  client.isActive ? "bg-green-500" : "bg-red-500"
+                  "w-5 h-5 rounded-full border-2 border-neutral-900 shadow-sm",
+                  client.isActive ? "bg-emerald-500" : "bg-red-500"
                 )} />
               </div>
             </div>
@@ -106,49 +107,87 @@ export function ClientProfileModal({
                   {client.isActive ? "ACTIVO" : "INACTIVO"}
                 </Badge>
               </div>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1">
-                {client.email} {client.phone && <span className="mx-2">•</span>} {client.phone}
-              </p>
-              <p className="text-xs font-condensed font-bold uppercase tracking-widest text-primary-600 dark:text-primary-400 mt-2">
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1.5 text-sm font-medium text-neutral-400">
+                <span>{client.email}</span>
+                {client.phone && (
+                  <>
+                    <span>•</span>
+                    <a
+                      href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors font-bold font-mono text-xs bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-full"
+                      title="Abrir chat en WhatsApp"
+                    >
+                      💬 {client.phone}
+                    </a>
+                  </>
+                )}
+              </div>
+
+              <p className="text-xs font-condensed font-bold uppercase tracking-widest text-red-500 mt-2">
                 MIEMBRO DESDE {formatDate(client.createdAt)}
               </p>
             </div>
           </div>
 
-          {/* Tabs Widget */}
-          <div className="flex bg-neutral-100 dark:bg-black/40 p-1.5 rounded-xl border border-neutral-200 dark:border-white/5 mb-8">
+          {/* Tabs Widget with horizontal scroll on mobile */}
+          <div className="flex bg-neutral-100 dark:bg-black/60 p-1.5 rounded-2xl border border-neutral-200 dark:border-white/10 mb-6 overflow-x-auto no-scrollbar gap-1.5">
             <button
               onClick={() => setActiveTab("profile")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 text-sm font-condensed font-bold uppercase tracking-wider py-2.5 rounded-lg transition-all duration-200",
+                "flex-1 min-w-[95px] flex items-center justify-center gap-1.5 text-xs sm:text-sm font-condensed font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 whitespace-nowrap",
                 activeTab === "profile"
-                  ? "bg-white dark:bg-white/10 text-primary-600 dark:text-primary-400 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-white/50 dark:hover:bg-white/5"
+                  ? "bg-white dark:bg-white/15 text-red-500 dark:text-red-400 shadow-sm ring-1 ring-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <UserCircle className="w-4 h-4" /> Perfil
+              <UserCircle className="w-4 h-4 text-red-500 shrink-0" /> Perfil
+            </button>
+            <button
+              onClick={() => setActiveTab("assessments")}
+              className={cn(
+                "flex-1 min-w-[115px] flex items-center justify-center gap-1.5 text-xs sm:text-sm font-condensed font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 whitespace-nowrap",
+                activeTab === "assessments"
+                  ? "bg-red-600 text-white shadow-md shadow-red-500/25 ring-1 ring-red-400"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <Ruler className="w-4 h-4 text-white shrink-0" /> Valoraciones
             </button>
             <button
               onClick={() => setActiveTab("progress")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 text-sm font-condensed font-bold uppercase tracking-wider py-2.5 rounded-lg transition-all duration-200",
+                "flex-1 min-w-[95px] flex items-center justify-center gap-1.5 text-xs sm:text-sm font-condensed font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 whitespace-nowrap",
                 activeTab === "progress"
-                  ? "bg-white dark:bg-white/10 text-primary-600 dark:text-primary-400 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-white/50 dark:hover:bg-white/5"
+                  ? "bg-white dark:bg-white/15 text-red-500 dark:text-red-400 shadow-sm ring-1 ring-white/10"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <LineChart className="w-4 h-4" /> Progreso
+              <LineChart className="w-4 h-4 text-red-500 shrink-0" /> Progreso
+            </button>
+            <button
+              onClick={() => setActiveTab("compliance")}
+              className={cn(
+                "flex-1 min-w-[130px] flex items-center justify-center gap-1.5 text-xs sm:text-sm font-condensed font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 whitespace-nowrap",
+                activeTab === "compliance"
+                  ? "bg-red-600 text-white shadow-md shadow-red-500/25 ring-1 ring-red-400"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <Activity className="w-4 h-4 text-white shrink-0" /> Rendimiento & %
             </button>
             <button
               onClick={() => setActiveTab("ai")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 text-sm font-condensed font-bold uppercase tracking-wider py-2.5 rounded-lg transition-all duration-200",
+                "flex-1 min-w-[120px] flex items-center justify-center gap-1.5 text-xs sm:text-sm font-condensed font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all duration-200 whitespace-nowrap",
                 activeTab === "ai"
-                  ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-md shadow-purple-500/20"
-                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-white/50 dark:hover:bg-white/5"
+                  ? "bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-md shadow-red-500/25"
+                  : "text-neutral-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <Sparkles className="w-4 h-4" /> Asistente AI
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" /> Asistente AI
             </button>
           </div>
 
@@ -334,12 +373,30 @@ export function ClientProfileModal({
             </div>
           )}
 
+          {/* Tab Content: Physical Assessments (Valoraciones Corporales) */}
+          {activeTab === "assessments" && (
+            <div className="animate-in fade-in duration-300">
+              <ClientAssessmentsTab clientId={client.id} isTrainer={true} />
+            </div>
+          )}
+
           {/* Tab Content: Progress */}
           {activeTab === "progress" && (
             <div className="animate-in fade-in duration-300">
               <ClientMealsProgress
                 clientId={client.id}
                 targetCalories={client.targetCalories || null}
+              />
+            </div>
+          )}
+
+          {/* Tab Content: Compliance & Percentages */}
+          {activeTab === "compliance" && (
+            <div className="animate-in fade-in duration-300">
+              <UserComplianceModule
+                userId={client.id}
+                userName={client.name}
+                isTrainer={true}
               />
             </div>
           )}

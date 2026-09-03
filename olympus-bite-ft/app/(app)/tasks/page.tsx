@@ -10,8 +10,6 @@ import { tasksService } from "@/features/tasks/services/tasks.service";
 import type { DailyTask, TaskLog } from "@/features/tasks/types/tasks.types";
 import {
   Flame,
-  Zap,
-  Trophy,
   Target,
   Plus,
   Trash2,
@@ -20,7 +18,9 @@ import {
   Sparkles,
   TrendingUp,
   Activity,
+  Brain,
 } from "lucide-react";
+import { DailyStressModal } from "@/features/tasks/components/DailyStressModal";
 
 /* ─── Emoji picker for tasks ─── */
 const TASK_ICONS = ["🍳", "🏋️", "🥗", "💼", "📚", "💧", "🧘", "🛌", "💊", "🏃", "🎯", "✅"];
@@ -66,6 +66,7 @@ export default function TasksPage() {
 
   // Add task form
   const [showAdd, setShowAdd] = useState(false);
+  const [showStressModal, setShowStressModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newIcon, setNewIcon] = useState("✅");
   const [adding, setAdding] = useState(false);
@@ -359,14 +360,23 @@ export default function TasksPage() {
               {tasks.map((task) => {
                 const done = isTaskDone(task.id);
                 const isToggling = toggling === task.id;
+                const isStress = task.title.toLowerCase().includes("estrés") || task.title.toLowerCase().includes("estres");
+
                 return (
                   <div
                     key={task.id}
-                    onClick={() => !isToggling && handleToggle(task.id)}
+                    onClick={() => {
+                      if (isToggling) return;
+                      if (isStress) {
+                        setShowStressModal(true);
+                      } else {
+                        handleToggle(task.id);
+                      }
+                    }}
                     className={cn(
                       "group flex items-center justify-between p-4 rounded-2xl border transition-all duration-200 cursor-pointer backdrop-blur-md select-none",
                       done
-                        ? "bg-primary-500/10 border-primary-500/30 text-slate-900 dark:text-white shadow-[0_0_20px_rgba(16,185,129,0.08)]"
+                        ? "bg-primary-500/10 border-primary-500/30 text-slate-900 dark:text-white shadow-[0_0_20px_rgba(239,68,68,0.08)]"
                         : "bg-white/80 border-slate-200/80 hover:border-slate-300 dark:bg-white/[0.03] dark:border-white/5 dark:hover:border-white/15",
                     )}
                   >
@@ -398,6 +408,11 @@ export default function TasksPage() {
                         >
                           {task.title}
                         </p>
+                        {isStress && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-condensed font-bold uppercase text-red-500 mt-0.5">
+                            <Brain className="w-3 h-3" /> {done ? "Registro de hoy completado" : "Toca para abrir formulario"}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -630,6 +645,17 @@ export default function TasksPage() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* ── Daily Stress Modal ── */}
+      {user && (
+        <DailyStressModal
+          isOpen={showStressModal}
+          onClose={() => setShowStressModal(false)}
+          userId={user.id}
+          date={today}
+          onSaved={loadData}
+        />
       )}
     </>
   );

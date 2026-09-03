@@ -14,6 +14,7 @@ import { Header } from '@/shared/components/layout/Header';
 import { cn, formatCalories, getLocalDateString } from '@/shared/lib/utils';
 import { calculateNutritionTargets } from '@/features/meals/utils/nutrition-calculator';
 import { FitiaDayTracker } from '@/features/dashboard/components/FitiaDayTracker';
+import { UserComplianceModule } from './UserComplianceModule';
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: 'Desayuno',
@@ -390,6 +391,11 @@ export function ClientDashboardView({
             </div>
           </div>
         </section>
+
+        {/* ── Módulo Inteligente de Rendimiento y Porcentajes ── */}
+        {user && (
+          <UserComplianceModule userId={user.id} userName={user.name} />
+        )}
 
         {/* ── Fast Meal Logging replacing charts ── */}
         <section className="bg-[#18181A] rounded-[32px] p-6 shadow-sm border border-white/5">

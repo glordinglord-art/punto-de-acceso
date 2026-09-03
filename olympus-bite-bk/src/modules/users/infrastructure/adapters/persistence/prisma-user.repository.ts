@@ -57,7 +57,42 @@ export class PrismaUserRepository implements UserRepositoryPort {
   }
 
   async findByTrainerId(trainerId: string): Promise<User[]> {
-    const rows = await this.prisma.user.findMany({ where: { trainerId } });
+    // Find all linked colleague trainers
+    const colleagueLinks = await this.prisma.trainerColleague.findMany({
+      where: {
+        OR: [{ trainerAId: trainerId }, { trainerBId: trainerId }],
+      },
+    });
+
+    interface ColleagueRow {
+      trainerAId: string;
+      trainerBId: string;
+      mode?: string;
+    }
+
+    const trainerIds = new Set<string>([trainerId]);
+    for (const link of colleagueLinks as unknown as ColleagueRow[]) {
+      const mode = link.mode || 'bidirectional';
+      if (mode === 'bidirectional') {
+        // Both coaches share with each other
+        trainerIds.add(link.trainerAId);
+        trainerIds.add(link.trainerBId);
+      } else {
+        // Unidirectional: trainerAId shares with trainerBId
+        // If current coach is trainerBId (the recipient), they see trainerAId's clients
+        if (trainerId === link.trainerBId) {
+          trainerIds.add(link.trainerAId);
+        }
+      }
+    }
+
+    const rows = await this.prisma.user.findMany({
+      where: {
+        trainerId: { in: Array.from(trainerIds) },
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+    });
     return rows.map((r) => this.toDomain(r));
   }
 
@@ -134,11 +169,13 @@ export class PrismaUserRepository implements UserRepositoryPort {
       this.prisma.dailyTask.deleteMany({ where: { userId: id } }),
       this.prisma.taskLog.deleteMany({ where: { userId: id } }),
       this.prisma.waterLog.deleteMany({ where: { userId: id } }),
-      this.prisma.notificationSubscription.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationSubscription.deleteMany({
+        where: { userId: id },
+      }),
       this.prisma.notificationPreference.deleteMany({ where: { userId: id } }),
       this.prisma.user.updateMany({
         where: { trainerId: id },
-        data: { trainerId: null }
+        data: { trainerId: null },
       }),
       this.prisma.user.delete({ where: { id } }),
     ]);

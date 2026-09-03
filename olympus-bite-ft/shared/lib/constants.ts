@@ -1,5 +1,5 @@
-export const APP_NAME = "Punto de Inflexión";
-export const APP_DESCRIPTION = "Tu aliado en nutrición y entrenamiento";
+export const APP_NAME = "VITALFIT";
+export const APP_DESCRIPTION = "Plataforma de Alto Rendimiento — Nutrición & Entrenamiento";
 
 export const MEAL_TYPES = {
   breakfast: { label: "Desayuno", icon: "🌅", color: "text-amber-500" },

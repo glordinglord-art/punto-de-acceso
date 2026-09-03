@@ -29,22 +29,22 @@
   --background: #f6f8fb;
   --foreground: #0f172a;
 
-  /* Default Theme: Emerald — JS overrides these at runtime */
-  --color-p50: #ecfdf5;
-  --color-p100: #d1fae5;
-  --color-p200: #a7f3d0;
-  --color-p300: #6ee7b7;
-  --color-p400: #34d399;
-  --color-p500: #10b981;
-  --color-p600: #059669;
-  --color-p700: #047857;
-  --color-p800: #065f46;
-  --color-p900: #064e3b;
-  --color-p950: #022c22;
+  /* Default Theme: VITALFIT Red — JS overrides these at runtime */
+  --color-p50: #fef2f2;
+  --color-p100: #fee2e2;
+  --color-p200: #fecaca;
+  --color-p300: #fca5a5;
+  --color-p400: #f87171;
+  --color-p500: #ef4444;
+  --color-p600: #dc2626;
+  --color-p700: #b91c1c;
+  --color-p800: #991b1b;
+  --color-p900: #7f1d1d;
+  --color-p950: #450a0a;
 }
 
 .dark {
-  --background: #020617;
+  --background: #050505;
   --foreground: #f8fafc;
 }
 
@@ -76,8 +76,8 @@ body {
 
 .dark body {
   background-image:
-    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.12), transparent 22%),
-    linear-gradient(180deg, #07111f 0%, #020617 45%, #02040d 100%);
+    radial-gradient(circle at 85% 15%, rgba(239, 68, 68, 0.08), transparent 28%),
+    linear-gradient(180deg, #0a0a0a 0%, #050505 45%, #000000 100%);
 }
 
 a {

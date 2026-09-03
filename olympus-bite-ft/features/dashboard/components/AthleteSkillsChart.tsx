@@ -90,8 +90,8 @@ export function AthleteSkillsChart({ stats }: AthleteSkillsChartProps) {
         name: 'Dieta',
         value: dieta,
         description: 'Alineación de tus calorías diarias a la meta asignada.',
-        color: '#10b981',
-        glow: 'rgba(16, 185, 129, 0.4)',
+        color: '#ef4444',
+        glow: 'rgba(239, 68, 68, 0.4)',
       },
     ];
   }, [stats]);

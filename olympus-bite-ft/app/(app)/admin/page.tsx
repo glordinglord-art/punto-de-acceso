@@ -97,7 +97,7 @@ export default function AdminOverviewPage() {
     <>
       <Header
         title="Centro de Mando"
-        subtitle={`Organización Punto de Inflexión • ${totalBranches} Sedes • ${totalTrainers} Entrenadores • ${totalClients} Atletas`}
+        subtitle={`Organización VITALFIT • ${totalBranches} Sedes • ${totalTrainers} Entrenadores • ${totalClients} Atletas`}
         action={
           <div className="flex items-center gap-3">
             {totalBranches === 0 && (

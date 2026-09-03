@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type ColorPreset = "emerald" | "blue" | "purple" | "orange";
+export type ColorPreset = "red" | "emerald" | "blue" | "purple" | "orange";
 export type LayoutType = "vertical" | "mini";
 export type FontFamily = "geist" | "inter" | "roboto";
 
@@ -20,6 +20,19 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 const PRESETS: Record<ColorPreset, Record<string, string>> = {
+  red: {
+    "color-p50": "#fef2f2",
+    "color-p100": "#fee2e2",
+    "color-p200": "#fecaca",
+    "color-p300": "#fca5a5",
+    "color-p400": "#f87171",
+    "color-p500": "#ef4444",
+    "color-p600": "#dc2626",
+    "color-p700": "#b91c1c",
+    "color-p800": "#991b1b",
+    "color-p900": "#7f1d1d",
+    "color-p950": "#450a0a",
+  },
   emerald: {
     "color-p50": "#ecfdf5",
     "color-p100": "#d1fae5",
@@ -75,7 +88,7 @@ const PRESETS: Record<ColorPreset, Record<string, string>> = {
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [colorPreset, setColorPreset] = useState<ColorPreset>("emerald");
+  const [colorPreset, setColorPreset] = useState<ColorPreset>("red");
   const [layout, setLayout] = useState<LayoutType>("vertical");
   const [fontFamily, setFontFamily] = useState<FontFamily>("geist");
   const [isMounted, setIsMounted] = useState(false);

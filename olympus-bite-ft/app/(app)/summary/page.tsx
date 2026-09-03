@@ -273,7 +273,7 @@ function ClientDetailView({ client, detail }: { client: User; detail: ClientDeta
               )}
               {client.phone && (
                 <a
-                  href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Hola ${client.name}! Te escribo desde Punto de Inflexión para revisar tu progreso de hoy 💪`)}`}
+                  href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Hola ${client.name}! Te escribo desde VITALFIT para revisar tu progreso de hoy 💪`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 transition-all font-condensed uppercase tracking-wider"

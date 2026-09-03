@@ -1,6 +1,6 @@
 import { api } from '@/shared/lib/api';
 import type { ApiResponse, User } from '@/shared/types/common.types';
-import type { AdminOverview, TrainerRosterItem } from '../types/admin.types';
+import type { AdminOverview, TrainerRosterItem, TrainerLink } from '../types/admin.types';
 
 export const adminService = {
   async getOverview(): Promise<ApiResponse<AdminOverview>> {
@@ -35,5 +35,27 @@ export const adminService = {
 
   async seedDefault(): Promise<ApiResponse<{ message: string; data: unknown }>> {
     return api.post<ApiResponse<{ message: string; data: unknown }>>('/admin/seed-default', {});
+  },
+
+  async linkTrainers(
+    trainerAId: string,
+    trainerBId: string,
+    gymId?: string | null,
+    mode: 'bidirectional' | 'unidirectional' = 'bidirectional',
+  ): Promise<ApiResponse<{ message: string }>> {
+    return api.post<ApiResponse<{ message: string }>>('/admin/trainers/link', {
+      trainerAId,
+      trainerBId,
+      gymId,
+      mode,
+    });
+  },
+
+  async getTrainerLinks(): Promise<ApiResponse<TrainerLink[]>> {
+    return api.get<ApiResponse<TrainerLink[]>>('/admin/trainers/links');
+  },
+
+  async unlinkTrainers(linkId: string): Promise<ApiResponse<{ message: string }>> {
+    return api.delete<ApiResponse<{ message: string }>>(`/admin/trainers/link/${linkId}`);
   },
 };

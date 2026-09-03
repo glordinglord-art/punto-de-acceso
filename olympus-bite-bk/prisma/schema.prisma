@@ -144,6 +144,14 @@ model User {
   waterLogs      WaterLog[]
   pushSubscriptions NotificationSubscription[]
   notificationPrefs  NotificationPreference?
+  colleaguesAsA      TrainerColleague[]         @relation("ColleagueA")
+  colleaguesAsB      TrainerColleague[]         @relation("ColleagueB")
+  dailyStressLogs    DailyStressLog[]
+  weeklyCheckins     WeeklyCheckin[]
+  paymentsAsClient   ClientPayment[]            @relation("ClientPayments")
+  paymentsAsTrainer  ClientPayment[]            @relation("TrainerPayments")
+  assessmentsAsClient  PhysicalAssessment[]     @relation("ClientAssessments")
+  assessmentsAsTrainer PhysicalAssessment[]     @relation("TrainerAssessments")
 
   @@index([trainerId, isActive])
   @@index([branchId, isActive])
@@ -409,5 +417,127 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+// ─── Trainer Colleague Links (Cartera compartida entre entrenadores) ──
+model TrainerColleague {
+  id         String   @id @default(uuid())
+  trainerAId String   @map("trainer_a_id")
+  trainerBId String   @map("trainer_b_id")
+  gymId      String?  @map("gym_id")
+  mode       String   @default("bidirectional") @map("mode") // "bidirectional" | "unidirectional"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  trainerA   User     @relation("ColleagueA", fields: [trainerAId], references: [id], onDelete: Cascade)
+  trainerB   User     @relation("ColleagueB", fields: [trainerBId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerAId, trainerBId])
+  @@index([trainerAId])
+  @@index([trainerBId])
+  @@map("trainer_colleagues")
+}
+
+// ─── Daily Stress Tracking ──────────────────────────────
+model DailyStressLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  date        String   // "YYYY-MM-DD"
+  stressLevel Int      @default(5) @map("stress_level") // 1 to 10
+  mood        String?  // "calm", "focused", "tired", "anxious", "energized"
+  energyLevel Int?     @default(5) @map("energy_level") // 1 to 10
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_stress_logs")
+}
+
+// ─── Weekly Check-in (Chequeo Semanal de los Lunes) ─────
+model WeeklyCheckin {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  weekDate       String   @map("week_date") // "YYYY-MM-DD" del lunes
+  stressRating   Int      @default(5) @map("stress_rating") // 1 to 10
+  energyRating   Int      @default(5) @map("energy_rating") // 1 to 10
+  recoveryRating String?  @map("recovery_rating") // "excelente", "buena", "regular", "mala"
+  dietPerception String?  @map("diet_perception") // "100%", "buena", "regular", "deficiente"
+  notes          String?
+  rawAnswers     Json?    @map("raw_answers")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekDate])
+  @@index([userId, weekDate])
+  @@map("weekly_checkins")
+}
+
+// ─── Client Payments / Membership Tracking ─────────────────
+model ClientPayment {
+  id            String    @id @default(uuid())
+  clientId      String    @map("client_id")
+  trainerId     String    @map("trainer_id")
+  gymId         String?   @map("gym_id")
+  periodMonth   String    @map("period_month") // "YYYY-MM", ej. "2026-09"
+  amount        Float     @default(0)
+  status        String    @default("PENDING") // "PAID" | "PENDING" | "OVERDUE"
+  paymentMethod String?   @map("payment_method") // "Nequi", "Bancolombia", "Efectivo", "Tarjeta", "Daviplata", "Otro"
+  paymentDate   DateTime? @map("payment_date")
+  notes         String?
+  receiptUrl    String?   @map("receipt_url")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  client        User      @relation("ClientPayments", fields: [clientId], references: [id], onDelete: Cascade)
+  trainer       User      @relation("TrainerPayments", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, periodMonth])
+  @@index([clientId])
+  @@index([trainerId])
+  @@index([periodMonth])
+  @@map("client_payments")
+}
+
+// ─── Physical Assessments (Valoraciones Corporales) ─────────
+model PhysicalAssessment {
+  id               String   @id @default(uuid())
+  clientId         String   @map("client_id")
+  trainerId        String   @map("trainer_id")
+  date             DateTime @default(now())
+
+  // Perímetros Corporales (cm)
+  neck             Float?   // Cuello
+  back             Float?   // Espalda
+  rightArm         Float?   @map("right_arm") // Brazo D
+  leftArm          Float?   @map("left_arm") // Brazo I
+  waist            Float?   // Cintura
+  hip              Float?   // Cadera
+  rightThigh       Float?   @map("right_thigh") // Pierna D
+  leftThigh        Float?   @map("left_thigh") // Pierna I
+  rightKnee        Float?   @map("right_knee") // Rodilla D
+  leftKnee         Float?   @map("left_knee") // Rodilla I
+  rightCalf        Float?   @map("right_calf") // Pantorrilla D
+  leftCalf         Float?   @map("left_calf") // Pantorrilla I
+
+  // Composición Corporal
+  weight           Float?   // Peso (kg)
+  fatPercentage    Float?   @map("fat_percentage") // % Grasa
+  musclePercentage Float?   @map("muscle_percentage") // % Muscular
+  waterPercentage  Float?   @map("water_percentage") // % Líquido
+  bonePercentage   Float?   @map("bone_percentage") // % Óseo
+
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  client           User     @relation("ClientAssessments", fields: [clientId], references: [id], onDelete: Cascade)
+  trainer          User     @relation("TrainerAssessments", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
+  @@index([trainerId])
+  @@map("physical_assessments")
 }
 

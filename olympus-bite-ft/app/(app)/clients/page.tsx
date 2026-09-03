@@ -11,9 +11,9 @@ import { clientsService } from "@/features/clients/services/clients.service";
 import { authService } from "@/features/auth/services/auth.service";
 import { ClientProfileModal } from "@/features/clients/components/ClientProfileModal";
 import type { User } from "@/shared/types/common.types";
-import { formatDate } from "@/shared/lib/utils";
+import { formatDate, cn } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
-import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight, UserCircle, Ruler } from "lucide-react";
 import { useConfirm } from "@/shared/contexts/ConfirmContext";
 import { toast } from "react-hot-toast";
 
@@ -38,6 +38,7 @@ export default function ClientsPage() {
   const [existingCodes, setExistingCodes] = useState<InvCode[]>([]);
   const [showCodesPanel, setShowCodesPanel] = useState(false);
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
+  const [selectedClientTab, setSelectedClientTab] = useState<"profile" | "assessments" | "progress" | "compliance" | "ai">("profile");
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkEmail, setLinkEmail] = useState("");
   const [linkLoading, setLinkLoading] = useState(false);
@@ -180,18 +181,29 @@ export default function ClientsPage() {
           loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE TOTAL' : 'CLIENTES TOTALES'}`
         }
         action={
-          <div className="flex gap-3">
-            <Button onClick={() => setShowLinkModal(true)} variant="ghost" size="md" className="font-condensed uppercase tracking-wider font-bold">
-              <Link2 className="w-4 h-4 mr-2" /> Vincular
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              onClick={() => setShowLinkModal(true)}
+              variant="secondary"
+              size="sm"
+              className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5"
+            >
+              <Link2 className="w-3.5 h-3.5 mr-1.5 text-neutral-400" /> Vincular
             </Button>
-            <Button onClick={handleShowCodes} variant="secondary" size="md" className="font-condensed uppercase tracking-wider font-bold shadow-md">
-              <Key className="w-4 h-4 mr-2" /> Códigos
+            <Button
+              onClick={handleShowCodes}
+              variant="secondary"
+              size="sm"
+              className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5"
+            >
+              <Key className="w-3.5 h-3.5 mr-1.5 text-neutral-400" /> Códigos
             </Button>
             <Button
               onClick={handleGenerateCode}
-              size="md"
+              size="sm"
               loading={codeLoading}
-              className="font-condensed uppercase tracking-wider font-bold shadow-lg shadow-primary-500/20"
+              variant="primary"
+              className="col-span-2 sm:col-auto font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
             >
               + Nuevo Cliente
             </Button>
@@ -275,100 +287,166 @@ export default function ClientsPage() {
       ) : (
         <div className="flex flex-col gap-6 mt-6">
           <div className="grid grid-cols-1 gap-4">
-            {paginatedClients.map((client) => (
-              <div
-                key={client.id}
-                onClick={() => setSelectedClient(client)}
-                className="group flex flex-col sm:flex-row gap-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 p-5 transition-all hover:border-primary-300 dark:hover:border-primary-500/50 hover:shadow-lg cursor-pointer backdrop-blur-sm relative overflow-hidden"
-              >
-                {/* Highlight bar on hover */}
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            {paginatedClients.map((client) => {
+              const hasCondition = Boolean(client.medicalConditions && client.medicalConditions.trim().toLowerCase() !== "no");
+              const hasDietPref = Boolean(client.dietaryPreferences && client.dietaryPreferences.trim().toLowerCase() !== "no");
 
-                <div className="flex items-center gap-4 flex-1">
-                  <Avatar name={client.name} size="xl" className="ring-2 ring-white dark:ring-black shadow-md" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
-                        {client.name}
-                      </h3>
-                      <Badge variant={client.isActive ? "success" : "danger"} className="shadow-sm">
-                        {client.isActive ? "ACTIVO" : "INACTIVO"}
-                      </Badge>
+              return (
+                <div
+                  key={client.id}
+                  onClick={() => {
+                    setSelectedClient(client);
+                    setSelectedClientTab("profile");
+                  }}
+                  className="group flex flex-col gap-4 rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 sm:p-5 transition-all hover:border-red-500/40 hover:shadow-xl hover:shadow-red-500/5 cursor-pointer backdrop-blur-sm relative overflow-hidden"
+                >
+                  {/* Left accent indicator */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Top: Avatar, Name, Email, Active Status and Objective Badge */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="relative shrink-0">
+                        <Avatar name={client.name} size="lg" className="w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-white dark:ring-neutral-800 shadow-md text-lg" />
+                        <div className="absolute bottom-0 right-0">
+                          <div className={cn(
+                            "w-3.5 h-3.5 rounded-full border-2 border-white dark:border-neutral-900",
+                            client.isActive ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" : "bg-red-500"
+                          )} />
+                        </div>
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
+                            {client.name}
+                          </h3>
+                          <Badge variant={client.isActive ? "success" : "danger"} className="text-[10px] px-2 py-0.5">
+                            {client.isActive ? "ACTIVO" : "INACTIVO"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                          {client.email}
+                        </p>
+                        <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">
+                          Alta: {formatDate(client.createdAt)}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mt-1 truncate">
-                      {client.email}
-                    </p>
 
-                    {/* Advanced Profile Pills */}
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    {/* Quick Stats: Goal & Calories */}
+                    <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                      <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-black/30 border border-neutral-200 dark:border-white/5 text-center">
+                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-neutral-400 block leading-tight">
+                          Objetivo
+                        </span>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-white capitalize">
+                          {client.dietaryGoal
+                            ? FITNESS_GOALS[client.dietaryGoal as keyof typeof FITNESS_GOALS]?.label || client.dietaryGoal
+                            : "--"}
+                        </span>
+                      </div>
+
+                      <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-black/30 border border-neutral-200 dark:border-white/5 text-center">
+                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-neutral-400 block leading-tight">
+                          Macros
+                        </span>
+                        <span className="text-xs font-bold text-red-500 font-mono">
+                          {client.targetCalories ? `${client.targetCalories} kcal` : "--"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle: Pills (Experience & Equipment) */}
+                  {(client.experienceLevel || client.equipmentAccess) && (
+                    <div className="flex flex-wrap items-center gap-2">
                       {client.experienceLevel && (
-                        <span className="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20 shadow-sm">
-                          <Dumbbell className="w-3 h-3 mr-1.5" /> {client.experienceLevel}
+                        <span className="inline-flex items-center rounded-lg bg-neutral-100 dark:bg-white/5 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10">
+                          <Dumbbell className="w-3 h-3 mr-1.5 text-red-500" /> {client.experienceLevel}
                         </span>
                       )}
                       {client.equipmentAccess && (
-                        <span className="inline-flex items-center rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20 shadow-sm">
-                          <Activity className="w-3 h-3 mr-1.5" /> {client.equipmentAccess}
+                        <span className="inline-flex items-center rounded-lg bg-neutral-100 dark:bg-white/5 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10">
+                          <Activity className="w-3 h-3 mr-1.5 text-white" /> {client.equipmentAccess}
                         </span>
                       )}
                     </div>
-                  </div>
-                </div>
+                  )}
 
-                {/* Medical / Dietary info if any */}
-                <div className="hidden lg:flex flex-col justify-center flex-1 max-w-xs border-l border-neutral-100 dark:border-white/5 pl-5">
-                  {(client.medicalConditions || client.dietaryPreferences) ? (
-                    <div className="space-y-2">
-                      {client.medicalConditions && (
-                        <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-100 dark:border-amber-500/20">
-                          <HeartPulse className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span className="leading-tight"><strong className="font-bold">CONDICIÓN:</strong> {client.medicalConditions}</span>
+                  {/* Medical Conditions & Dietary Restrictions (VISIBLE ON MOBILE & DESKTOP!) */}
+                  {(hasCondition || hasDietPref) ? (
+                    <div className="space-y-1.5">
+                      {hasCondition && (
+                        <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
+                          <HeartPulse className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                          <span className="leading-snug">
+                            <strong className="font-bold uppercase tracking-wider font-condensed">Condición / Lesión:</strong> {client.medicalConditions}
+                          </span>
                         </div>
                       )}
-                      {client.dietaryPreferences && (
-                        <div className="flex items-start gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 p-2 rounded-lg border border-orange-100 dark:border-orange-500/20">
-                          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span className="leading-tight"><strong className="font-bold">DIETA/ALERGIA:</strong> {client.dietaryPreferences}</span>
+                      {hasDietPref && (
+                        <div className="flex items-start gap-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-xl">
+                          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-orange-500" />
+                          <span className="leading-snug">
+                            <strong className="font-bold uppercase tracking-wider font-condensed">Dieta / Alergia:</strong> {client.dietaryPreferences}
+                          </span>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-neutral-400 font-condensed uppercase tracking-wider border border-dashed border-neutral-200 dark:border-white/10 rounded-xl p-2 bg-neutral-50/50 dark:bg-white/5">
-                      Sin restricciones
+                    <div className="text-[11px] text-neutral-500 font-condensed uppercase tracking-wider py-1 px-3 bg-neutral-50 dark:bg-white/[0.02] border border-dashed border-neutral-200 dark:border-white/5 rounded-xl w-fit">
+                      ✓ Sin restricciones o lesiones reportadas
                     </div>
                   )}
+
+                  {/* Bottom: Action Buttons for Trainer */}
+                  <div className="grid grid-cols-2 sm:flex items-center justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-white/5">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setSelectedClientTab("profile");
+                      }}
+                      className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5"
+                    >
+                      <UserCircle className="w-3.5 h-3.5 mr-1 text-neutral-400" />
+                      Ver Perfil
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setSelectedClientTab("assessments");
+                      }}
+                      className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 text-white"
+                    >
+                      <Ruler className="w-3.5 h-3.5 mr-1 text-red-500" />
+                      Valoraciones
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setSelectedClientTab("compliance");
+                      }}
+                      className="col-span-2 sm:col-auto font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
+                    >
+                      <Activity className="w-3.5 h-3.5 mr-1 text-white" />
+                      Rendimiento & % (4/4)
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 items-center justify-items-end xl:justify-items-center bg-neutral-50 dark:bg-black/20 p-4 rounded-xl border border-neutral-100 dark:border-white/5">
-                  <div className="text-right xl:text-center w-full">
-                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Objetivo</p>
-                    <p className="text-sm font-bold text-neutral-900 dark:text-white capitalize">
-                      {client.dietaryGoal
-                        ? FITNESS_GOALS[
-                            client.dietaryGoal as keyof typeof FITNESS_GOALS
-                          ]?.label || client.dietaryGoal
-                        : "--"}
-                    </p>
-                  </div>
-
-                  <div className="text-right xl:text-center w-full">
-                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Macros</p>
-                    <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
-                      {client.targetCalories
-                        ? `${client.targetCalories} kcal`
-                        : "--"}
-                    </p>
-                  </div>
-
-                  <div className="text-right xl:text-center w-full col-span-2 md:col-span-2 xl:col-span-1 border-t md:border-t-0 pt-2 md:pt-0 mt-2 md:mt-0 border-neutral-200 dark:border-white/10">
-                    <p className="text-[10px] font-condensed font-bold text-neutral-400 uppercase tracking-widest mb-1">Ingreso</p>
-                    <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
-                      {formatDate(client.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination Controls */}
@@ -485,6 +563,7 @@ export default function ClientsPage() {
 
       <ClientProfileModal
         client={selectedClient}
+        initialTab={selectedClientTab}
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
         onDelete={async (clientId) => {

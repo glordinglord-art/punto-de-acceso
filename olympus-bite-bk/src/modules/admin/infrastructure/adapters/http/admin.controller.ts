@@ -3,9 +3,11 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { UserRole } from '../../../../users/domain/enums/user-role.enum';
@@ -147,6 +149,16 @@ export class AdminController {
       include: {
         gym: true,
         branch: true,
+        colleaguesAsA: {
+          include: {
+            trainerB: { select: { id: true, name: true, email: true } },
+          },
+        },
+        colleaguesAsB: {
+          include: {
+            trainerA: { select: { id: true, name: true, email: true } },
+          },
+        },
         clients: {
           where: { isActive: true },
           select: {
@@ -172,22 +184,140 @@ export class AdminController {
 
     return {
       success: true,
-      data: trainers.map((t) => ({
-        id: t.id,
-        name: t.name,
-        email: t.email,
-        phone: t.phone,
-        avatarUrl: t.avatarUrl,
-        role: t.role,
-        gymId: t.gymId,
-        gymName: t.gym?.name ?? null,
-        branchId: t.branchId,
-        branchName: t.branch?.name ?? null,
-        branchCity: t.branch?.city ?? null,
-        activeRoutinesCount: t._count.routinesAsTrainer,
-        clients: t.clients,
-      })),
+      data: trainers.map((t) => {
+        const linked = [
+          ...t.colleaguesAsA.map((c: any) => ({
+            ...c.trainerB,
+            linkId: c.id,
+            mode: c.mode || 'bidirectional',
+            roleInLink: 'source',
+          })),
+          ...t.colleaguesAsB.map((c: any) => ({
+            ...c.trainerA,
+            linkId: c.id,
+            mode: c.mode || 'bidirectional',
+            roleInLink: 'recipient',
+          })),
+        ];
+
+        return {
+          id: t.id,
+          name: t.name,
+          email: t.email,
+          phone: t.phone,
+          avatarUrl: t.avatarUrl,
+          role: t.role,
+          gymId: t.gymId,
+          gymName: t.gym?.name ?? null,
+          branchId: t.branchId,
+          branchName: t.branch?.name ?? null,
+          branchCity: t.branch?.city ?? null,
+          activeRoutinesCount: t._count.routinesAsTrainer,
+          clients: t.clients,
+          linkedTrainers: linked,
+        };
+      }),
     };
+  }
+
+  @Post('trainers/link')
+  async linkTrainers(
+    @Body()
+    body: {
+      trainerAId: string;
+      trainerBId: string;
+      gymId?: string | null;
+      mode?: 'bidirectional' | 'unidirectional';
+    },
+  ) {
+    if (!body.trainerAId || !body.trainerBId) {
+      throw new BadRequestException('Debes proporcionar ambos entrenadores');
+    }
+    if (body.trainerAId === body.trainerBId) {
+      throw new BadRequestException(
+        'No puedes enlazar un entrenador consigo mismo',
+      );
+    }
+
+    const mode = body.mode || 'bidirectional';
+
+    const existing = await (this.prisma.trainerColleague as any).findFirst({
+      where: {
+        OR: [
+          { trainerAId: body.trainerAId, trainerBId: body.trainerBId },
+          { trainerAId: body.trainerBId, trainerBId: body.trainerAId },
+        ],
+      },
+    });
+
+    if (existing) {
+      const updated = await (this.prisma.trainerColleague as any).update({
+        where: { id: existing.id },
+        data: {
+          trainerAId: body.trainerAId,
+          trainerBId: body.trainerBId,
+          mode,
+          gymId: body.gymId ?? existing.gymId,
+        },
+        include: {
+          trainerA: { select: { id: true, name: true, email: true } },
+          trainerB: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      return {
+        success: true,
+        message:
+          mode === 'bidirectional'
+            ? 'Enlace actualizado a modo mutuo (ambos comparten sus atletas)'
+            : `Enlace actualizado: ${updated.trainerA.name} comparte con ${updated.trainerB.name}`,
+        data: updated,
+      };
+    }
+
+    const link = await (this.prisma.trainerColleague as any).create({
+      data: {
+        trainerAId: body.trainerAId,
+        trainerBId: body.trainerBId,
+        gymId: body.gymId ?? null,
+        mode,
+      },
+      include: {
+        trainerA: { select: { id: true, name: true, email: true } },
+        trainerB: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return {
+      success: true,
+      message:
+        mode === 'bidirectional'
+          ? 'Entrenadores enlazados en modo mutuo con éxito'
+          : `Enlace unidireccional creado: ${link.trainerA.name} comparte con ${link.trainerB.name}`,
+      data: link,
+    };
+  }
+
+  @Get('trainers/links')
+  async getTrainerLinks() {
+    const links = await this.prisma.trainerColleague.findMany({
+      include: {
+        trainerA: {
+          select: { id: true, name: true, email: true, branchId: true },
+        },
+        trainerB: {
+          select: { id: true, name: true, email: true, branchId: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, data: links };
+  }
+
+  @Delete('trainers/link/:linkId')
+  async unlinkTrainers(@Param('linkId') linkId: string) {
+    await this.prisma.trainerColleague.delete({ where: { id: linkId } });
+    return { success: true, message: 'Enlace eliminado con éxito' };
   }
 
   @Patch('users/:userId/assign')

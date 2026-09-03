@@ -1,11 +1,11 @@
 {
-  "name": "Punto de Inflexion",
-  "short_name": "Punto Fit",
-  "description": "Recordatorios de comidas, rutinas y progreso fitness.",
+  "name": "VITALFIT",
+  "short_name": "VITALFIT",
+  "description": "VITALFIT — Control de comidas, rutinas y progreso fitness de alto rendimiento.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#10b981",
+  "background_color": "#050505",
+  "theme_color": "#ef4444",
   "icons": [
     {
       "src": "/icon-192.svg",

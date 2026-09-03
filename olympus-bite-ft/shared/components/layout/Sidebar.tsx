@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSettings } from "@/shared/contexts/SettingsContext";
+import { VitalFitLogo } from "@/shared/components/ui/VitalFitLogo";
 import { cn } from "../../lib/utils";
 
 type NavItem = {
@@ -51,6 +52,15 @@ const navGroups: NavGroup[] = [
         icon: (
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        ),
+      },
+      {
+        href: "/admin/finances",
+        label: "Cuentas & Finanzas",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         ),
       },
@@ -139,6 +149,15 @@ const navGroups: NavGroup[] = [
         icon: (
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+        ),
+      },
+      {
+        href: "/finances",
+        label: "Mis Cuentas",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
         ),
       },
@@ -277,21 +296,15 @@ export function Sidebar() {
       {/* Logo */}
       <div
         className={cn(
-          "flex items-center gap-4",
+          "flex items-center",
           layout === "mini"
-            ? "h-full border-none pr-8 border-r border-slate-200/80 dark:border-white/5"
-            : "h-24 px-6 border-b border-slate-200/80 dark:border-white/5"
+            ? "h-full border-none pr-6 border-r border-slate-200/80 dark:border-white/5"
+            : "h-24 px-6 border-b border-slate-200/80 dark:border-white/5 justify-start"
         )}
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500 text-slate-950 shadow-md shadow-primary-500/30">
-          <span className="text-xl font-black italic tracking-tighter">PI</span>
-        </div>
-        <div>
-          <h1 className="text-lg font-black italic text-slate-950 tracking-tight uppercase leading-none dark:text-white">
-            PUNTO DE
-            <span className="block text-primary-500">INFLEXIÓN</span>
-          </h1>
-        </div>
+        <Link href="/dashboard" className="flex items-center group transition-transform hover:scale-[1.02]">
+          <VitalFitLogo size={layout === "mini" ? "sm" : "md"} showGlow={true} glowIntensity="medium" />
+        </Link>
       </div>
 
       {/* Navigation */}

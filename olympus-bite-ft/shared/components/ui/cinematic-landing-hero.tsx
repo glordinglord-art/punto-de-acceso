@@ -34,8 +34,8 @@ const INJECTED_STYLES = `
   .text-3d-matte {
       color: #fff;
       text-shadow: 
-          0 10px 30px rgba(16, 185, 129, 0.2), 
-          0 2px 4px rgba(16, 185, 129, 0.1);
+          0 10px 30px rgba(239, 68, 68, 0.35), 
+          0 2px 4px rgba(239, 68, 68, 0.2);
   }
 
   .text-silver-matte {
@@ -62,19 +62,20 @@ const INJECTED_STYLES = `
 
   /* Deep Physical Card with Dynamic Mouse Lighting */
   .premium-depth-card {
-      background: linear-gradient(145deg, #022c22 0%, #020617 100%);
+      background: radial-gradient(circle at 50% 30%, #1f0406 0%, #100203 45%, #050505 100%);
       box-shadow: 
-          0 40px 100px -20px rgba(0, 0, 0, 0.9),
+          0 40px 100px -20px rgba(0, 0, 0, 0.95),
+          0 0 60px -15px rgba(239, 68, 68, 0.2),
           0 20px 40px -20px rgba(0, 0, 0, 0.8),
-          inset 0 1px 2px rgba(255, 255, 255, 0.1),
-          inset 0 -2px 4px rgba(0, 0, 0, 0.8);
-      border: 1px solid rgba(16, 185, 129, 0.1);
+          inset 0 1px 2px rgba(255, 255, 255, 0.15),
+          inset 0 -2px 4px rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(239, 68, 68, 0.25);
       position: relative;
   }
 
   .card-sheen {
       position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 50;
-      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(16,185,129,0.08) 0%, transparent 40%);
+      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(239, 68, 68, 0.15) 0%, transparent 45%);
       mix-blend-mode: screen; transition: opacity 0.3s ease;
   }
 
@@ -144,11 +145,11 @@ export interface CinematicHeroProps extends React.HTMLAttributes<HTMLDivElement>
 }
 
 export function CinematicHero({ 
-  brandName = "INFLEXIÓN",
+  brandName: _brandName = "VITALFIT",
   tagline1 = "Sigue tu progreso,",
   tagline2 = "de forma profesional.",
   cardHeading = "Todo tu plan en un solo lugar.",
-  cardDescription = <><span className="text-white font-semibold">Punto de Inflexión</span> conecta a entrenadores y clientes con una experiencia premium de nutrición y rutinas.</>,
+  cardDescription = <><span className="text-white font-semibold">VITALFIT</span> conecta a entrenadores y atletas con una experiencia premium de nutrición y rutinas.</>,
   metricValue = 2140,
   metricLabel = "Kcal Hoy",
   ctaHeading = "Comienza tu evolución.",
@@ -265,7 +266,7 @@ export function CinematicHero({
   return (
     <div
       ref={containerRef}
-      className={cn("relative w-screen h-screen flex items-center justify-center bg-slate-950 text-white font-sans antialiased", className)}
+      className={cn("relative w-screen h-screen flex items-center justify-center bg-[#050505] text-white font-sans antialiased", className)}
       style={{ perspective: "1500px" }}
       {...props}
     >
@@ -292,7 +293,7 @@ export function CinematicHero({
           {ctaDescription}
         </p>
         <div className="flex flex-col sm:flex-row gap-6">
-          <Link href="/register" className="group relative flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-400 px-8 py-4 text-base font-bold text-slate-950 shadow-[0_0_40px_rgba(16,185,129,0.3)] transition-all hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] hover:-translate-y-1">
+          <Link href="/register" className="group relative flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 px-8 py-4 text-base font-bold text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] transition-all hover:shadow-[0_0_60px_rgba(239,68,68,0.65)] hover:-translate-y-1">
             Crear cuenta
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -315,9 +316,11 @@ export function CinematicHero({
             
             {/* BRAND NAME */}
             <div className="card-right-text gsap-reveal order-1 lg:order-3 flex justify-center lg:justify-end z-20 w-full">
-              <h2 className="text-5xl md:text-[5rem] lg:text-[7rem] font-display font-black uppercase tracking-tighter text-card-silver-matte lg:mt-0">
-                {brandName}
-              </h2>
+              <div className="select-none tracking-tighter font-black font-condensed uppercase flex items-baseline text-6xl md:text-[6rem] lg:text-[7.5rem] leading-none">
+                <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]">VITAL</span>
+                <span className="text-red-500 drop-shadow-[0_0_40px_rgba(239,68,68,0.95)] ml-1">F</span>
+                <span className="text-white drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">IT</span>
+              </div>
             </div>
 
             {/* IPHONE MOCKUP */}
@@ -338,28 +341,28 @@ export function CinematicHero({
                     <div className="absolute inset-0 screen-glare z-40 pointer-events-none" aria-hidden="true" />
 
                     <div className="absolute top-[5px] left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-50 flex items-center justify-end px-3 shadow-[inset_0_-1px_2px_rgba(255,255,255,0.1)]">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
                     </div>
 
-                    <div className="relative w-full h-full pt-12 px-5 pb-8 flex flex-col bg-gradient-to-br from-slate-900 to-slate-950">
+                    <div className="relative w-full h-full pt-12 px-5 pb-8 flex flex-col bg-gradient-to-br from-neutral-900 to-[#050505]">
                       <div className="phone-widget flex justify-between items-center mb-8">
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Hoy</span>
+                          <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold mb-1">Hoy</span>
                           <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">Tu Progreso</span>
                         </div>
-                        <div className="w-9 h-9 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold text-sm border border-primary-500/20 shadow-lg">
+                        <div className="w-9 h-9 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-sm border border-red-500/30 shadow-lg">
                            <Target className="w-4 h-4" />
                         </div>
                       </div>
 
                       <div className="phone-widget relative w-44 h-44 mx-auto flex items-center justify-center mb-8 drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]">
                         <svg className="absolute inset-0 w-full h-full" aria-hidden="true">
-                          <circle cx="88" cy="88" r="64" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="12" />
-                          <circle className="progress-ring" cx="88" cy="88" r="64" fill="none" stroke="#10b981" strokeWidth="12" />
+                          <circle cx="88" cy="88" r="64" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="12" />
+                          <circle className="progress-ring" cx="88" cy="88" r="64" fill="none" stroke="#ef4444" strokeWidth="12" />
                         </svg>
                         <div className="text-center z-10 flex flex-col items-center">
                           <span className="counter-val font-display text-4xl font-extrabold tracking-tighter text-white">0</span>
-                          <span className="text-[10px] text-emerald-200/60 uppercase tracking-[0.1em] font-bold mt-0.5">{metricLabel}</span>
+                          <span className="text-[10px] text-red-400 uppercase tracking-[0.1em] font-bold mt-0.5">{metricLabel}</span>
                         </div>
                       </div>
 
@@ -391,22 +394,22 @@ export function CinematicHero({
 
                 {/* Floating Badges */}
                 <div className="floating-badge absolute flex top-6 lg:top-12 left-[-15px] lg:left-[-80px] floating-ui-badge rounded-xl lg:rounded-2xl p-3 lg:p-4 items-center gap-3 lg:gap-4 z-30">
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-400/30 shadow-inner">
-                    <CheckCircle2 className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-400" />
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/40 shadow-inner">
+                    <CheckCircle2 className="w-4 h-4 lg:w-5 lg:h-5 text-red-500" />
                   </div>
                   <div>
                     <p className="text-white text-xs lg:text-sm font-bold tracking-tight">Macros al 100%</p>
-                    <p className="text-emerald-200/60 text-[10px] lg:text-xs font-medium">Meta diaria alcanzada</p>
+                    <p className="text-red-300/80 text-[10px] lg:text-xs font-medium">Meta diaria alcanzada</p>
                   </div>
                 </div>
 
                 <div className="floating-badge absolute flex bottom-12 lg:bottom-20 right-[-15px] lg:right-[-80px] floating-ui-badge rounded-xl lg:rounded-2xl p-3 lg:p-4 items-center gap-3 lg:gap-4 z-30">
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
                     <span className="text-base lg:text-lg drop-shadow-lg" aria-hidden="true">🤝</span>
                   </div>
                   <div>
                     <p className="text-white text-xs lg:text-sm font-bold tracking-tight">Sincronizado</p>
-                    <p className="text-blue-200/50 text-[10px] lg:text-xs font-medium">Entrenador notificado</p>
+                    <p className="text-neutral-400 text-[10px] lg:text-xs font-medium">Entrenador notificado</p>
                   </div>
                 </div>
 

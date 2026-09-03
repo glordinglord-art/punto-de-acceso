@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { SplashScreen } from "@/shared/components/ui/SplashScreen";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -12,7 +13,7 @@ const barlow = Barlow({
 const barlowCondensed = Barlow_Condensed({
   variable: "--font-barlow-condensed",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -21,9 +22,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Punto de Inflexión — Nutrición & Entrenamiento",
+  title: "VITALFIT — Nutrición & Entrenamiento",
   description:
-    "La plataforma de tu entrenador personal para controlar tu alimentación y rutinas de gym",
+    "VITALFIT: Plataforma de alto rendimiento para atletas y entrenadores",
   manifest: "/manifest.json",
 };
 
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} ${geistMono.variable} antialiased`}
       >
+        <SplashScreen />
         <Providers>{children}</Providers>
       </body>
     </html>

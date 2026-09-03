@@ -20,10 +20,35 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
   }
 
   async getTasksByUser(userId: string): Promise<DailyTask[]> {
-    const tasks = await this.prisma.dailyTask.findMany({
+    let tasks = await this.prisma.dailyTask.findMany({
       where: { userId, isActive: true },
       orderBy: { order: 'asc' },
     });
+
+    if (tasks.length === 0) {
+      await this.prisma.dailyTask.createMany({
+        data: [
+          {
+            userId,
+            title: 'Dejar el celular 1 hora antes de dormir',
+            icon: '🛌',
+            order: 0,
+          },
+          {
+            userId,
+            title: 'Formulario diario de manejo de estrés',
+            icon: '🧠',
+            order: 1,
+          },
+        ],
+      });
+
+      tasks = await this.prisma.dailyTask.findMany({
+        where: { userId, isActive: true },
+        orderBy: { order: 'asc' },
+      });
+    }
+
     return tasks.map((t) => new DailyTask(t));
   }
 
