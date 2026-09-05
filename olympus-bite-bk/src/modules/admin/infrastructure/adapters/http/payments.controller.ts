@@ -224,24 +224,43 @@ export class PaymentsController {
     });
 
     const sharedTrainerIds = new Set<string>([trainerId]);
+    const specificClientIds = new Set<string>();
+
     for (const link of colleagues) {
+      const isUnidir = link.mode === 'unidirectional';
+      const hasSpecific = Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
+
       if (link.mode === 'bidirectional') {
-        sharedTrainerIds.add(
-          link.trainerAId === trainerId ? link.trainerBId : link.trainerAId,
-        );
+        const otherId = link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
+        if (hasSpecific) {
+          link.sharedClientIds.forEach((id) => specificClientIds.add(id));
+        } else {
+          sharedTrainerIds.add(otherId);
+        }
       } else {
-        // unidirectional: B shared to A -> trainerA can see trainerB's clients
-        if (link.trainerAId === trainerId) {
-          sharedTrainerIds.add(link.trainerBId);
+        // Unidirectional: trainerAId shares with trainerBId
+        if (trainerId === link.trainerBId) {
+          if (hasSpecific) {
+            link.sharedClientIds.forEach((id) => specificClientIds.add(id));
+          } else {
+            sharedTrainerIds.add(link.trainerAId);
+          }
         }
       }
+    }
+
+    const orConditions: any[] = [
+      { trainerId: { in: Array.from(sharedTrainerIds) } },
+    ];
+    if (specificClientIds.size > 0) {
+      orConditions.push({ id: { in: Array.from(specificClientIds) } });
     }
 
     const clients = await this.prisma.user.findMany({
       where: {
         role: 'client',
         isActive: true,
-        trainerId: { in: Array.from(sharedTrainerIds) },
+        OR: orConditions,
       },
       select: {
         id: true,

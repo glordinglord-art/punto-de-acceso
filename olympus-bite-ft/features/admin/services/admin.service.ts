@@ -42,12 +42,14 @@ export const adminService = {
     trainerBId: string,
     gymId?: string | null,
     mode: 'bidirectional' | 'unidirectional' = 'bidirectional',
+    sharedClientIds?: string[],
   ): Promise<ApiResponse<{ message: string }>> {
     return api.post<ApiResponse<{ message: string }>>('/admin/trainers/link', {
       trainerAId,
       trainerBId,
       gymId,
       mode,
+      sharedClientIds,
     });
   },
 

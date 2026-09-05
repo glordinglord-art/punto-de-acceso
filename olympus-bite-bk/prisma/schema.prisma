@@ -423,12 +423,13 @@ model NotificationPreference {
 
 // ─── Trainer Colleague Links (Cartera compartida entre entrenadores) ──
 model TrainerColleague {
-  id         String   @id @default(uuid())
-  trainerAId String   @map("trainer_a_id")
-  trainerBId String   @map("trainer_b_id")
-  gymId      String?  @map("gym_id")
-  mode       String   @default("bidirectional") @map("mode") // "bidirectional" | "unidirectional"
-  createdAt  DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid())
+  trainerAId      String   @map("trainer_a_id")
+  trainerBId      String   @map("trainer_b_id")
+  gymId           String?  @map("gym_id")
+  mode            String   @default("bidirectional") @map("mode") // "bidirectional" | "unidirectional"
+  sharedClientIds String[] @default([]) @map("shared_client_ids")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   trainerA   User     @relation("ColleagueA", fields: [trainerAId], references: [id], onDelete: Cascade)
   trainerB   User     @relation("ColleagueB", fields: [trainerBId], references: [id], onDelete: Cascade)

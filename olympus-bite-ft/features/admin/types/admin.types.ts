@@ -71,6 +71,7 @@ export interface TrainerLink {
   trainerBId: string;
   gymId: string | null;
   mode?: 'bidirectional' | 'unidirectional' | string;
+  sharedClientIds?: string[];
   createdAt: string;
   trainerA: { id: string; name: string; email: string; branchId?: string };
   trainerB: { id: string; name: string; email: string; branchId?: string };

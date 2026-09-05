@@ -68,27 +68,46 @@ export class PrismaUserRepository implements UserRepositoryPort {
       trainerAId: string;
       trainerBId: string;
       mode?: string;
+      sharedClientIds?: string[];
     }
 
     const trainerIds = new Set<string>([trainerId]);
+    const specificClientIds = new Set<string>();
+
     for (const link of colleagueLinks as unknown as ColleagueRow[]) {
       const mode = link.mode || 'bidirectional';
+      const hasSpecific = Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
+
       if (mode === 'bidirectional') {
-        // Both coaches share with each other
-        trainerIds.add(link.trainerAId);
-        trainerIds.add(link.trainerBId);
+        const otherId = link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
+        if (hasSpecific) {
+          link.sharedClientIds!.forEach((id) => specificClientIds.add(id));
+        } else {
+          trainerIds.add(otherId);
+        }
       } else {
         // Unidirectional: trainerAId shares with trainerBId
         // If current coach is trainerBId (the recipient), they see trainerAId's clients
         if (trainerId === link.trainerBId) {
-          trainerIds.add(link.trainerAId);
+          if (hasSpecific) {
+            link.sharedClientIds!.forEach((id) => specificClientIds.add(id));
+          } else {
+            trainerIds.add(link.trainerAId);
+          }
         }
       }
     }
 
+    const orConditions: any[] = [
+      { trainerId: { in: Array.from(trainerIds) } },
+    ];
+    if (specificClientIds.size > 0) {
+      orConditions.push({ id: { in: Array.from(specificClientIds) } });
+    }
+
     const rows = await this.prisma.user.findMany({
       where: {
-        trainerId: { in: Array.from(trainerIds) },
+        OR: orConditions,
         isActive: true,
       },
       orderBy: { name: 'asc' },

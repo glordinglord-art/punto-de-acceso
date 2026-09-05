@@ -228,6 +228,7 @@ export class AdminController {
       trainerBId: string;
       gymId?: string | null;
       mode?: 'bidirectional' | 'unidirectional';
+      sharedClientIds?: string[];
     },
   ) {
     if (!body.trainerAId || !body.trainerBId) {
@@ -240,6 +241,7 @@ export class AdminController {
     }
 
     const mode = body.mode || 'bidirectional';
+    const sharedClientIds = Array.isArray(body.sharedClientIds) ? body.sharedClientIds : [];
 
     const existing = await (this.prisma.trainerColleague as any).findFirst({
       where: {
@@ -257,6 +259,7 @@ export class AdminController {
           trainerAId: body.trainerAId,
           trainerBId: body.trainerBId,
           mode,
+          sharedClientIds,
           gymId: body.gymId ?? existing.gymId,
         },
         include: {
@@ -269,7 +272,7 @@ export class AdminController {
         success: true,
         message:
           mode === 'bidirectional'
-            ? 'Enlace actualizado a modo mutuo (ambos comparten sus atletas)'
+            ? 'Enlace actualizado a modo mutuo (ambos comparten atletas)'
             : `Enlace actualizado: ${updated.trainerA.name} comparte con ${updated.trainerB.name}`,
         data: updated,
       };
@@ -281,6 +284,7 @@ export class AdminController {
         trainerBId: body.trainerBId,
         gymId: body.gymId ?? null,
         mode,
+        sharedClientIds,
       },
       include: {
         trainerA: { select: { id: true, name: true, email: true } },
