@@ -12,6 +12,7 @@ import { RoutineCalendar } from "@/features/routines/components/RoutineCalendar"
 import { ClientRoutinesView } from "@/features/routines/components/ClientRoutinesView";
 import { RoutineTemplateModal } from "@/features/routines/components/RoutineTemplateModal";
 import { CustomTemplatesView } from "@/features/routines/components/CustomTemplatesView";
+import { ClinicalLogBar } from "@/features/routines/components/ClinicalLogBar";
 import type { RoutinePreset } from "@/features/routines/data/preset-routines";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { clientsService } from "@/features/clients/services/clients.service";
@@ -506,6 +507,29 @@ function TrainerRoutinesPage() {
             </select>
           </div>
         </div>
+
+        {/* ── Motor 3: Bitácora Clínica & Ajuste Biomecánico IA ── */}
+        <ClinicalLogBar
+          routineId={selectedRoutine.id}
+          exercises={selectedRoutine.days.flatMap((d) =>
+            d.exercises.map((ex) => ({
+              id: ex.id,
+              name: ex.name,
+              dayNumber: d.dayNumber,
+            }))
+          )}
+          onRoutineUpdated={async () => {
+            await loadData();
+            if (user) {
+              const updatedRes = await routinesService.getByTrainer(user.id);
+              const updated = updatedRes?.data?.find(
+                (r) => r.id === selectedRoutine.id,
+              );
+              if (updated) setSelectedRoutine(updated);
+            }
+          }}
+          className="mb-6"
+        />
 
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <Button size="sm" variant="ghost" onClick={() => setView("edit")}>

@@ -15,6 +15,7 @@ import { cn, formatCalories, getLocalDateString } from '@/shared/lib/utils';
 import { calculateNutritionTargets } from '@/features/meals/utils/nutrition-calculator';
 import { FitiaDayTracker } from '@/features/dashboard/components/FitiaDayTracker';
 import { UserComplianceModule } from './UserComplianceModule';
+import { VitalBioPillarsWidget } from './VitalBioPillarsWidget';
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: 'Desayuno',
@@ -291,6 +292,27 @@ export function ClientDashboardView({
   const displayProtein = isSelectedToday ? stats.proteinToday : 0;
   const displayCarbs = isSelectedToday ? stats.carbsToday : 0;
   const displayFat = isSelectedToday ? stats.fatToday : 0;
+
+  // Completion map for week circular rings (rueditas)
+  const weekCompletionMap: Record<string, number> = {};
+  const goal = targets.calories || 2000;
+
+  stats.weeklyTrend?.forEach((d) => {
+    if (d.calories && goal > 0) {
+      weekCompletionMap[d.date] = Math.min(Math.round((d.calories / goal) * 100), 100);
+    } else if (d.meals > 0) {
+      weekCompletionMap[d.date] = 50;
+    }
+  });
+
+  if (today && goal > 0) {
+    const liveTodayCalories = stats.caloriesToday || 0;
+    weekCompletionMap[today] = Math.min(Math.round((liveTodayCalories / goal) * 100), 100);
+  }
+
+  const isTodayCompleted = (weekCompletionMap[today] ?? 0) >= 80;
+  const streakDays = stats.activeRoutine?.completedLogs ? Math.max(stats.activeRoutine.completedLogs, 4) : 4;
+
   return (
     <>
       {trainerSwitchAction && (
@@ -299,98 +321,115 @@ export function ClientDashboardView({
         </div>
       )}
     <div className="space-y-6 pb-12 touch-pan-y">
-      {/* ── Fitia Minimalist Day Tracker Header ── */}
+      {/* ── Fitia Minimalist Day Tracker Header with Circular Rueditas & Duolingo Streak ── */}
       <FitiaDayTracker
         selectedDate={selectedDate}
         onSelectDate={(newDate) => setSelectedDate(newDate)}
-        streakDays={4}
+        streakDays={streakDays}
+        completionMap={weekCompletionMap}
+        isTodayCompleted={isTodayCompleted}
       />
 
-      {/* ── Hero Row ── */}
+      {/* ── Hero Row: Calorie Speedometer Arc & Routine (ARRIBA) ── */}
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        {/* Premium Dashboard Hero */}
+        <div className="flex flex-col gap-4">
+          <DashboardHeroWidget
+            calories={displayCalories}
+            protein={displayProtein}
+            carbs={displayCarbs}
+            fat={displayFat}
+            calorieGoal={targets.calories}
+            proteinGoal={targets.protein}
+            carbsGoal={targets.carbs}
+            fatGoal={targets.fat}
+            waterGlasses={waterGlasses}
+            waterGoal={WATER_GOAL}
+            onWaterClick={handleWaterClick}
+          />
+        </div>
 
-          {/* Premium Dashboard Hero */}
-          <div className="flex flex-col gap-4">
-            <DashboardHeroWidget
-              calories={displayCalories}
-              protein={displayProtein}
-              carbs={displayCarbs}
-              fat={displayFat}
-              calorieGoal={targets.calories}
-              proteinGoal={targets.protein}
-              carbsGoal={targets.carbs}
-              fatGoal={targets.fat}
-              waterGlasses={waterGlasses}
-              waterGoal={WATER_GOAL}
-              onWaterClick={handleWaterClick}
-            />
-          </div>
-
-          {/* Routine & Quick Stats */}
-          <div className="flex h-full flex-col gap-4">
-            <div className="flex flex-1 flex-col bg-[#18181A] rounded-[32px] p-6 relative overflow-hidden shadow-sm border border-white/5">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[40px] pointer-events-none" />
-              
-              <div className="flex items-start justify-between gap-4 relative z-10 mb-6">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Rutina de hoy</h3>
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/40 mt-1">
-                    {stats.activeRoutine
-                      ? `${stats.activeRoutine.trainingDays} DÍAS · ${stats.activeRoutine.weekCount} SEMANAS`
-                      : 'SIN RUTINA ASIGNADA'}
-                  </p>
-                </div>
-                {stats.activeRoutine && (
-                  <Link href="/routines" className="flex shrink-0 items-center gap-0.5 text-xs font-bold uppercase tracking-wider text-primary-400 hover:text-primary-300 bg-primary-500/10 px-3 py-1.5 rounded-full">
-                    Ver <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
+        {/* Routine & Quick Stats */}
+        <div className="flex h-full flex-col gap-4">
+          <div className="flex flex-1 flex-col bg-[#18181A] rounded-[32px] p-6 relative overflow-hidden shadow-sm border border-white/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[40px] pointer-events-none" />
+            
+            <div className="flex items-start justify-between gap-4 relative z-10 mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-white">Rutina de hoy</h3>
+                <p className="text-xs font-bold uppercase tracking-wider text-white/40 mt-1">
+                  {stats.activeRoutine
+                    ? `${stats.activeRoutine.trainingDays} DÍAS · ${stats.activeRoutine.weekCount} SEMANAS`
+                    : 'SIN RUTINA ASIGNADA'}
+                </p>
               </div>
-
-              {!stats.activeRoutine ? (
-                <EmptyPanel icon={<Dumbbell className="h-8 w-8" />} title="Sin rutina asignada" description="Tu entrenador aún no te ha asignado una rutina." />
-              ) : todayDay?.isRestDay ? (
-                <EmptyPanel icon={<span className="text-3xl">🛌</span>} title="Hoy toca descanso" description="Recuperar bien también es parte de progresar." />
-              ) : todayDay ? (
-                <div className="flex flex-1 flex-col gap-4 relative z-10">
-                  <div className="flex items-center justify-between rounded-[20px] bg-white/5 border border-white/5 px-4 py-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-white/40 font-bold mb-0.5">Enfoque</p>
-                      <p className="text-base font-bold text-white">{todayDay.focusArea}</p>
-                    </div>
-                    <div className="bg-white/10 text-white/90 text-xs font-bold px-3 py-1 rounded-lg">{todayDay.exercises.length} ejercicios</div>
-                  </div>
-
-                  <div className="sm:max-h-56 flex-1 space-y-2 sm:overflow-y-auto pr-1">
-                    {todayDay.exercises.map((ex, i) => (
-                      <div key={ex.id} className="flex items-center gap-3 rounded-[16px] bg-white/5 px-4 py-3 border border-white/5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white/90">
-                          {i + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold text-white">{ex.name}</p>
-                          <p className="text-xs text-white/50 font-medium">{ex.sets} × {ex.reps}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <EmptyPanel icon={<Calendar className="h-8 w-8" />} title={stats.activeRoutine.name} description="Rutina activa sin día asignado para hoy." />
+              {stats.activeRoutine && (
+                <Link href="/routines" className="flex shrink-0 items-center gap-0.5 text-xs font-bold uppercase tracking-wider text-primary-400 hover:text-primary-300 bg-primary-500/10 px-3 py-1.5 rounded-full">
+                  Ver <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               )}
             </div>
 
-            {/* Micro AI Tip Card instead of the big ones */}
-            <div className="relative overflow-hidden rounded-[24px] border border-primary-500/20 bg-primary-500/5 p-4 flex items-center gap-3">
-              <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary-500/20 rounded-full blur-[20px] pointer-events-none" />
-              <span className="text-xl shrink-0">🧠</span>
-              <p className="text-xs text-white/70 font-medium leading-relaxed">
-                <span className="text-primary-400 font-bold mr-1">Coach:</span> 
-                {aiCoachTip}
-              </p>
-            </div>
+            {!stats.activeRoutine ? (
+              <EmptyPanel icon={<Dumbbell className="h-8 w-8" />} title="Sin rutina asignada" description="Tu entrenador aún no te ha asignado una rutina." />
+            ) : todayDay?.isRestDay ? (
+              <EmptyPanel icon={<span className="text-3xl">🛌</span>} title="Hoy toca descanso" description="Recuperar bien también es parte de progresar." />
+            ) : todayDay ? (
+              <div className="flex flex-1 flex-col gap-4 relative z-10">
+                <div className="flex items-center justify-between rounded-[20px] bg-white/5 border border-white/5 px-4 py-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-white/40 font-bold mb-0.5">Enfoque</p>
+                    <p className="text-base font-bold text-white">{todayDay.focusArea}</p>
+                  </div>
+                  <div className="bg-white/10 text-white/90 text-xs font-bold px-3 py-1 rounded-lg">{todayDay.exercises.length} ejercicios</div>
+                </div>
+
+                <div className="sm:max-h-56 flex-1 space-y-2 sm:overflow-y-auto pr-1">
+                  {todayDay.exercises.map((ex, i) => (
+                    <div key={ex.id} className="flex items-center gap-3 rounded-[16px] bg-white/5 px-4 py-3 border border-white/5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white/90">
+                        {i + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-white">{ex.name}</p>
+                        <p className="text-xs text-white/50 font-medium">{ex.sets} × {ex.reps}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyPanel icon={<Calendar className="h-8 w-8" />} title={stats.activeRoutine.name} description="Rutina activa sin día asignado para hoy." />
+            )}
           </div>
-        </section>
+
+          {/* Micro AI Tip Card */}
+          <div className="relative overflow-hidden rounded-[24px] border border-primary-500/20 bg-primary-500/5 p-4 flex items-center gap-3">
+            <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary-500/20 rounded-full blur-[20px] pointer-events-none" />
+            <span className="text-xl shrink-0">🧠</span>
+            <p className="text-xs text-white/70 font-medium leading-relaxed">
+              <span className="text-primary-400 font-bold mr-1">Coach:</span> 
+              {aiCoachTip}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Vital Fit 4 Pilares de Adaptación Diaria (Estilo Pulso) ── */}
+      {user && (
+        <VitalBioPillarsWidget
+          userId={user.id}
+          selectedDate={selectedDate}
+          calories={displayCalories}
+          calorieGoal={targets.calories}
+          protein={displayProtein}
+          proteinGoal={targets.protein}
+          waterGlasses={waterGlasses}
+          waterGoal={WATER_GOAL}
+          activeRoutine={stats.activeRoutine}
+          onMealLogged={loadData}
+        />
+      )}
 
         {/* ── Módulo Inteligente de Rendimiento y Porcentajes ── */}
         {user && (

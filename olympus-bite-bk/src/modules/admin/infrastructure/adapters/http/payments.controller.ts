@@ -228,10 +228,12 @@ export class PaymentsController {
 
     for (const link of colleagues) {
       const isUnidir = link.mode === 'unidirectional';
-      const hasSpecific = Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
+      const hasSpecific =
+        Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
 
       if (link.mode === 'bidirectional') {
-        const otherId = link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
+        const otherId =
+          link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
         if (hasSpecific) {
           link.sharedClientIds.forEach((id) => specificClientIds.add(id));
         } else {

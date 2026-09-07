@@ -138,6 +138,7 @@ export class User extends BaseEntity {
     weight: number;
     height: number;
     dietaryGoal: string;
+    targetCalories?: number;
     experienceLevel?: string;
     equipmentAccess?: string;
     medicalConditions?: string;
@@ -146,6 +147,8 @@ export class User extends BaseEntity {
     this.weight = data.weight;
     this.height = data.height;
     this.dietaryGoal = data.dietaryGoal;
+    if (data.targetCalories !== undefined)
+      this.targetCalories = data.targetCalories;
 
     if (data.experienceLevel !== undefined)
       this.experienceLevel = data.experienceLevel;

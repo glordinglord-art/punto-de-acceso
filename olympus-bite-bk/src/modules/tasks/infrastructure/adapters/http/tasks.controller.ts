@@ -23,6 +23,7 @@ import {
 
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { WeeklyAuditService } from '../../../application/services/weekly-audit.service';
 
 @Controller('tasks')
 export class TasksController {
@@ -30,7 +31,23 @@ export class TasksController {
     @Inject(TASK_REPOSITORY)
     private readonly taskRepo: TaskRepositoryPort,
     private readonly prisma: PrismaService,
+    private readonly weeklyAuditService: WeeklyAuditService,
   ) {}
+
+  /* ─── Motor 1: Auditoría Semanal de la Regla del 80% ─ */
+
+  @Get('audit/weekly-80')
+  async getWeeklyAudit(@Query('trainerId') trainerId?: string) {
+    const result = await this.weeklyAuditService.runAudit(trainerId);
+    return { success: true, data: result };
+  }
+
+  @Post('audit/weekly-80')
+  @HttpCode(HttpStatus.OK)
+  async triggerWeeklyAudit(@Query('trainerId') trainerId?: string) {
+    const result = await this.weeklyAuditService.runAudit(trainerId);
+    return { success: true, data: result };
+  }
 
   /* ─── Tasks CRUD ─────────────────────────── */
 

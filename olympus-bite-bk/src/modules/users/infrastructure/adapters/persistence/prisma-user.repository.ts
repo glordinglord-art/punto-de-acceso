@@ -76,10 +76,12 @@ export class PrismaUserRepository implements UserRepositoryPort {
 
     for (const link of colleagueLinks as unknown as ColleagueRow[]) {
       const mode = link.mode || 'bidirectional';
-      const hasSpecific = Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
+      const hasSpecific =
+        Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
 
       if (mode === 'bidirectional') {
-        const otherId = link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
+        const otherId =
+          link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
         if (hasSpecific) {
           link.sharedClientIds!.forEach((id) => specificClientIds.add(id));
         } else {
@@ -98,9 +100,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
       }
     }
 
-    const orConditions: any[] = [
-      { trainerId: { in: Array.from(trainerIds) } },
-    ];
+    const orConditions: any[] = [{ trainerId: { in: Array.from(trainerIds) } }];
     if (specificClientIds.size > 0) {
       orConditions.push({ id: { in: Array.from(specificClientIds) } });
     }

@@ -280,15 +280,107 @@ export function ClientProfileModal({
                 </div>
               )}
 
-              {/* Configuracion Nutricional (Editable) */}
+              {/* Configuracion Nutricional & Matriz Biológica */}
               <div className="bg-white dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-white/10 p-5 shadow-sm">
-                <h3 className="text-sm font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-neutral-500" /> Configuración del Plan
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-neutral-500" /> Matriz de Fases Biológicas & Plan
+                  </h3>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary-500 bg-primary-500/10 border border-primary-500/20 px-2 py-0.5 rounded-md">
+                    Cálculo Automático
+                  </span>
+                </div>
+
+                {/* Biological Phase Quick Pills */}
+                <div className="mb-5">
+                  <label className="block text-xs font-condensed font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">
+                    Seleccionar Fase Biológica (Recalcula TDEE y Macros)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { key: 'deficit', label: 'Déficit (-20%)', icon: '🔥', desc: 'Definición & Grasa' },
+                      { key: 'volumen', label: 'Volumen (+15%)', icon: '💪', desc: 'Superávit Hipertrofia' },
+                      { key: 'recomposicion', label: 'Recomposición', icon: '🔄', desc: 'Normocalórico' },
+                      { key: 'mantenimiento', label: 'Mantenimiento', icon: '⚖️', desc: 'Equilibrio TDEE' },
+                    ].map((phase) => {
+                      const isSelected = goal === phase.key;
+                      return (
+                        <button
+                          key={phase.key}
+                          type="button"
+                          onClick={() => {
+                            setGoal(phase.key);
+                            const w = client.weight || 75;
+                            const h = client.height || 175;
+                            const bmr = Math.round(10 * w + 6.25 * h - 5 * 26 + 5);
+                            const tdee = Math.round(bmr * 1.55);
+                            let cal = tdee;
+                            if (phase.key === 'deficit') cal = Math.round(tdee * 0.80);
+                            else if (phase.key === 'volumen') cal = Math.round(tdee * 1.15);
+                            setCalories(cal.toString());
+                          }}
+                          className={cn(
+                            "flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200",
+                            isSelected
+                              ? "bg-primary-500/10 border-primary-500/40 shadow-sm ring-1 ring-primary-500/20"
+                              : "bg-neutral-50 dark:bg-black/20 border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-white/10"
+                          )}
+                        >
+                          <span className="text-base mb-1">{phase.icon}</span>
+                          <span className={cn(
+                            "text-xs font-bold uppercase tracking-wide",
+                            isSelected ? "text-primary-600 dark:text-primary-400" : "text-neutral-900 dark:text-white"
+                          )}>
+                            {phase.label}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 font-medium">
+                            {phase.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dynamic Metabolic Telemetry */}
+                {client.weight && (
+                  <div className="mb-5 rounded-xl border border-primary-500/20 bg-gradient-to-br from-primary-500/5 to-transparent p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary-500/10 pb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-primary-500">
+                        ⚡ Telemetría Metabólica (Mifflin-St Jeor)
+                      </span>
+                      <span className="text-[10px] font-semibold text-neutral-400">
+                        BMR: ~{Math.round(10 * client.weight + 6.25 * (client.height || 175) - 5 * 26 + 5)} kcal · TDEE: ~{Math.round((10 * client.weight + 6.25 * (client.height || 175) - 5 * 26 + 5) * 1.55)} kcal
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-2.5 text-center">
+                      <div className="rounded-lg bg-white/60 dark:bg-white/5 p-2">
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Proteína</p>
+                        <p className="text-xs font-bold text-red-500">
+                          {Math.round(client.weight * (goal === 'deficit' ? 2.4 : goal === 'volumen' ? 2.0 : 2.2))}g
+                          <span className="text-[9px] font-medium text-neutral-400 ml-1">({goal === 'deficit' ? '2.4' : goal === 'volumen' ? '2.0' : '2.2'}g/kg)</span>
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/60 dark:bg-white/5 p-2">
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grasas</p>
+                        <p className="text-xs font-bold text-blue-500">
+                          {Math.round(((Number(calories) || 2000) * 0.25) / 9)}g
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/60 dark:bg-white/5 p-2">
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Carbos</p>
+                        <p className="text-xs font-bold text-amber-500">
+                          {Math.max(0, Math.round(((Number(calories) || 2000) - (client.weight * (goal === 'deficit' ? 2.4 : goal === 'volumen' ? 2.0 : 2.2) * 4 + (((Number(calories) || 2000) * 0.25) / 9) * 9)) / 4))}g
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs font-condensed font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">
-                      Objetivo Principal
+                      Objetivo Asignado
                     </label>
                     <div className="relative">
                       <select

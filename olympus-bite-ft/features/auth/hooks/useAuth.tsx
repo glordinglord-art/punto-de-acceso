@@ -12,7 +12,7 @@ interface AuthState {
   isTrainer: boolean;
   isSuperAdmin: boolean;
   activeMode: 'client' | 'trainer' | 'superadmin';
-  setActiveMode: (mode: 'client' | 'trainer' | 'superadmin') => void;
+  setActiveMode: (mode: 'client' | 'trainer' | 'superadmin', redirect?: boolean) => void;
   availableModes: ('client' | 'trainer' | 'superadmin')[];
   login: (data: AuthResponse) => void;
   logout: () => void;
@@ -81,9 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/';
   };
 
-  const setActiveMode = (mode: 'client' | 'trainer' | 'superadmin') => {
+  const setActiveMode = (mode: 'client' | 'trainer' | 'superadmin', redirect = true) => {
     setActiveModeState(mode);
     localStorage.setItem('ob_mode', mode);
+    if (redirect && typeof window !== 'undefined') {
+      const target = mode === 'superadmin' ? '/admin' : '/dashboard';
+      window.location.href = target;
+    }
   };
 
   const isTrainerRole = !!user && isAdmin(user.role);

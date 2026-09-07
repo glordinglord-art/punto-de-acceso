@@ -60,4 +60,47 @@ export const routinesService = {
 
   activate: (routineId: string) =>
     api.put<ApiResponse<Routine>>(`/routines/${routineId}/activate`, {}),
+
+  proposeClinicalAdjustment: (
+    routineId: string,
+    data: { exerciseId: string; coachNote: string },
+  ) =>
+    api.post<
+      ApiResponse<{
+        targetExerciseId: string;
+        targetExerciseName: string;
+        replacementExercise: {
+          name: string;
+          muscleGroup: string;
+          sets: number;
+          reps: string;
+          restSeconds: number;
+          observations: string;
+          intensity: string;
+        };
+        clinicalRationale: string;
+      }>
+    >(`/routines/${routineId}/clinical-adjustment`, data),
+
+  applyClinicalAdjustment: (
+    routineId: string,
+    data: {
+      targetExerciseId: string;
+      replacementExercise: {
+        name: string;
+        muscleGroup?: string;
+        sets?: number;
+        reps?: string;
+        restSeconds?: number;
+        observations?: string;
+        intensity?: string;
+      };
+      clinicalRationale?: string;
+      coachNote?: string;
+    },
+  ) =>
+    api.post<ApiResponse<{ success: boolean; message: string; data: unknown }>>(
+      `/routines/${routineId}/apply-adjustment`,
+      data,
+    ),
 };

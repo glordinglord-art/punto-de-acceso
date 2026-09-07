@@ -241,7 +241,9 @@ export class AdminController {
     }
 
     const mode = body.mode || 'bidirectional';
-    const sharedClientIds = Array.isArray(body.sharedClientIds) ? body.sharedClientIds : [];
+    const sharedClientIds = Array.isArray(body.sharedClientIds)
+      ? body.sharedClientIds
+      : [];
 
     const existing = await (this.prisma.trainerColleague as any).findFirst({
       where: {

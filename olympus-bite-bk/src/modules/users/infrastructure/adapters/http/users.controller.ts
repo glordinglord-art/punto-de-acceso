@@ -56,7 +56,7 @@ export class UsersController {
     const users = await this.getUsersByTrainerUseCase.execute(trainerId);
     return {
       success: true,
-      data: users.map(UserResponseDto.fromEntity),
+      data: users.map((u) => UserResponseDto.fromEntity(u)),
     };
   }
 
@@ -102,6 +102,53 @@ export class UsersController {
         'No se encontró ningún usuario con ese email',
       );
     return { success: true, data: UserResponseDto.fromEntity(user) };
+  }
+
+  @Put(':id/biological-phase')
+  async updateBiologicalPhase(
+    @Param('id') id: string,
+    @Body() dto: { phase: string },
+  ) {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const weight = user.weight && user.weight > 30 ? user.weight : 75;
+    const height = user.height && user.height > 100 ? user.height : 175;
+    const bmr = 10 * weight + 6.25 * height - 5 * 26 + 5;
+    const tdee = Math.round(bmr * 1.55);
+
+    const phase = dto.phase.toLowerCase();
+    let targetCalories = tdee;
+    if (
+      phase.includes('deficit') ||
+      phase.includes('perder') ||
+      phase.includes('defin')
+    ) {
+      targetCalories = Math.round(tdee * 0.8);
+    } else if (
+      phase.includes('volum') ||
+      phase.includes('muscul') ||
+      phase.includes('gain') ||
+      phase.includes('aumento')
+    ) {
+      targetCalories = Math.round(tdee * 1.15);
+    } else {
+      targetCalories = tdee;
+    }
+
+    user.updateProfile({
+      dietaryGoal: dto.phase,
+      targetCalories,
+    });
+
+    const updated = await this.userRepository.update(user);
+    return {
+      success: true,
+      message: `Fase biológica actualizada a "${dto.phase}". Requerimientos metabólicos recalculados: ${targetCalories} kcal.`,
+      data: UserResponseDto.fromEntity(updated),
+    };
   }
 
   @Delete(':id')

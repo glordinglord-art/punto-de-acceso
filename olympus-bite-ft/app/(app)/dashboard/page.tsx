@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { Button } from '@/shared/components/ui/Button';
 import { Header } from '@/shared/components/layout/Header';
-import { StatsOverview } from '@/features/dashboard/components/StatsOverview';
 import { ClientsList } from '@/features/dashboard/components/ClientsList';
 import { RecentActivity } from '@/features/dashboard/components/RecentActivity';
 import { WeeklyChart } from '@/features/dashboard/components/WeeklyChart';
@@ -12,6 +10,7 @@ import { MacroChart } from '@/features/dashboard/components/MacroChart';
 import { TopFoods } from '@/features/dashboard/components/TopFoods';
 import { TrainerHeroCard } from '@/features/dashboard/components/TrainerHeroCard';
 import { ClientDashboardView } from '@/features/dashboard/components/ClientDashboardView';
+import { WeeklySentinelAuditWidget } from '@/features/dashboard/components/WeeklySentinelAuditWidget';
 import { dashboardService } from '@/features/dashboard/services/dashboard.service';
 import type { DashboardStats } from '@/features/dashboard/types/dashboard.types';
 
@@ -122,6 +121,9 @@ function TrainerDashboard() {
       <div className="space-y-6 max-w-full overflow-hidden">
         {/* Row 0: Hero with activity rings & weekly metrics */}
         {stats && <TrainerHeroCard stats={stats} />}
+
+        {/* Row 0.5: Motor 1 - Regla del 80% Auditoría Centinela de los Lunes */}
+        <WeeklySentinelAuditWidget trainerId={user?.id} />
 
         {/* Row 1: Charts */}
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] items-stretch">

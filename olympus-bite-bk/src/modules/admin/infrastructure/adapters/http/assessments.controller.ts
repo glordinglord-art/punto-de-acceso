@@ -366,9 +366,7 @@ export class AssessmentsController {
       throw new NotFoundException('Valoración no encontrada');
     }
 
-    const assessmentDate = dto.date
-      ? new Date(dto.date)
-      : existing[0].date;
+    const assessmentDate = dto.date ? new Date(dto.date) : existing[0].date;
 
     await this.prisma.$executeRawUnsafe(
       `UPDATE physical_assessments SET

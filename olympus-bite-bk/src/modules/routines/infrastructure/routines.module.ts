@@ -24,6 +24,11 @@ import { GetDictExercisesUseCase } from '../application/use-cases/get-dict-exerc
 import { DeleteDictExerciseUseCase } from '../application/use-cases/delete-dict-exercise.use-case';
 import { SearchDictExercisesUseCase } from '../application/use-cases/search-dict-exercises.use-case';
 
+import { CLINICAL_DIRECTOR_PORT } from '../domain/ports/clinical-director.port';
+import { ClinicalDirectorAdapter } from './adapters/ai/clinical-director.adapter';
+import { ProposeClinicalAdjustmentUseCase } from '../application/use-cases/propose-clinical-adjustment.use-case';
+import { ApplyClinicalAdjustmentUseCase } from '../application/use-cases/apply-clinical-adjustment.use-case';
+
 @Module({
   controllers: [RoutinesController, ExerciseDictionaryController],
   providers: [
@@ -51,6 +56,12 @@ import { SearchDictExercisesUseCase } from '../application/use-cases/search-dict
     GetDictExercisesUseCase,
     DeleteDictExerciseUseCase,
     SearchDictExercisesUseCase,
+    {
+      provide: CLINICAL_DIRECTOR_PORT,
+      useClass: ClinicalDirectorAdapter,
+    },
+    ProposeClinicalAdjustmentUseCase,
+    ApplyClinicalAdjustmentUseCase,
   ],
   exports: [ROUTINE_REPOSITORY, EXERCISE_DICTIONARY_REPOSITORY],
 })

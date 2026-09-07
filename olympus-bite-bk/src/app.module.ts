@@ -9,6 +9,7 @@ import { TasksModule } from './modules/tasks/infrastructure/tasks.module';
 import { NotificationsModule } from './modules/notifications/infrastructure/notifications.module';
 import { GymsModule } from './modules/gyms/infrastructure/gyms.module';
 import { AdminModule } from './modules/admin/infrastructure/admin.module';
+import { ClinicalAgentModule } from './modules/clinical-agent/clinical-agent.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -24,6 +25,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationsModule,
     GymsModule,
     AdminModule,
+    ClinicalAgentModule,
   ],
   controllers: [],
   providers: [],

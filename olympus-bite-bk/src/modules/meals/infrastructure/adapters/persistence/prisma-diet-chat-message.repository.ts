@@ -11,7 +11,10 @@ export class PrismaDietChatMessageRepository implements DietChatMessageRepositor
 
   async findByUserId(userId: string): Promise<DietChatMessageEntity[]> {
     const rows = await this.prisma.dietChatMessage.findMany({
-      where: { userId },
+      where: {
+        userId,
+        role: { in: ['user', 'ai'] },
+      },
       orderBy: { createdAt: 'asc' },
     });
     return rows;
@@ -19,7 +22,10 @@ export class PrismaDietChatMessageRepository implements DietChatMessageRepositor
 
   async deleteByUserId(userId: string): Promise<void> {
     await this.prisma.dietChatMessage.deleteMany({
-      where: { userId },
+      where: {
+        userId,
+        role: { in: ['user', 'ai'] },
+      },
     });
   }
 

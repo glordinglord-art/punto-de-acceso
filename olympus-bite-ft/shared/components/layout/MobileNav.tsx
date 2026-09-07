@@ -35,6 +35,7 @@ const Icons = {
   exercises: <Dumbbell className="h-5 w-5" />,
   finances: <CreditCard className="h-5 w-5" />,
   profile: <User className="h-5 w-5" />,
+  clinicalAgent: <Sparkles className="h-5 w-5 text-primary-400" />,
 };
 
 interface NavItem {
@@ -56,6 +57,7 @@ function getNavConfig(activeMode: string) {
 
     // Only modules NOT visible in the bottom bar
     const moreModules: NavItem[] = [
+      { href: "/clinical-agent", label: "Director Clínico IA", icon: Icons.clinicalAgent, description: "Terminal médica, metabólica y biomecánica omnisciente" },
       { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Seguridad y cuenta de administrador" },
     ];
 
@@ -72,6 +74,7 @@ function getNavConfig(activeMode: string) {
 
     // Only modules NOT visible in the bottom bar
     const moreModules: NavItem[] = [
+      { href: "/clinical-agent", label: "Director Clínico IA", icon: Icons.clinicalAgent, description: "Terminal médica, metabólica y biomecánica omnisciente" },
       { href: "/tasks", label: "Tareas Diarias", icon: Icons.tasks, description: "Hábitos y control de estrés de atletas" },
       { href: "/exercises", label: "Banco de Ejercicios", icon: Icons.exercises, description: "Catálogo de técnica y biblioteca" },
       { href: "/summary", label: "Resumen Global", icon: Icons.summary, description: "Métricas y cumplimiento general" },
@@ -223,8 +226,8 @@ function MoreMenu({
                   <button
                     key={mode}
                     onClick={() => {
-                      setActiveMode(mode);
                       setOpen(false);
+                      setActiveMode(mode, true);
                     }}
                     className={cn(
                       "rounded-xl py-2 px-2 text-[10px] font-condensed font-bold uppercase tracking-wider transition-all text-center border backdrop-blur-md",

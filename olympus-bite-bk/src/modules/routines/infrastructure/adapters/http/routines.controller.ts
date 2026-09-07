@@ -20,6 +20,11 @@ import {
   EvaluateRoutineDto,
 } from '../../../application/use-cases/evaluate-routine.use-case';
 import { ActivateRoutineUseCase } from '../../../application/use-cases/activate-routine.use-case';
+import { ProposeClinicalAdjustmentUseCase } from '../../../application/use-cases/propose-clinical-adjustment.use-case';
+import {
+  ApplyClinicalAdjustmentUseCase,
+  ApplyClinicalAdjustmentDto,
+} from '../../../application/use-cases/apply-clinical-adjustment.use-case';
 import {
   CreateRoutineDto,
   LogWorkoutDto,
@@ -38,6 +43,8 @@ export class RoutinesController {
     private readonly logWorkoutUseCase: LogWorkoutUseCase,
     private readonly evaluateRoutineUseCase: EvaluateRoutineUseCase,
     private readonly activateRoutineUseCase: ActivateRoutineUseCase,
+    private readonly proposeClinicalAdjustmentUseCase: ProposeClinicalAdjustmentUseCase,
+    private readonly applyClinicalAdjustmentUseCase: ApplyClinicalAdjustmentUseCase,
   ) {}
 
   @Post(':trainerId')
@@ -147,5 +154,34 @@ export class RoutinesController {
   ) {
     const logs = await this.logWorkoutUseCase.getByRoutine(routineId, userId);
     return { success: true, data: logs };
+  }
+
+  // ─── Motor 3: Director Clínico & Biomecánico (IA) ──────────
+
+  @Post(':routineId/clinical-adjustment')
+  @HttpCode(HttpStatus.OK)
+  async proposeClinicalAdjustment(
+    @Param('routineId') routineId: string,
+    @Body() dto: { exerciseId: string; coachNote: string },
+  ) {
+    const result = await this.proposeClinicalAdjustmentUseCase.execute({
+      routineId,
+      exerciseId: dto.exerciseId,
+      coachNote: dto.coachNote,
+    });
+    return { success: true, data: result };
+  }
+
+  @Post(':routineId/apply-adjustment')
+  @HttpCode(HttpStatus.OK)
+  async applyClinicalAdjustment(
+    @Param('routineId') routineId: string,
+    @Body() dto: ApplyClinicalAdjustmentDto,
+  ) {
+    const result = await this.applyClinicalAdjustmentUseCase.execute({
+      ...dto,
+      routineId,
+    });
+    return result;
   }
 }

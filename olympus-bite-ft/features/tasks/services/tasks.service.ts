@@ -1,8 +1,19 @@
 import { api } from "@/shared/lib/api";
 import type { ApiResponse } from "@/shared/types/common.types";
-import type { DailyTask, TaskLog } from "../types/tasks.types";
+import type { DailyTask, TaskLog, WeeklyAuditData } from "../types/tasks.types";
 
 export const tasksService = {
+  getWeeklyAudit: (trainerId?: string) =>
+    api.get<ApiResponse<WeeklyAuditData>>(
+      `/tasks/audit/weekly-80${trainerId ? `?trainerId=${encodeURIComponent(trainerId)}` : ""}`
+    ),
+
+  triggerWeeklyAudit: (trainerId?: string) =>
+    api.post<ApiResponse<WeeklyAuditData>>(
+      `/tasks/audit/weekly-80${trainerId ? `?trainerId=${encodeURIComponent(trainerId)}` : ""}`,
+      {}
+    ),
+
   getTasks: (userId: string) =>
     api.get<ApiResponse<DailyTask[]>>(`/tasks/${userId}`),
 
