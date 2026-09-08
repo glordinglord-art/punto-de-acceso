@@ -366,7 +366,7 @@ export function GlobalAiAssistant() {
 
                     <div
                       className={cn(
-                        proposalData ? "max-w-[95%] sm:max-w-[90%]" : "max-w-[85%]",
+                        actionData ? "max-w-[95%] sm:max-w-[90%]" : "max-w-[85%]",
                         "rounded-2xl p-4 text-xs leading-relaxed shadow-sm",
                         isUser
                           ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 rounded-tr-none font-medium"
