@@ -224,7 +224,9 @@ export function ClinicalAgentTerminal({
                 {/* Message Bubble */}
                 {(() => {
                   let proposalData: RoutineProposal | null = null;
-                  const proposalMatch = msg.content.match(/\[PROPUESTA_RUTINA:\s*(\{[\s\S]*?\})\]/);
+                  const proposalMatch = msg.content.match(
+                    /\[PROPUESTA_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
+                  );
                   if (proposalMatch) {
                     try {
                       proposalData = JSON.parse(proposalMatch[1]);
@@ -233,11 +235,33 @@ export function ClinicalAgentTerminal({
                     }
                   }
 
-                  const cleanText = msg.content
-                    .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/g, '')
+                  // Fallback: Model output raw JSON block with proposal schema
+                  if (!proposalData) {
+                    const jsonBlocks = msg.content.matchAll(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi);
+                    for (const block of jsonBlocks) {
+                      try {
+                        const parsed = JSON.parse(block[1]);
+                        if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
+                          proposalData = parsed;
+                          break;
+                        }
+                      } catch {
+                        // ignore
+                      }
+                    }
+                  }
+
+                  let cleanText = msg.content
+                    .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/gi, '')
                     .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, '')
                     .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
                     .trim();
+
+                  if (proposalData) {
+                    cleanText = cleanText
+                      .replace(/```(?:json)?\s*\{[\s\S]*?"clientName"[\s\S]*?"proposedExercise"[\s\S]*?\}\s*```/gi, '')
+                      .trim();
+                  }
 
                   return (
                     <div

@@ -10,22 +10,56 @@ export class GeminiDietRecommenderAdapter
   implements DietRecommenderPort, OnModuleInit
 {
   private readonly logger = new Logger(GeminiDietRecommenderAdapter.name);
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null =
-    null;
+  private geminiKeys: string[] = [];
+  private mimoApiKey: string | null = null;
+  private mimoBaseUrl = 'https://api.xiaomimimo.com/v1';
+
+  private getModelsForKey(key: string): string[] {
+    if (key.startsWith('AQ.')) {
+      return [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-3.7-flash',
+        'gemini-3.5-flash',
+      ];
+    } else {
+      return [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-3.7-flash',
+        'gemini-3.5-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+      ];
+    }
+  }
 
   onModuleInit() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      this.logger.warn(
-        '⚠️ GEMINI_API_KEY no configurada. El recomendador de dietas fallará.',
+    const keys: string[] = [];
+    if (process.env.GEMINI_BACKUP_API_KEY) {
+      keys.push(
+        process.env.GEMINI_BACKUP_API_KEY.trim().replace(/^["']|["']$/g, ''),
       );
-      return;
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    if (process.env.GEMINI_API_KEY) {
+      keys.push(process.env.GEMINI_API_KEY.trim().replace(/^["']|["']$/g, ''));
+    }
+    this.geminiKeys = keys.filter(Boolean);
+
+    this.mimoApiKey = process.env.MIMO_API_KEY
+      ? process.env.MIMO_API_KEY.trim().replace(/^["']|["']$/g, '')
+      : null;
+    if (process.env.MIMO_BASE_URL) {
+      this.mimoBaseUrl = process.env.MIMO_BASE_URL.trim().replace(
+        /^["']|["']$/g,
+        '',
+      );
+    }
+
     this.logger.log(
-      '✅ Gemini 2.5 Flash conectado para recomendaciones de dieta',
+      `🥗 Pool de IA para Nutrición inicializado: ${this.geminiKeys.length} clave(s) Gemini + ${this.mimoApiKey ? 'Xiaomi MiMo v2.5' : 'Sin MiMo'}`,
     );
   }
 
@@ -33,8 +67,10 @@ export class GeminiDietRecommenderAdapter
     promptStr: string,
     context?: DietRecommenderContext,
   ): Promise<string> {
-    if (!this.genAI || !this.model) {
-      throw new Error('El servicio de IA no está configurado (falta API Key)');
+    if (this.geminiKeys.length === 0 && !this.mimoApiKey) {
+      throw new Error(
+        'El servicio de IA no está configurado (falta API Key de Gemini y MiMo)',
+      );
     }
 
     const {
@@ -104,41 +140,121 @@ Devuelve tu respuesta SOLAMENTE en Markdown estructurado y amigable, usando list
       parts: [{ text: msg.content }],
     }));
 
-    try {
-      const chat = this.model.startChat({
-        history: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text:
-                  systemInstruction +
-                  '\n\n' +
-                  'CONTEXTO NUTRICIONAL DEL USUARIO:\n' +
-                  (userContextString
-                    ? userContextString
-                    : 'Ningún dato específico configurado.'),
-              },
-            ],
-          },
-          {
-            role: 'model',
-            parts: [
-              {
-                text: 'Entendido. Estoy listo para platicar directamente contigo, entender tu cuerpo y ayudarte a alcanzar tus objetivos nutricionales usando toda mi sabiduría. ¡Hablemos! 🥦✨',
-              },
-            ],
-          },
-          ...mappedHistory,
-        ],
-      });
+    // 1. Cascada Multi-Modelo por todas las llaves de Gemini
+    for (let k = 0; k < this.geminiKeys.length; k++) {
+      const key = this.geminiKeys[k];
+      const keyShort = `...${key.slice(-4)}`;
+      const targetModels = this.getModelsForKey(key);
 
-      const result = await chat.sendMessage(promptStr);
-      const output = result.response.text();
-      return output;
-    } catch (e) {
-      this.logger.error('Error generando recomendación con historial:', e);
-      throw new Error('No se pudo generar la recomendación en este momento.');
+      for (const modelName of targetModels) {
+        try {
+          const genAI = new GoogleGenerativeAI(key);
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const chat = model.startChat({
+            history: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    text:
+                      systemInstruction +
+                      '\n\n' +
+                      'CONTEXTO NUTRICIONAL DEL USUARIO:\n' +
+                      (userContextString
+                        ? userContextString
+                        : 'Ningún dato específico configurado.'),
+                  },
+                ],
+              },
+              {
+                role: 'model',
+                parts: [
+                  {
+                    text: 'Entendido. Estoy listo para platicar directamente contigo, entender tu cuerpo y ayudarte a alcanzar tus objetivos nutricionales usando toda mi sabiduría. ¡Hablemos! 🥦✨',
+                  },
+                ],
+              },
+              ...mappedHistory,
+            ],
+          });
+
+          const generatePromise = chat.sendMessage(promptStr);
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`Timeout de 6s en ${modelName}`)),
+              6000,
+            ),
+          );
+
+          const result = await Promise.race([generatePromise, timeoutPromise]);
+
+          const reply = result.response.text();
+          if (reply) {
+            this.logger.log(
+              `✅ Recomendación dietética generada exitosamente con [${modelName}] (Clave #${k + 1} ${keyShort})`,
+            );
+            return reply;
+          }
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          this.logger.warn(
+            `⚠️ [${modelName}] en Clave #${k + 1} (${keyShort}) falló (${errMsg.slice(0, 80)}). Conmutando...`,
+          );
+        }
+      }
     }
+
+    // Failover a Xiaomi MiMo v2.5
+    if (this.mimoApiKey) {
+      try {
+        const messages = [
+          {
+            role: 'system',
+            content:
+              systemInstruction +
+              '\n\nCONTEXTO NUTRICIONAL DEL USUARIO:\n' +
+              (userContextString || 'Ningún dato específico configurado.'),
+          },
+          ...history.map((h) => ({
+            role: h.role === 'ai' ? ('assistant' as const) : ('user' as const),
+            content: h.content,
+          })),
+          { role: 'user' as const, content: promptStr },
+        ];
+
+        const response = await fetch(`${this.mimoBaseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.mimoApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'mimo-v2.5',
+            messages,
+            temperature: 0.6,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data?.choices?.[0]?.message?.content;
+          if (content) {
+            this.logger.log(
+              '✅ Recomendación dietética generada exitosamente con Xiaomi MiMo v2.5',
+            );
+            return content;
+          }
+        }
+      } catch (mimoErr) {
+        this.logger.error(
+          '❌ Xiaomi MiMo también falló para recomendación dietética:',
+          mimoErr,
+        );
+      }
+    }
+
+    throw new Error(
+      'No se pudo generar la recomendación en este momento (motores de IA ocupados).',
+    );
   }
 }

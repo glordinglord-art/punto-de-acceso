@@ -10,26 +10,68 @@ export interface SendClinicalAgentMessageDto {
 @Injectable()
 export class ClinicalAgentService implements OnModuleInit {
   private readonly logger = new Logger(ClinicalAgentService.name);
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null =
-    null;
+  private geminiKeys: string[] = [];
+  private mimoApiKey: string | null = null;
+  private mimoBaseUrl = 'https://api.xiaomimimo.com/v1';
+
+  private static readonly GEMINI_MODELS = [
+    'gemini-3.6-flash',
+    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash-lite',
+  ];
 
   constructor(private readonly prisma: PrismaService) {}
 
-  onModuleInit() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      this.logger.warn(
-        '⚠️ GEMINI_API_KEY no configurada para ClinicalAgentService',
-      );
-      return;
+  private getModelsForKey(key: string): string[] {
+    if (key.startsWith('AQ.')) {
+      // Clave nueva de Google AI Studio (Proyecto 2026) -> Serie Gemini 3.x
+      return [
+        'gemini-3.5-flash-lite', // 500 peticiones/día (ultra rápido)
+        'gemini-3.1-flash-lite', // 500 peticiones/día (ultra rápido)
+        'gemini-3.6-flash', // 20 peticiones/día (alta inteligencia)
+        'gemini-3.7-flash', // 20 peticiones/día
+        'gemini-3.5-flash', // 20 peticiones/día
+      ];
+    } else {
+      // Clave estándar AIzaSy... -> Serie Gemini 3.x + 2.5
+      return [
+        'gemini-3.5-flash-lite', // 500 peticiones/día (0.6s latencia)
+        'gemini-3.1-flash-lite', // 500 peticiones/día (0.5s latencia)
+        'gemini-3.6-flash', // 20 peticiones/día
+        'gemini-3.7-flash', // 20 peticiones/día
+        'gemini-3.5-flash', // 20 peticiones/día
+        'gemini-2.5-flash-lite', // 20 peticiones/día
+        'gemini-2.5-flash', // 20 peticiones/día
+      ];
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-    });
+  }
+
+  onModuleInit() {
+    const keys: string[] = [];
+    // Priorizamos la clave con mayor cuota diaria (1000 RPD en Gemini 3.x)
+    if (process.env.GEMINI_BACKUP_API_KEY) {
+      keys.push(
+        process.env.GEMINI_BACKUP_API_KEY.trim().replace(/^["']|["']$/g, ''),
+      );
+    }
+    if (process.env.GEMINI_API_KEY) {
+      keys.push(process.env.GEMINI_API_KEY.trim().replace(/^["']|["']$/g, ''));
+    }
+    this.geminiKeys = keys.filter(Boolean);
+
+    this.mimoApiKey = process.env.MIMO_API_KEY
+      ? process.env.MIMO_API_KEY.trim().replace(/^["']|["']$/g, '')
+      : null;
+    if (process.env.MIMO_BASE_URL) {
+      this.mimoBaseUrl = process.env.MIMO_BASE_URL.trim().replace(
+        /^["']|["']$/g,
+        '',
+      );
+    }
+
     this.logger.log(
-      '✅ Gemini 2.5 Flash conectado para el Director Clínico IA',
+      `🚀 Pool de IA Director Clínico inicializado: ${this.geminiKeys.length} clave(s) Gemini + ${this.mimoApiKey ? 'Xiaomi MiMo v2.5 ACTIVO (Respaldo $2)' : 'Sin MiMo'}`,
     );
   }
 
@@ -197,9 +239,8 @@ TELEMETRÍA EN VIVO DE LOS ATLETAS DE ${trainer.name.toUpperCase()}:
 ${clientsContextSummary}
 `;
 
-    // 4. Check if trainer's prompt includes a routine change request
-    if (!this.genAI || !this.model) {
-      return '⚠️ El servicio de Director Clínico IA no tiene configurada la clave API de Gemini.';
+    if (this.geminiKeys.length === 0 && !this.mimoApiKey) {
+      return '⚠️ El servicio de Director Clínico IA no tiene configurada ninguna API Key (ni Gemini ni MiMo).';
     }
 
     // Fetch last 6 chat history messages for context continuity
@@ -212,6 +253,108 @@ ${clientsContextSummary}
       take: 6,
     });
     const chronologicalHistory = history.reverse();
+    const formattedHistory = chronologicalHistory.map((m) => ({
+      role: m.role === 'clinical_ai' ? ('model' as const) : ('user' as const),
+      content: m.content,
+    }));
+
+    let replyText = '';
+    let providerUsed = '';
+
+    // Intento 1: Cascada Multi-Modelo a través de todas las Claves de Gemini configuradas
+    for (let k = 0; k < this.geminiKeys.length; k++) {
+      const key = this.geminiKeys[k];
+      const keyShort = `...${key.slice(-4)}`;
+      const targetModels = this.getModelsForKey(key);
+
+      for (const modelName of targetModels) {
+        try {
+          this.logger.log(
+            `🩺 Consultando Director Clínico con [${modelName}] (Clave #${k + 1} ${keyShort})...`,
+          );
+          replyText = await this.callGemini(
+            key,
+            modelName,
+            systemInstruction,
+            formattedHistory,
+            trainer.name,
+            allClients.length,
+            userMessage,
+          );
+          providerUsed = `${modelName} (Clave #${k + 1} ${keyShort})`;
+          break;
+        } catch (geminiErr: unknown) {
+          const msg =
+            geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+          this.logger.warn(
+            `⚠️ [${modelName}] en Clave #${k + 1} (${keyShort}) falló (${msg.slice(0, 80)}). Conmutando al siguiente modelo...`,
+          );
+        }
+      }
+
+      if (replyText) break;
+    }
+
+    // Intento 2: Failover transparente a Xiaomi MiMo v2.5 (saldo de respaldo $2)
+    if (!replyText && this.mimoApiKey) {
+      try {
+        this.logger.log(
+          `🔄 [FAILOVER ACTIVO] Conmutando consulta clínica a Xiaomi MiMo v2.5...`,
+        );
+        replyText = await this.callMimo(
+          systemInstruction,
+          formattedHistory,
+          trainer.name,
+          allClients.length,
+          userMessage,
+        );
+        providerUsed = 'Xiaomi MiMo v2.5';
+      } catch (mimoErr: unknown) {
+        const msg =
+          mimoErr instanceof Error ? mimoErr.message : String(mimoErr);
+        this.logger.error(`❌ Xiaomi MiMo v2.5 también falló: ${msg}`);
+      }
+    }
+
+    if (!replyText) {
+      this.logger.error(
+        '🚨 Todos los proveedores de IA configurados fallaron.',
+      );
+      return 'Lo siento Coach, hubo una sobrecarga momentánea en todos los motores de IA. Por favor intenta tu consulta de nuevo en unos instantes.';
+    }
+
+    this.logger.log(
+      `✅ Consulta clínica resuelta exitosamente con [${providerUsed}]`,
+    );
+
+    // Clean up legacy command tags or stray UUIDs, but preserve [PROPUESTA_RUTINA: ...]
+    replyText = replyText
+      .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
+      .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
+      .trim();
+
+    // Save to chat history with clinical roles so they never collide with meal/diet chat
+    await this.prisma.dietChatMessage.createMany({
+      data: [
+        { userId: trainerId, role: 'clinical_user', content: userMessage },
+        { userId: trainerId, role: 'clinical_ai', content: replyText },
+      ],
+    });
+
+    return replyText;
+  }
+
+  private async callGemini(
+    apiKey: string,
+    modelName: string,
+    systemInstruction: string,
+    history: Array<{ role: 'user' | 'model'; content: string }>,
+    trainerName: string,
+    clientCount: number,
+    userMessage: string,
+  ): Promise<string> {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const contents = [
       { role: 'user' as const, parts: [{ text: systemInstruction }] },
@@ -219,16 +362,15 @@ ${clientsContextSummary}
         role: 'model' as const,
         parts: [
           {
-            text: `Entendido Coach ${trainer.name}. Tengo en memoria el perfil clínico, biomecánico y nutricional de todos tus ${allClients.length} atletas. ¿En qué optimizamos el rendimiento hoy?`,
+            text: `Entendido Coach ${trainerName}. Tengo en memoria el perfil clínico, biomecánico y nutricional de todos tus ${clientCount} atletas. ¿En qué optimizamos el rendimiento hoy?`,
           },
         ],
       },
     ];
 
-    chronologicalHistory.forEach((msg) => {
+    history.forEach((msg) => {
       contents.push({
-        role:
-          msg.role === 'clinical_ai' ? ('model' as const) : ('user' as const),
+        role: msg.role === 'model' ? ('model' as const) : ('user' as const),
         parts: [{ text: msg.content }],
       });
     });
@@ -238,32 +380,87 @@ ${clientsContextSummary}
       parts: [{ text: userMessage }],
     });
 
-    try {
-      const response = await this.model.generateContent({
-        contents,
-      });
+    const generatePromise = model.generateContent({ contents });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Timeout de 6s excedido para ${modelName}`)),
+        6000,
+      ),
+    );
 
-      let replyText = response.response.text();
+    const response = await Promise.race([generatePromise, timeoutPromise]);
 
-      // Clean up legacy command tags or stray UUIDs, but preserve [PROPUESTA_RUTINA: ...]
-      replyText = replyText
-        .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
-        .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
-        .trim();
+    return response.response.text();
+  }
 
-      // Save to chat history with clinical roles so they never collide with meal/diet chat
-      await this.prisma.dietChatMessage.createMany({
-        data: [
-          { userId: trainerId, role: 'clinical_user', content: userMessage },
-          { userId: trainerId, role: 'clinical_ai', content: replyText },
-        ],
-      });
-
-      return replyText;
-    } catch (err) {
-      this.logger.error('Error en ClinicalAgentService:', err);
-      return 'Lo siento Coach, hubo una sobrecarga en la conexión con el motor clínico. Por favor intenta tu consulta de nuevo.';
+  private async callMimo(
+    systemInstruction: string,
+    history: Array<{ role: 'user' | 'model'; content: string }>,
+    trainerName: string,
+    clientCount: number,
+    userMessage: string,
+  ): Promise<string> {
+    if (!this.mimoApiKey) {
+      throw new Error('MIMO_API_KEY no configurada');
     }
+
+    const messages = [
+      { role: 'system', content: systemInstruction },
+      {
+        role: 'assistant',
+        content: `Entendido Coach ${trainerName}. Tengo en memoria el perfil clínico, biomecánico y nutricional de todos tus ${clientCount} atletas. ¿En qué optimizamos el rendimiento hoy?`,
+      },
+      ...history.map((h) => ({
+        role: h.role === 'model' ? ('assistant' as const) : ('user' as const),
+        content: h.content,
+      })),
+      { role: 'user' as const, content: userMessage },
+    ];
+
+    const models = ['mimo-v2.5', 'mimo-v2.5-pro', 'mimo-v2-omni'];
+    let lastError: Error | null = null;
+
+    for (const model of models) {
+      try {
+        this.logger.log(
+          `🤖 Ejecutando consulta clínica con Xiaomi MiMo (${model})...`,
+        );
+        const response = await fetch(`${this.mimoBaseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.mimoApiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.6,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(
+            `Status ${response.status}: ${errText.slice(0, 150)}`,
+          );
+        }
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) {
+          throw new Error(`Respuesta vacía de MiMo ${model}`);
+        }
+        return content;
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        lastError = err;
+        this.logger.warn(
+          `⚠️ Intento con MiMo (${model}) falló: ${err.message}`,
+        );
+      }
+    }
+
+    throw lastError || new Error('Todos los modelos de MiMo fallaron');
   }
 
   async applyRoutineAdjustment(
