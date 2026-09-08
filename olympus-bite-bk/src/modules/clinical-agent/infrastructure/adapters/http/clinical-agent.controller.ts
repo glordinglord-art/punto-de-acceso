@@ -30,6 +30,29 @@ export class ClinicalAgentController {
     };
   }
 
+  @Post('apply-adjustment/:trainerId')
+  @HttpCode(HttpStatus.OK)
+  async applyAdjustment(
+    @Param('trainerId') trainerId: string,
+    @Body()
+    dto: {
+      clientName: string;
+      oldExercise: string;
+      newExercise: string;
+      rationale?: string;
+      routineName?: string;
+    },
+  ) {
+    const result = await this.agentService.applyRoutineAdjustment(
+      trainerId,
+      dto,
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Get('history/:trainerId')
   async getHistory(@Param('trainerId') trainerId: string) {
     const history = await this.agentService.getChatHistory(trainerId);

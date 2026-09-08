@@ -15,7 +15,12 @@ import {
 import { toast } from 'react-hot-toast';
 import { cn } from '@/shared/lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { clinicalAgentService, type ChatMessage } from '../services/clinical-agent.service';
+import {
+  clinicalAgentService,
+  type ChatMessage,
+  type RoutineProposal,
+} from '../services/clinical-agent.service';
+import { ClinicalRoutineProposalCard } from './ClinicalRoutineProposalCard';
 
 interface ClinicalAgentTerminalProps {
   trainerId: string;
@@ -218,7 +223,18 @@ export function ClinicalAgentTerminal({
 
                 {/* Message Bubble */}
                 {(() => {
+                  let proposalData: RoutineProposal | null = null;
+                  const proposalMatch = msg.content.match(/\[PROPUESTA_RUTINA:\s*(\{[\s\S]*?\})\]/);
+                  if (proposalMatch) {
+                    try {
+                      proposalData = JSON.parse(proposalMatch[1]);
+                    } catch {
+                      // ignore parse errors
+                    }
+                  }
+
                   const cleanText = msg.content
+                    .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/g, '')
                     .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, '')
                     .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
                     .trim();
@@ -235,60 +251,70 @@ export function ClinicalAgentTerminal({
                       {isUser ? (
                         <div className="whitespace-pre-wrap font-sans">{cleanText}</div>
                       ) : (
-                        <div className="prose prose-invert max-w-none text-xs leading-relaxed space-y-2">
-                          <ReactMarkdown
-                            components={{
-                              h1: ({ children }) => (
-                                <h1 className="text-sm font-black text-cyan-400 mt-2.5 mb-1 uppercase tracking-wider">
-                                  {children}
-                                </h1>
-                              ),
-                              h2: ({ children }) => (
-                                <h2 className="text-xs font-black text-cyan-300 mt-2 mb-1 uppercase tracking-wider">
-                                  {children}
-                                </h2>
-                              ),
-                              h3: ({ children }) => (
-                                <h3 className="text-xs font-bold text-amber-300 mt-3 mb-1.5 uppercase tracking-wide border-b border-white/5 pb-1 flex items-center gap-1.5">
-                                  {children}
-                                </h3>
-                              ),
-                              p: ({ children }) => (
-                                <p className="text-slate-200 text-xs leading-relaxed my-1.5">
-                                  {children}
-                                </p>
-                              ),
-                              strong: ({ children }) => (
-                                <strong className="font-bold text-white tracking-wide">
-                                  {children}
-                                </strong>
-                              ),
-                              ul: ({ children }) => (
-                                <ul className="space-y-1.5 my-2 pl-1 list-none">
-                                  {children}
-                                </ul>
-                              ),
-                              ol: ({ children }) => (
-                                <ol className="space-y-1.5 my-2 pl-4 list-decimal text-slate-300">
-                                  {children}
-                                </ol>
-                              ),
-                              li: ({ children }) => (
-                                <li className="flex items-start gap-2 text-slate-300">
-                                  <span className="text-cyan-400 font-bold shrink-0 mt-0.5">•</span>
-                                  <div className="flex-1">{children}</div>
-                                </li>
-                              ),
-                              blockquote: ({ children }) => (
-                                <blockquote className="my-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-500/10 px-3.5 py-2 text-[11px] font-medium text-emerald-300">
-                                  {children}
-                                </blockquote>
-                              ),
-                            }}
-                          >
-                            {cleanText}
-                          </ReactMarkdown>
-                        </div>
+                        <>
+                          <div className="prose prose-invert max-w-none text-xs leading-relaxed space-y-2">
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ children }) => (
+                                  <h1 className="text-sm font-black text-cyan-400 mt-2.5 mb-1 uppercase tracking-wider">
+                                    {children}
+                                  </h1>
+                                ),
+                                h2: ({ children }) => (
+                                  <h2 className="text-xs font-black text-cyan-300 mt-2 mb-1 uppercase tracking-wider">
+                                    {children}
+                                  </h2>
+                                ),
+                                h3: ({ children }) => (
+                                  <h3 className="text-xs font-bold text-amber-300 mt-3 mb-1.5 uppercase tracking-wide border-b border-white/5 pb-1 flex items-center gap-1.5">
+                                    {children}
+                                  </h3>
+                                ),
+                                p: ({ children }) => (
+                                  <p className="text-slate-200 text-xs leading-relaxed my-1.5">
+                                    {children}
+                                  </p>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong className="font-bold text-white tracking-wide">
+                                    {children}
+                                  </strong>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="space-y-1.5 my-2 pl-1 list-none">
+                                    {children}
+                                  </ul>
+                                ),
+                                ol: ({ children }) => (
+                                  <ol className="space-y-1.5 my-2 pl-4 list-decimal text-slate-300">
+                                    {children}
+                                  </ol>
+                                ),
+                                li: ({ children }) => (
+                                  <li className="flex items-start gap-2 text-slate-300">
+                                    <span className="text-cyan-400 font-bold shrink-0 mt-0.5">•</span>
+                                    <div className="flex-1">{children}</div>
+                                  </li>
+                                ),
+                                blockquote: ({ children }) => (
+                                  <blockquote className="my-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-500/10 px-3.5 py-2 text-[11px] font-medium text-emerald-300">
+                                    {children}
+                                  </blockquote>
+                                ),
+                              }}
+                            >
+                              {cleanText}
+                            </ReactMarkdown>
+                          </div>
+
+                          {/* Interactive Clinical Routine Proposal Diff Card */}
+                          {proposalData && (
+                            <ClinicalRoutineProposalCard
+                              proposal={proposalData}
+                              trainerId={trainerId}
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   );

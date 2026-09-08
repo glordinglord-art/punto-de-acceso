@@ -123,12 +123,16 @@ export class WeeklyAuditService {
           );
         }
         if (workoutsCount === 0) {
-          reasons.push('Sin sesiones de entrenamiento completadas en la semana');
+          reasons.push(
+            'Sin sesiones de entrenamiento completadas en la semana',
+          );
         } else if (workoutsCount < 3) {
           reasons.push(`Solo ${workoutsCount} entrenamientos registrados`);
         }
         if (reasons.length === 0) {
-          reasons.push('Adherencia general por debajo del umbral clínico (80%)');
+          reasons.push(
+            'Adherencia general por debajo del umbral clínico (80%)',
+          );
         }
 
         const actionTaken =

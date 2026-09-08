@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Exercise, RoutineDay } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 
 export interface SendClinicalAgentMessageDto {
@@ -180,10 +181,12 @@ REGLAS DE COMUNICACIÓN Y FORMATO (INNEGOCIABLES):
    • **Impacto Biológico:** 1 línea explicando el porqué fisiológico.
    • **Acción Recomendada:** Consejo práctico y directo para el entrenador.
 
-3. COMANDOS EXCLUSIVOS PARA CAMBIO DE RUTINAS:
-   ÚNICAMENTE si el entrenador te ordena EXPLÍCITAMENTE cambiar un ejercicio por otro (ej: "Cambia la sentadilla de Carlos por prensa 45°"), añade al final de tu respuesta:
-   [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "replace_exercise", "oldExercise": "ejercicio_anterior", "newExercise": "ejercicio_nuevo", "rationale": "fundamento_biomecánico"}]
-   En cualquier otra situación, ¡NUNCA emitas esta etiqueta!
+3. MÓDULO DE PROPUESTA CLÍNICA DE RUTINAS:
+   Cuando el entrenador te pida cambiar, mejorar o adaptar un ejercicio o rutina, O cuando diagnostiques en un atleta una molestia, lesión, sobrecarga o estancamiento que requiera sustituir un ejercicio:
+   - Explica con claridad médica y calidez tu diagnóstico fisiológico y biomecánico.
+   - OBLIGATORIAMENTE añade al final de tu mensaje este bloque estructurado para que el entrenador pueda revisarlo y aplicarlo con un solo clic:
+   [PROPUESTA_RUTINA: {"clientName": "NombreDelAtleta", "routineName": "NombreDeLaRutina", "dayFocus": "EnfoqueDelDia", "currentExercise": {"name": "EjercicioActual", "setsReps": "4 x 8-10"}, "proposedExercise": {"name": "NuevoEjercicioSustituto", "setsReps": "4 x 10-12"}, "rationale": "Criterio biomecánico y clínico breve"}]
+   - Utiliza siempre los nombres de atletas, rutinas y ejercicios reales de la telemetría.
 
 4. CORPUS CIENTÍFICO DE SOPORTE (Lehninger, Guyton & Hall, Schoenfeld, Israetel, Beardsley, Zatsiorsky):
    - Prioriza la recuperación celular (MPS via mTORC1 vs AMPK).
@@ -224,7 +227,8 @@ ${clientsContextSummary}
 
     chronologicalHistory.forEach((msg) => {
       contents.push({
-        role: msg.role === 'clinical_ai' ? ('model' as const) : ('user' as const),
+        role:
+          msg.role === 'clinical_ai' ? ('model' as const) : ('user' as const),
         parts: [{ text: msg.content }],
       });
     });
@@ -241,33 +245,7 @@ ${clientsContextSummary}
 
       let replyText = response.response.text();
 
-      // Check if response contains any [COMANDO_RUTINA: ...] block and process it
-      const commandMatches = [...replyText.matchAll(/\[COMANDO_RUTINA:\s*(\{.*?\})\]/gs)];
-      for (const match of commandMatches) {
-        try {
-          const cmd = JSON.parse(match[1]);
-          if ((cmd.clientName || cmd.clientId) && cmd.oldExercise && cmd.newExercise) {
-            await this.executeRoutineReplacement(
-              cmd.clientId,
-              cmd.clientName,
-              cmd.oldExercise,
-              cmd.newExercise,
-              cmd.rationale,
-            );
-            replyText = replyText.replace(
-              match[0],
-              `\n> 🩺 **Ajuste Clínico Aplicado:** Se sustituyó *${cmd.oldExercise}* por *${cmd.newExercise}* en la rutina activa de ${cmd.clientName || 'el atleta'}.\n`,
-            );
-          } else {
-            // Remove unhandled/spurious command completely
-            replyText = replyText.replace(match[0], '');
-          }
-        } catch {
-          replyText = replyText.replace(match[0], '');
-        }
-      }
-
-      // Cleanup: strip any leftover command tags, JSON leftovers or raw UUIDs
+      // Clean up legacy command tags or stray UUIDs, but preserve [PROPUESTA_RUTINA: ...]
       replyText = replyText
         .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
         .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
@@ -288,27 +266,42 @@ ${clientsContextSummary}
     }
   }
 
-  private async executeRoutineReplacement(
-    clientId?: string,
-    clientName?: string,
-    oldExerciseName?: string,
-    newExerciseName?: string,
-    rationale?: string,
+  async applyRoutineAdjustment(
+    trainerId: string,
+    payload: {
+      clientName: string;
+      oldExercise: string;
+      newExercise: string;
+      rationale?: string;
+      routineName?: string;
+    },
   ) {
-    if (!oldExerciseName || !newExerciseName) return;
-
-    let targetId = clientId;
-    if (!targetId && clientName) {
-      const athlete = await this.prisma.user.findFirst({
-        where: { name: { contains: clientName, mode: 'insensitive' } },
-      });
-      if (athlete) targetId = athlete.id;
+    const { clientName, oldExercise, newExercise, rationale, routineName } =
+      payload;
+    if (!clientName || !oldExercise || !newExercise) {
+      throw new Error('Faltan datos requeridos para aplicar la modificación');
     }
 
-    if (!targetId) return;
+    // 1. Search athlete by name (case-insensitive)
+    const athlete = await this.prisma.user.findFirst({
+      where: {
+        name: { contains: clientName, mode: 'insensitive' },
+        role: 'client',
+      },
+    });
 
-    const routine = await this.prisma.routine.findFirst({
-      where: { clientId: targetId, isActive: true },
+    if (!athlete) {
+      throw new Error(
+        `No se encontró al atleta "${clientName}" en tu cartera.`,
+      );
+    }
+
+    // 2. Search active routine (or matching routineName)
+    let routine = await this.prisma.routine.findFirst({
+      where: {
+        clientId: athlete.id,
+        isActive: true,
+      },
       include: {
         routineDays: {
           include: {
@@ -318,36 +311,104 @@ ${clientsContextSummary}
       },
     });
 
-    if (!routine) return;
-
-    // Search for exercise matching oldExerciseName (case-insensitive)
-    for (const day of routine.routineDays) {
-      const target = day.exercises.find((ex) =>
-        ex.name.toLowerCase().includes(oldExerciseName.toLowerCase()),
-      );
-      if (target) {
-        const updatedObs = [
-          target.observations,
-          rationale ? `[Clínico: ${rationale}]` : null,
-        ]
-          .filter(Boolean)
-          .join(' · ');
-
-        await this.prisma.exercise.update({
-          where: { id: target.id },
-          data: {
-            name: newExerciseName,
-            observations: updatedObs,
+    if (!routine && routineName) {
+      routine = await this.prisma.routine.findFirst({
+        where: {
+          clientId: athlete.id,
+          name: { contains: routineName, mode: 'insensitive' },
+        },
+        include: {
+          routineDays: {
+            include: {
+              exercises: true,
+            },
           },
-        });
+        },
+      });
+    }
 
-        await this.prisma.routine.update({
-          where: { id: routine.id },
-          data: { updatedAt: new Date() },
-        });
+    if (!routine) {
+      throw new Error(
+        `El atleta "${athlete.name}" no tiene una rutina activa para modificar.`,
+      );
+    }
+
+    // 3. Search exercise to substitute
+    let matchedExercise: Exercise | null = null;
+    let matchedDay: RoutineDay | null = null;
+
+    for (const day of routine.routineDays) {
+      const found = day.exercises.find((ex) => {
+        const exLow = ex.name.toLowerCase();
+        const oldLow = oldExercise.toLowerCase();
+        return exLow.includes(oldLow) || oldLow.includes(exLow);
+      });
+      if (found) {
+        matchedExercise = found;
+        matchedDay = day;
         break;
       }
     }
+
+    // Fallback: word overlap
+    if (!matchedExercise) {
+      const words = oldExercise
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 3);
+      for (const day of routine.routineDays) {
+        const found = day.exercises.find((ex) => {
+          const exLow = ex.name.toLowerCase();
+          return words.some((w) => exLow.includes(w));
+        });
+        if (found) {
+          matchedExercise = found;
+          matchedDay = day;
+          break;
+        }
+      }
+    }
+
+    if (!matchedExercise) {
+      throw new Error(
+        `No se encontró el ejercicio "${oldExercise}" en la rutina activa de ${athlete.name}.`,
+      );
+    }
+
+    // 4. Update the exercise with the new name and clinical rationale
+    const updatedObs = [
+      matchedExercise.observations,
+      rationale ? `[Ajuste Clínico IA: ${rationale}]` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    await this.prisma.exercise.update({
+      where: { id: matchedExercise.id },
+      data: {
+        name: newExercise,
+        observations: updatedObs,
+      },
+    });
+
+    await this.prisma.routine.update({
+      where: { id: routine.id },
+      data: { updatedAt: new Date() },
+    });
+
+    this.logger.log(
+      `✅ Ajuste clínico aplicado: "${matchedExercise.name}" -> "${newExercise}" para ${athlete.name} por entrenador ${trainerId}`,
+    );
+
+    return {
+      success: true,
+      message: `¡Rutina actualizada! Se sustituyó "${matchedExercise.name}" por "${newExercise}" en la rutina de ${athlete.name}.`,
+      clientName: athlete.name,
+      routineName: routine.name,
+      oldExercise: matchedExercise.name,
+      newExercise,
+      dayFocus: matchedDay?.focusArea || 'Día Activo',
+    };
   }
 
   async getChatHistory(trainerId: string) {

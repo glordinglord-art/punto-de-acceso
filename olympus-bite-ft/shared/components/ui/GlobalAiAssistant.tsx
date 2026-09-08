@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import { mealsService } from "@/features/meals/services/meals.service";
-import { clinicalAgentService } from "@/features/clinical-agent/services/clinical-agent.service";
+import { clinicalAgentService, RoutineProposal } from "@/features/clinical-agent/services/clinical-agent.service";
+import { ClinicalRoutineProposalCard } from "@/features/clinical-agent/components/ClinicalRoutineProposalCard";
 import { cn } from "@/shared/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { X, Send, Sparkles, UserCircle, Trash2, Stethoscope, Bot } from "lucide-react";
@@ -304,7 +305,21 @@ export function GlobalAiAssistant() {
             <>
               {messages.map((msg, idx) => {
                 const isUser = msg.role === "user";
+                let proposalData: RoutineProposal | null = null;
+
+                if (isClinical && !isUser) {
+                  const proposalMatch = msg.content.match(/\[PROPUESTA_RUTINA:\s*(\{[\s\S]*?\})\]/);
+                  if (proposalMatch) {
+                    try {
+                      proposalData = JSON.parse(proposalMatch[1]);
+                    } catch {
+                      // ignore parse errors
+                    }
+                  }
+                }
+
                 const cleanContent = msg.content
+                  .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/g, "")
                   .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, "")
                   .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, "")
                   .trim();
@@ -338,7 +353,8 @@ export function GlobalAiAssistant() {
 
                     <div
                       className={cn(
-                        "max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm",
+                        proposalData ? "max-w-[95%] sm:max-w-[90%]" : "max-w-[85%]",
+                        "rounded-2xl p-4 text-xs leading-relaxed shadow-sm",
                         isUser
                           ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 rounded-tr-none font-medium"
                           : "bg-white dark:bg-[#151922] text-neutral-800 dark:text-slate-100 border border-slate-200/70 dark:border-white/10 rounded-tl-none"
@@ -347,57 +363,68 @@ export function GlobalAiAssistant() {
                       {isUser ? (
                         <div className="whitespace-pre-wrap font-sans">{cleanContent}</div>
                       ) : (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed space-y-2">
-                          <ReactMarkdown
-                            components={{
-                              h1: ({ children }) => (
-                                <h1 className="text-sm font-black text-cyan-400 dark:text-cyan-300 mt-2 mb-1 uppercase tracking-wider">
-                                  {children}
-                                </h1>
-                              ),
-                              h2: ({ children }) => (
-                                <h2 className="text-xs font-black text-cyan-300 dark:text-cyan-200 mt-2 mb-1 uppercase tracking-wider">
-                                  {children}
-                                </h2>
-                              ),
-                              h3: ({ children }) => (
-                                <h3 className="text-xs font-bold text-white mt-1.5 mb-1">
-                                  {children}
-                                </h3>
-                              ),
-                              p: ({ children }) => (
-                                <p className="mb-1.5 last:mb-0 leading-relaxed text-slate-700 dark:text-slate-200">
-                                  {children}
-                                </p>
-                              ),
-                              ul: ({ children }) => (
-                                <ul className="list-disc pl-4 space-y-1 mb-2 text-slate-700 dark:text-slate-200">
-                                  {children}
-                                </ul>
-                              ),
-                              ol: ({ children }) => (
-                                <ol className="list-decimal pl-4 space-y-1 mb-2 text-slate-700 dark:text-slate-200">
-                                  {children}
-                                </ol>
-                              ),
-                              li: ({ children }) => (
-                                <li className="text-slate-700 dark:text-slate-200">{children}</li>
-                              ),
-                              strong: ({ children }) => (
-                                <strong className="font-bold text-slate-950 dark:text-white">
-                                  {children}
-                                </strong>
-                              ),
-                              blockquote: ({ children }) => (
-                                <blockquote className="border-l-2 border-cyan-400/60 pl-3 italic text-cyan-200/90 my-1 bg-cyan-950/20 py-1 rounded-r-lg">
-                                  {children}
-                                </blockquote>
-                              ),
-                            }}
-                          >
-                            {cleanContent}
-                          </ReactMarkdown>
-                        </div>
+                        <>
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed space-y-2">
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ children }) => (
+                                  <h1 className="text-sm font-black text-cyan-400 dark:text-cyan-300 mt-2 mb-1 uppercase tracking-wider">
+                                    {children}
+                                  </h1>
+                                ),
+                                h2: ({ children }) => (
+                                  <h2 className="text-xs font-black text-cyan-300 dark:text-cyan-200 mt-2 mb-1 uppercase tracking-wider">
+                                    {children}
+                                  </h2>
+                                ),
+                                h3: ({ children }) => (
+                                  <h3 className="text-xs font-bold text-white mt-1.5 mb-1">
+                                    {children}
+                                  </h3>
+                                ),
+                                p: ({ children }) => (
+                                  <p className="mb-1.5 last:mb-0 leading-relaxed text-slate-700 dark:text-slate-200">
+                                    {children}
+                                  </p>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="list-disc pl-4 space-y-1 mb-2 text-slate-700 dark:text-slate-200">
+                                    {children}
+                                  </ul>
+                                ),
+                                ol: ({ children }) => (
+                                  <ol className="list-decimal pl-4 space-y-1 mb-2 text-slate-700 dark:text-slate-200">
+                                    {children}
+                                  </ol>
+                                ),
+                                li: ({ children }) => (
+                                  <li className="text-slate-700 dark:text-slate-200">{children}</li>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong className="font-bold text-slate-950 dark:text-white">
+                                    {children}
+                                  </strong>
+                                ),
+                                blockquote: ({ children }) => (
+                                  <blockquote className="border-l-2 border-cyan-400/60 pl-3 italic text-cyan-200/90 my-1 bg-cyan-950/20 py-1 rounded-r-lg">
+                                    {children}
+                                  </blockquote>
+                                ),
+                              }}
+                            >
+                              {cleanContent}
+                            </ReactMarkdown>
+                          </div>
+
+                          {proposalData && user?.id && (
+                            <div className="mt-3">
+                              <ClinicalRoutineProposalCard
+                                proposal={proposalData}
+                                trainerId={user.id}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
