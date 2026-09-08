@@ -606,6 +606,8 @@ npm run start:dev   # http://localhost:3000
 
 Proyecto desarrollado para la gestión integral de **nutrición y entrenamiento** de **Punto de Inflexión**.
 
+- **Developer:** danilodev (<quinteroar.018@gmail.com>)
+
 ---
 
 ## 📄 Licencia
