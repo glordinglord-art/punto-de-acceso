@@ -27,7 +27,7 @@ interface ClinicalRoutineProposalCardProps {
   actionData?: RoutineAction | RoutineProposal;
   proposal?: RoutineProposal; // legacy prop compatibility
   trainerId: string;
-  onApplied?: () => void;
+  onApplied?: (followUpMessage?: string) => void;
 }
 
 export function ClinicalRoutineProposalCard({
@@ -38,7 +38,6 @@ export function ClinicalRoutineProposalCard({
 }: ClinicalRoutineProposalCardProps) {
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   // Normalize data into RoutineAction format
@@ -76,15 +75,15 @@ export function ClinicalRoutineProposalCard({
 
       if (res?.data?.success) {
         setApplied(true);
-        const msg =
+        const followUp =
+          res.data.followUpMessage ||
           res.data.message ||
           `¡Acción de rutina para ${action.clientName} aplicada con éxito!`;
-        setAppliedMessage(msg);
-        toast.success(msg, {
+        toast.success(res.data.message || '¡Acción aplicada con éxito!', {
           duration: 5000,
           icon: '🩺',
         });
-        onApplied?.();
+        onApplied?.(followUp);
       } else {
         toast.error('No se pudo aplicar la acción a la rutina.');
       }
@@ -180,23 +179,33 @@ export function ClinicalRoutineProposalCard({
 
   return (
     <div
-      className={`my-4 overflow-hidden rounded-3xl border ${meta.borderColor} bg-[#0f131a] shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all`}
+      className={`my-4 overflow-hidden rounded-3xl border ${
+        applied ? 'border-emerald-500/40' : meta.borderColor
+      } bg-[#0f131a] shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all`}
     >
       {/* ── Top Header Badge ── */}
       <div
-        className={`flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-gradient-to-r ${meta.gradient} px-5 py-3.5`}
+        className={`flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-gradient-to-r ${
+          applied ? 'from-emerald-950/40 via-emerald-900/20 to-transparent' : meta.gradient
+        } px-5 py-3.5`}
       >
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/15">
-            {meta.icon}
+            {applied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : meta.icon}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                {meta.title}
+                {applied ? '✓ Ajuste Sincronizado' : meta.title}
               </span>
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/80 border border-white/20">
-                {meta.badge}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider border ${
+                  applied
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-white/10 text-white/80 border-white/20'
+                }`}
+              >
+                {applied ? 'En Base de Datos' : meta.badge}
               </span>
             </div>
             <p className="text-xs font-black text-white mt-0.5">
@@ -218,7 +227,7 @@ export function ClinicalRoutineProposalCard({
         )}
       </div>
 
-      {/* ── Body: Specific to each of the 6 actions ── */}
+      {/* ── Body: Comparative ANTES (SALE) vs DESPUÉS (ENTRA) ── */}
       <div className="p-5 space-y-4">
         {/* 1. SUSTITUIR EJERCICIO */}
         {action.action === 'sustituir_ejercicio' && (
@@ -226,7 +235,7 @@ export function ClinicalRoutineProposalCard({
             <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 relative overflow-hidden">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 flex items-center gap-1">
-                  <Dumbbell className="w-3 h-3" /> Ejercicio Actual
+                  <Dumbbell className="w-3 h-3" /> Sale: Ejercicio Actual
                 </span>
                 <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">
                   En Rutina
@@ -249,7 +258,7 @@ export function ClinicalRoutineProposalCard({
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 relative overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.1)]">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Sustitución Recomendada
+                  <Sparkles className="w-3 h-3" /> Entra: Sustitución Propuesta
                 </span>
                 <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   Objetivo
@@ -268,35 +277,48 @@ export function ClinicalRoutineProposalCard({
         {/* 2. REEMPLAZAR DÍA COMPLETO */}
         {action.action === 'reemplazar_dia' && (
           <div className="space-y-3">
-            {action.currentExercises && action.currentExercises.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* SALE */}
               <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-3.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 block mb-2">
-                  Ejercicios anteriores que serán reemplazados ({action.currentExercises.length}):
+                  🔴 Sale: Esquema anterior Día {action.dayNumber || ''} ({action.currentExercises?.length || 0} ejercicios)
                 </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {action.currentExercises.map((ex, idx) => (
-                    <span
-                      key={idx}
-                      className="line-through text-rose-300/70 text-xs bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg"
-                    >
-                      {ex}
-                    </span>
-                  ))}
-                </div>
+                {action.currentExercises && action.currentExercises.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {action.currentExercises.map((ex, idx) => (
+                      <span
+                        key={idx}
+                        className="line-through text-rose-300/70 text-xs bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-lg"
+                      >
+                        {ex}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/40 italic">Ejercicios anteriores configurados en el día.</p>
+                )}
               </div>
-            )}
 
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2.5">
-                <Sparkles className="h-3.5 w-3.5" />
-                Nuevo Esquema para el Día {action.dayNumber || ''}{' '}
-                {action.dayFocus ? `· ${action.dayFocus}` : ''} ({action.newExercises?.length || 0} ejercicios):
+              {/* ENTRA */}
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block mb-2">
+                  🟢 Entra: Nuevo Enfoque ({action.dayFocus || 'Día Renovado'})
+                </span>
+                <p className="text-xs font-bold text-white">
+                  {action.newExercises?.length || 0} ejercicios biomecánicamente optimizados
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-500/30 bg-black/40 p-3.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block mb-2.5">
+                Detalle de los nuevos ejercicios:
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {action.newExercises?.map((ex: ExerciseSpec, idx: number) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between rounded-xl bg-black/40 border border-emerald-500/20 px-3 py-2 text-xs"
+                    className="flex items-center justify-between rounded-xl bg-black/50 border border-emerald-500/20 px-3 py-2 text-xs"
                   >
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <span className="text-[10px] text-emerald-400 font-mono">
@@ -316,34 +338,44 @@ export function ClinicalRoutineProposalCard({
 
         {/* 3. AGREGAR EJERCICIO(S) */}
         {action.action === 'agregar_ejercicio' && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2.5">
-              <Plus className="h-3.5 w-3.5" />
-              Ejercicios que se incorporarán al Día {action.dayNumber || ''}{' '}
-              {action.dayFocus ? `· ${action.dayFocus}` : ''}:
-            </span>
-            <div className="space-y-2">
-              {action.exercises?.map((ex: ExerciseSpec, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-xl bg-black/40 border border-emerald-500/20 px-3 py-2.5 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold">
-                      +
-                    </span>
-                    <span className="font-bold text-white">{ex.name}</span>
-                    {ex.muscleGroup && (
-                      <span className="text-[10px] uppercase text-white/50 bg-white/5 px-2 py-0.5 rounded">
-                        {ex.muscleGroup}
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-3 text-xs flex items-center justify-between">
+              <span className="text-cyan-300 font-bold">
+                Destino: Día {action.dayNumber || ''} ({action.dayFocus || 'Enfoque del Día'})
+              </span>
+              <span className="text-[10px] uppercase font-bold text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded">
+                +{action.exercises?.length || 0} Ejercicios
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2.5">
+                <Plus className="h-3.5 w-3.5" />
+                🟢 Entra: Ejercicios que se incorporan a la rutina:
+              </span>
+              <div className="space-y-2">
+                {action.exercises?.map((ex: ExerciseSpec, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-xl bg-black/40 border border-emerald-500/20 px-3 py-2.5 text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold">
+                        +
                       </span>
-                    )}
+                      <span className="font-bold text-white">{ex.name}</span>
+                      {ex.muscleGroup && (
+                        <span className="text-[10px] uppercase text-white/50 bg-white/5 px-2 py-0.5 rounded">
+                          {ex.muscleGroup}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-md">
+                      {ex.sets || 3}x{ex.reps || '8-12'} · {ex.restSeconds || 60}s
+                    </span>
                   </div>
-                  <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-md">
-                    {ex.sets || 3}x{ex.reps || '8-12'} · {ex.restSeconds || 60}s
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -353,7 +385,7 @@ export function ClinicalRoutineProposalCard({
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
             <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5 mb-2.5">
               <Trash2 className="h-3.5 w-3.5" />
-              Ejercicios que serán eliminados de la rutina:
+              🔴 Sale: Ejercicios que serán eliminados de la rutina:
             </span>
             <div className="space-y-2">
               {action.exercisesToRemove?.map((name: string, idx: number) => (
@@ -373,60 +405,100 @@ export function ClinicalRoutineProposalCard({
           </div>
         )}
 
-        {/* 5. CREAR RUTINA COMPLETA */}
+        {/* 5. CREAR RUTINA COMPLETA (COMPARACIÓN ANTES VS DESPUÉS) */}
         {action.action === 'crear_rutina' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-2xl bg-white/[0.03] border border-white/10 p-3 text-xs">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-purple-400" />
-                <span className="text-white font-bold">
-                  {action.routineName || 'Nueva Rutina Integral'}
-                </span>
+            {/* ANTES (SALE) vs DESPUÉS (ENTRA) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* SALE */}
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-3.5 flex items-start gap-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-500/20 text-rose-300">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-rose-400 block">
+                    🔴 Sale: Rutina Anterior
+                  </span>
+                  <p className="text-xs font-bold text-white line-through opacity-80 mt-0.5">
+                    {action.previousRoutineName || 'Rutina activa previa'}
+                  </p>
+                  <p className="text-[10px] text-rose-200/60 mt-0.5">
+                    Quedará desactivada y guardada en el historial
+                  </p>
+                </div>
               </div>
-              <span className="text-[10px] uppercase font-bold text-purple-300 bg-purple-500/20 px-2.5 py-1 rounded-lg">
-                {action.weekCount || 4} Semanas · {action.days?.length || 0} Días
-              </span>
+
+              {/* ENTRA */}
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 flex items-start gap-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 block">
+                    🟢 Entra: Nueva Rutina
+                  </span>
+                  <p className="text-xs font-bold text-white mt-0.5">
+                    {action.routineName || 'Nueva Rutina Integral'}
+                  </p>
+                  <p className="text-[10px] text-emerald-300/80 mt-0.5">
+                    {action.days?.length || 0} Días de estímulo · {action.weekCount || 4} Semanas
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {action.days?.map((day, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-white/10 bg-black/30 p-3 text-xs"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-black text-cyan-300 text-[11px] uppercase tracking-wide">
-                      Día {day.dayNumber}: {day.focusArea}
-                    </span>
-                    {day.isRestDay && (
-                      <span className="text-[9px] uppercase font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded">
-                        Descanso
+            {/* Day by Day Plan Breakdown */}
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Estructura del Nuevo Mesociclo:
+                </span>
+                <span className="text-[9px] uppercase font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded">
+                  {action.weekCount || 4} Semanas
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {action.days?.map((day, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-black text-cyan-300 text-[11px] uppercase tracking-wide">
+                        Día {day.dayNumber}: {day.focusArea}
                       </span>
+                      {day.isRestDay && (
+                        <span className="text-[9px] uppercase font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded">
+                          Descanso
+                        </span>
+                      )}
+                    </div>
+                    {day.exercises && day.exercises.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1.5">
+                        {day.exercises.map((ex, eIdx) => (
+                          <div
+                            key={eIdx}
+                            className="flex items-center justify-between rounded-lg bg-white/5 px-2 py-1 text-[11px]"
+                          >
+                            <span className="text-slate-200 font-medium truncate">
+                              {ex.name}
+                            </span>
+                            <span className="text-[10px] text-purple-300 shrink-0 ml-1 font-mono">
+                              {ex.sets}x{ex.reps}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-white/40 italic mt-0.5">
+                        {day.restDayNote || 'Día de recuperación activa y descanso.'}
+                      </p>
                     )}
                   </div>
-                  {day.exercises && day.exercises.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
-                      {day.exercises.map((ex, eIdx) => (
-                        <div
-                          key={eIdx}
-                          className="flex items-center justify-between rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px]"
-                        >
-                          <span className="text-slate-200 font-medium truncate">
-                            {ex.name}
-                          </span>
-                          <span className="text-[10px] text-purple-300 shrink-0 ml-1 font-mono">
-                            {ex.sets}x{ex.reps}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[10px] text-white/40 italic">
-                      {day.restDayNote || 'Día de recuperación activa y descanso.'}
-                    </p>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -436,10 +508,13 @@ export function ClinicalRoutineProposalCard({
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
             <div className="flex items-center gap-2 mb-2 text-rose-400 font-bold text-xs">
               <AlertTriangle className="h-4 w-4" />
-              ¿Confirmas la desactivación de esta rutina?
+              🔴 Módulo que se desactivará:
             </div>
-            <p className="text-xs text-rose-200/80 leading-relaxed">
-              La rutina actual de <strong>{action.clientName}</strong> quedará inactiva. Sus registros y progresos quedarán resguardados de forma segura en la base de datos para no perder historial.
+            <p className="text-xs text-rose-200/90 leading-relaxed font-semibold">
+              Rutina: &quot;{action.routineName || 'Rutina Activa'}&quot; de {action.clientName}
+            </p>
+            <p className="text-[11px] text-rose-200/60 mt-1 leading-relaxed">
+              La rutina quedará archivada de forma segura para preservar todos los registros y progresos históricos del atleta.
             </p>
           </div>
         )}
@@ -461,8 +536,8 @@ export function ClinicalRoutineProposalCard({
         <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-semibold text-white/70 text-center sm:text-left">
             {applied
-              ? appliedMessage || '✓ Ajuste guardado y aplicado a la rutina del atleta.'
-              : '¿Deseas aplicar esta acción a la rutina del atleta ahora?'}
+              ? '✓ Módulo actualizado y sincronizado en tiempo real con la base de datos.'
+              : '¿Deseas aplicar estos cambios a la rutina del atleta ahora?'}
           </p>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import { mealsService } from "@/features/meals/services/meals.service";
-import { clinicalAgentService, RoutineProposal } from "@/features/clinical-agent/services/clinical-agent.service";
+import {
+  clinicalAgentService,
+  parseRoutineAction,
+  type RoutineAction,
+  type RoutineProposal,
+} from "@/features/clinical-agent/services/clinical-agent.service";
 import { ClinicalRoutineProposalCard } from "@/features/clinical-agent/components/ClinicalRoutineProposalCard";
 import { cn } from "@/shared/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -187,6 +192,19 @@ export function GlobalAiAssistant() {
     }
   };
 
+  const handleActionApplied = (followUpMessage?: string) => {
+    if (followUpMessage) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: followUpMessage,
+        },
+      ]);
+      setTimeout(scrollToBottom, 120);
+    }
+  };
+
   // If on the full-page clinical terminal, don't show the duplicate floating button
   if (pathname === "/clinical-agent") {
     return null;
@@ -305,46 +323,17 @@ export function GlobalAiAssistant() {
             <>
               {messages.map((msg, idx) => {
                 const isUser = msg.role === "user";
-                let proposalData: RoutineProposal | null = null;
+                let actionData: RoutineAction | RoutineProposal | null = null;
+                let cleanContent = msg.content;
 
                 if (isClinical && !isUser) {
-                  const proposalMatch = msg.content.match(
-                    /\[PROPUESTA_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
-                  );
-                  if (proposalMatch) {
-                    try {
-                      proposalData = JSON.parse(proposalMatch[1]);
-                    } catch {
-                      // ignore parse errors
-                    }
-                  }
-
-                  // Fallback: Check for raw JSON block with proposal schema
-                  if (!proposalData) {
-                    const jsonBlocks = msg.content.matchAll(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi);
-                    for (const block of jsonBlocks) {
-                      try {
-                        const parsed = JSON.parse(block[1]);
-                        if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
-                          proposalData = parsed;
-                          break;
-                        }
-                      } catch {
-                        // ignore
-                      }
-                    }
-                  }
-                }
-
-                let cleanContent = msg.content
-                  .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/gi, '')
-                  .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, '')
-                  .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
-                  .trim();
-
-                if (proposalData) {
-                  cleanContent = cleanContent
-                    .replace(/```(?:json)?\s*\{[\s\S]*?"clientName"[\s\S]*?"proposedExercise"[\s\S]*?\}\s*```/gi, '')
+                  const parsed = parseRoutineAction(msg.content);
+                  actionData = parsed.actionData;
+                  cleanContent = parsed.cleanText;
+                } else {
+                  cleanContent = msg.content
+                    .replace(/\[COMANDO_RUTINA:[^\]]*\]/g, "")
+                    .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, "")
                     .trim();
                 }
 
@@ -440,11 +429,12 @@ export function GlobalAiAssistant() {
                             </ReactMarkdown>
                           </div>
 
-                          {proposalData && user?.id && (
+                          {actionData && user?.id && (
                             <div className="mt-3">
                               <ClinicalRoutineProposalCard
-                                proposal={proposalData}
+                                actionData={actionData}
                                 trainerId={user.id}
+                                onApplied={handleActionApplied}
                               />
                             </div>
                           )}

@@ -24,6 +24,7 @@ export interface RoutineActionBase {
   action: string;
   clientName: string;
   routineName?: string;
+  previousRoutineName?: string;
   rationale?: string;
 }
 
@@ -139,7 +140,121 @@ export const clinicalAgentService = {
         message: string;
         clientName: string;
         routineName?: string;
+        previousRoutineName?: string;
+        followUpMessage?: string;
         [key: string]: unknown;
       }>
     >(`/clinical-agent/execute-action/${trainerId}`, action),
 };
+
+/**
+ * Robust balanced-bracket parser for clinical routine actions.
+ * Safely handles nested arrays and objects within JSON (e.g. days, exercises).
+ */
+export function parseRoutineAction(content: string): {
+  actionData: RoutineAction | null;
+  cleanText: string;
+} {
+  const markers = ['[ACCION_RUTINA:', '[PROPUESTA_RUTINA:'];
+  let markerFound = '';
+  let markerIdx = -1;
+
+  for (const m of markers) {
+    const idx = content.indexOf(m);
+    if (idx !== -1 && (markerIdx === -1 || idx < markerIdx)) {
+      markerIdx = idx;
+      markerFound = m;
+    }
+  }
+
+  // 1. Tag-based parsing with bracket/brace depth balancing
+  if (markerIdx !== -1) {
+    const jsonStart = content.indexOf('{', markerIdx + markerFound.length);
+    if (jsonStart !== -1) {
+      let depth = 0;
+      let inString = false;
+      let escape = false;
+      let jsonEnd = -1;
+
+      for (let i = jsonStart; i < content.length; i++) {
+        const char = content[i];
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (char === '\\') {
+          escape = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (char === '{') depth++;
+          else if (char === '}') {
+            depth--;
+            if (depth === 0) {
+              jsonEnd = i;
+              break;
+            }
+          }
+        }
+      }
+
+      if (jsonEnd !== -1) {
+        const jsonStr = content.slice(jsonStart, jsonEnd + 1);
+        let actionData: RoutineAction | null = null;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          if (markerFound === '[PROPUESTA_RUTINA:' && !parsed.action) {
+            parsed.action = 'sustituir_ejercicio';
+          }
+          actionData = parsed as RoutineAction;
+        } catch (err) {
+          console.error('Error al parsear JSON de acción de rutina:', err);
+        }
+
+        let tagEnd = content.indexOf(']', jsonEnd);
+        if (tagEnd === -1) tagEnd = jsonEnd;
+
+        const beforeTag = content.slice(0, markerIdx);
+        const afterTag = content.slice(tagEnd + 1);
+        const cleanText = (beforeTag + afterTag)
+          .replace(/\[COMANDO_RUTINA:[^\]]*\]/g, '')
+          .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
+          .trim();
+
+        return { actionData, cleanText };
+      }
+    }
+  }
+
+  // 2. Fallback: markdown code blocks ```json { ... } ```
+  const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (codeBlockMatch) {
+    try {
+      const parsed = JSON.parse(codeBlockMatch[1]);
+      if (parsed.action && parsed.clientName) {
+        return {
+          actionData: parsed as RoutineAction,
+          cleanText: content.replace(codeBlockMatch[0], '').trim(),
+        };
+      }
+      if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
+        return {
+          actionData: { ...parsed, action: 'sustituir_ejercicio' } as RoutineAction,
+          cleanText: content.replace(codeBlockMatch[0], '').trim(),
+        };
+      }
+    } catch {}
+  }
+
+  const cleanText = content
+    .replace(/\[COMANDO_RUTINA:[^\]]*\]/g, '')
+    .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
+    .trim();
+
+  return { actionData: null, cleanText };
+}
+

@@ -244,7 +244,7 @@ REGLAS DE COMUNICACIÓN Y FORMATO (INNEGOCIABLES):
    [ACCION_RUTINA: {"action": "eliminar_ejercicio", "clientName": "NombreAtleta", "routineName": "NombreRutina", "dayFocus": "Pierna", "exercisesToRemove": ["Peso Muerto Rumano", "Extensión de Cuádriceps"], "rationale": "Criterio clínico"}]
 
    e) CREAR UNA RUTINA COMPLETA DESDE CERO:
-   [ACCION_RUTINA: {"action": "crear_rutina", "clientName": "NombreAtleta", "routineName": "Nombre de la Nueva Rutina", "description": "Descripción breve", "weekCount": 4, "days": [{"dayNumber": 1, "focusArea": "Pierna y Empuje", "isRestDay": false, "exercises": [{"name": "Sentadilla", "sets": 4, "reps": "6-8", "muscleGroup": "quads", "restSeconds": 120}]}, {"dayNumber": 2, "focusArea": "Descanso", "isRestDay": true, "restDayNote": "Recuperación activa", "exercises": []}], "rationale": "Criterio clínico"}]
+   [ACCION_RUTINA: {"action": "crear_rutina", "clientName": "NombreAtleta", "previousRoutineName": "NombreDeRutinaActualSiExiste", "routineName": "Nombre de la Nueva Rutina", "description": "Descripción breve", "weekCount": 4, "days": [{"dayNumber": 1, "focusArea": "Pierna y Empuje", "isRestDay": false, "exercises": [{"name": "Sentadilla", "sets": 4, "reps": "6-8", "muscleGroup": "quads", "restSeconds": 120}]}, {"dayNumber": 2, "focusArea": "Descanso", "isRestDay": true, "restDayNote": "Recuperación activa", "exercises": []}], "rationale": "Criterio clínico"}]
 
    f) ELIMINAR / DESACTIVAR UNA RUTINA:
    [ACCION_RUTINA: {"action": "eliminar_rutina", "clientName": "NombreAtleta", "routineName": "NombreRutina", "rationale": "Criterio clínico"}]
@@ -662,34 +662,91 @@ ${clientsContextSummary}
       );
     }
 
+    let result: Record<string, any>;
+
     switch (action) {
       case 'sustituir_ejercicio':
-        return this.applyRoutineAdjustment(trainerId, {
+        result = await this.applyRoutineAdjustment(trainerId, {
           clientName,
           oldExercise: payload.currentExercise?.name || '',
           newExercise: payload.proposedExercise?.name || '',
           rationale: payload.rationale,
           routineName: payload.routineName,
         });
+        break;
 
       case 'reemplazar_dia':
-        return this.actionReplaceDayExercises(trainerId, athlete, payload);
+        result = await this.actionReplaceDayExercises(trainerId, athlete, payload);
+        break;
 
       case 'agregar_ejercicio':
-        return this.actionAddExercises(trainerId, athlete, payload);
+        result = await this.actionAddExercises(trainerId, athlete, payload);
+        break;
 
       case 'eliminar_ejercicio':
-        return this.actionRemoveExercises(trainerId, athlete, payload);
+        result = await this.actionRemoveExercises(trainerId, athlete, payload);
+        break;
 
       case 'crear_rutina':
-        return this.actionCreateRoutine(trainerId, athlete, payload);
+        result = await this.actionCreateRoutine(trainerId, athlete, payload);
+        break;
 
       case 'eliminar_rutina':
-        return this.actionDeleteRoutine(trainerId, athlete, payload);
+        result = await this.actionDeleteRoutine(trainerId, athlete, payload);
+        break;
 
       default:
         throw new Error(`Acción no reconocida: "${action}"`);
     }
+
+    // 2. Generate proactive intelligent clinical follow-up for the coach
+    let followUpMessage = '';
+    switch (action) {
+      case 'sustituir_ejercicio':
+        followUpMessage = `🩺 **Ajuste Clínico Aplicado:** Se sustituyó **"${payload.currentExercise?.name || result.oldExercise}"** por **"${payload.proposedExercise?.name || result.newExercise}"** en la rutina de **${athlete.name}**.\n\n💡 **Criterio Biomecánico:** ${payload.rationale || 'Ajuste para optimizar el perfil de resistencia y proteger las articulaciones.'}\n\n📌 **Siguiente paso:** Recomiendo monitorear las sensaciones articulares y el RIR en la próxima sesión. ¿Deseas revisar otro ejercicio o algún parámetro de su nutrición?`;
+        break;
+
+      case 'reemplazar_dia':
+        followUpMessage = `⚡ **Día Rediseñado con Éxito:** El Día ${payload.dayNumber || ''} (${result.dayFocus}) de **${athlete.name}** ha quedado actualizado con ${result.newExercises?.length || 0} nuevos ejercicios.\n\n🧠 **Estrategia Clínica:** ${payload.rationale || 'Renovación de estímulo biomecánico para evitar adaptaciones negativas.'}\n\n📌 **Siguiente paso:** Recomiendo una semana de progresión gradual en las cargas. ¿Avanzamos con otro día o con su plan de suplementación?`;
+        break;
+
+      case 'agregar_ejercicio':
+        followUpMessage = `➕ **Ejercicios Incorporados:** Se agregaron ${(result.addedExercises || []).join(', ')} al Día ${result.dayFocus} de **${athlete.name}**.\n\n💡 **Propósito:** ${payload.rationale || 'Complemento de volumen efectivo para grupos musculares rezagados.'}\n\n¿Quieres que revisemos la frecuencia semanal de este grupo muscular?`;
+        break;
+
+      case 'eliminar_ejercicio':
+        followUpMessage = `🗑️ **Ejercicios Retirados:** Se removieron ${(result.removedExercises || []).join(', ')} de la rutina de **${athlete.name}** para proteger su recuperación.\n\n🛡️ **Criterio:** ${payload.rationale || 'Descarga articular estratégica.'}\n\n¿Deseas programar una alternativa sin carga axial más adelante?`;
+        break;
+
+      case 'crear_rutina':
+        const prevText = result.previousRoutineName ? ` (reemplazando la rutina anterior "${result.previousRoutineName}")` : '';
+        followUpMessage = `✨ **Nueva Rutina Activada:** He configurado y asignado la rutina **"${result.routineName}"**${prevText} para **${athlete.name}** con ${result.daysCount} días de trabajo y ${result.exercisesCount} ejercicios.\n\n🧬 **Fundamento Clínico:** ${payload.rationale || 'Mesociclo optimizado para adaptación neuromuscular y protección articular.'}\n\n📌 **Siguiente paso del Director Clínico:** Dado que el volumen y la frecuencia cambiaron, es clave sincronizar las metas nutricionales de ${athlete.name}. ¿Deseas que calculemos el balance calórico y proteico ideal para acompañar este nuevo estímulo?`;
+        break;
+
+      case 'eliminar_rutina':
+        followUpMessage = `⚠️ **Rutina Desactivada:** La rutina **"${result.routineName}"** de **${athlete.name}** fue desactivada y resguardada de forma segura en su expediente.\n\n🎯 **Próximo paso:** El atleta no tiene rutina activa actualmente. ¿Deseas que le diseñe una nueva rutina desde cero? Solo dime cuántos días y el enfoque deseado.`;
+        break;
+    }
+
+    // 3. Persist confirmation in history so the chat log reflects the action and follow-up
+    if (followUpMessage) {
+      try {
+        await this.prisma.dietChatMessage.create({
+          data: {
+            userId: trainerId,
+            role: 'clinical_ai',
+            content: followUpMessage,
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`No se pudo guardar follow-up en chat: ${err}`);
+      }
+    }
+
+    return {
+      ...result,
+      followUpMessage,
+    };
   }
 
   // ── Helper: Find active routine for athlete ──
@@ -985,13 +1042,19 @@ ${clientsContextSummary}
       }>;
     }>;
 
-    // Deactivate any currently active routine
+    // 1. Detect current active routine before deactivating
+    const previousRoutine = await this.prisma.routine.findFirst({
+      where: { clientId: athlete.id, isActive: true },
+      select: { id: true, name: true },
+    });
+
+    // 2. Deactivate any currently active routine
     await this.prisma.routine.updateMany({
       where: { clientId: athlete.id, isActive: true },
       data: { isActive: false },
     });
 
-    // Create the full routine with nested days and exercises
+    // 3. Create the full routine with nested days and exercises
     const routine = await this.prisma.routine.create({
       data: {
         name: routineName,
@@ -1030,16 +1093,19 @@ ${clientsContextSummary}
       0,
     );
 
+    const prevName = previousRoutine?.name || payload.previousRoutineName || null;
+
     this.logger.log(
-      `✅ Rutina "${routineName}" creada para ${athlete.name}: ${routine.routineDays.length} días, ${totalExercises} ejercicios`,
+      `✅ Rutina "${routineName}" creada para ${athlete.name} (anterior: "${prevName || 'ninguna'}"): ${routine.routineDays.length} días, ${totalExercises} ejercicios`,
     );
 
     return {
       success: true,
       action: 'crear_rutina',
-      message: `¡Rutina "${routineName}" creada exitosamente para ${athlete.name}! Contiene ${routine.routineDays.length} días y ${totalExercises} ejercicios. La rutina anterior ha sido desactivada.`,
+      message: `¡Rutina "${routineName}" creada exitosamente para ${athlete.name}! Contiene ${routine.routineDays.length} días y ${totalExercises} ejercicios.`,
       clientName: athlete.name,
       routineName,
+      previousRoutineName: prevName,
       daysCount: routine.routineDays.length,
       exercisesCount: totalExercises,
     };

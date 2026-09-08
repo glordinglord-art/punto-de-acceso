@@ -17,9 +17,8 @@ import { cn } from '@/shared/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import {
   clinicalAgentService,
+  parseRoutineAction,
   type ChatMessage,
-  type RoutineProposal,
-  type RoutineAction,
 } from '../services/clinical-agent.service';
 import { ClinicalRoutineProposalCard } from './ClinicalRoutineProposalCard';
 
@@ -119,6 +118,21 @@ export function ClinicalAgentTerminal({
       toast.success('Memoria reiniciada');
     } catch {
       toast.error('Error al limpiar la conversación');
+    }
+  };
+
+  const handleActionApplied = (followUpMessage?: string) => {
+    if (followUpMessage) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-followup-${Date.now()}`,
+          role: 'ai',
+          content: followUpMessage,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setTimeout(scrollToBottom, 120);
     }
   };
 
@@ -224,67 +238,7 @@ export function ClinicalAgentTerminal({
 
                 {/* Message Bubble */}
                 {(() => {
-                  let actionData: RoutineAction | RoutineProposal | null = null;
-
-                  // 1. Try modern [ACCION_RUTINA: {...}]
-                  const actionMatch = msg.content.match(
-                    /\[ACCION_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
-                  );
-                  if (actionMatch) {
-                    try {
-                      actionData = JSON.parse(actionMatch[1]);
-                    } catch {
-                      // ignore parse errors
-                    }
-                  }
-
-                  // 2. Fallback to legacy [PROPUESTA_RUTINA: {...}]
-                  if (!actionData) {
-                    const proposalMatch = msg.content.match(
-                      /\[PROPUESTA_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
-                    );
-                    if (proposalMatch) {
-                      try {
-                        const parsed = JSON.parse(proposalMatch[1]);
-                        actionData = { ...parsed, action: 'sustituir_ejercicio' };
-                      } catch {
-                        // ignore parse errors
-                      }
-                    }
-                  }
-
-                  // 3. Fallback: Raw code block with action or proposal JSON
-                  if (!actionData) {
-                    const jsonBlocks = msg.content.matchAll(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi);
-                    for (const block of jsonBlocks) {
-                      try {
-                        const parsed = JSON.parse(block[1]);
-                        if (parsed.action && parsed.clientName) {
-                          actionData = parsed;
-                          break;
-                        }
-                        if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
-                          actionData = { ...parsed, action: 'sustituir_ejercicio' };
-                          break;
-                        }
-                      } catch {
-                        // ignore
-                      }
-                    }
-                  }
-
-                  let cleanText = msg.content
-                    .replace(/\[ACCION_RUTINA:[\s\S]*?\]/gi, '')
-                    .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/gi, '')
-                    .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, '')
-                    .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
-                    .trim();
-
-                  if (actionData) {
-                    cleanText = cleanText
-                      .replace(/```(?:json)?\s*\{[\s\S]*?"(?:clientName|action)"[\s\S]*?\}\s*```/gi, '')
-                      .trim();
-                  }
+                  const { actionData, cleanText } = parseRoutineAction(msg.content);
 
                   return (
                     <div
@@ -359,6 +313,7 @@ export function ClinicalAgentTerminal({
                             <ClinicalRoutineProposalCard
                               actionData={actionData}
                               trainerId={trainerId}
+                              onApplied={handleActionApplied}
                             />
                           )}
                         </>
