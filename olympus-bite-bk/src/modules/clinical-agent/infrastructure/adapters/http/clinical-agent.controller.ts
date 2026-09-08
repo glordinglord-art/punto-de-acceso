@@ -53,6 +53,22 @@ export class ClinicalAgentController {
     };
   }
 
+  @Post('execute-action/:trainerId')
+  @HttpCode(HttpStatus.OK)
+  async executeAction(
+    @Param('trainerId') trainerId: string,
+    @Body() dto: Record<string, any>,
+  ) {
+    const result = await this.agentService.executeRoutineAction(
+      trainerId,
+      dto,
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Get('history/:trainerId')
   async getHistory(@Param('trainerId') trainerId: string) {
     const history = await this.agentService.getChatHistory(trainerId);

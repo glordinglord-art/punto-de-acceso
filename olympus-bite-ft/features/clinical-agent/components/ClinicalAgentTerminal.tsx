@@ -19,6 +19,7 @@ import {
   clinicalAgentService,
   type ChatMessage,
   type RoutineProposal,
+  type RoutineAction,
 } from '../services/clinical-agent.service';
 import { ClinicalRoutineProposalCard } from './ClinicalRoutineProposalCard';
 
@@ -223,26 +224,47 @@ export function ClinicalAgentTerminal({
 
                 {/* Message Bubble */}
                 {(() => {
-                  let proposalData: RoutineProposal | null = null;
-                  const proposalMatch = msg.content.match(
-                    /\[PROPUESTA_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
+                  let actionData: RoutineAction | RoutineProposal | null = null;
+
+                  // 1. Try modern [ACCION_RUTINA: {...}]
+                  const actionMatch = msg.content.match(
+                    /\[ACCION_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
                   );
-                  if (proposalMatch) {
+                  if (actionMatch) {
                     try {
-                      proposalData = JSON.parse(proposalMatch[1]);
+                      actionData = JSON.parse(actionMatch[1]);
                     } catch {
                       // ignore parse errors
                     }
                   }
 
-                  // Fallback: Model output raw JSON block with proposal schema
-                  if (!proposalData) {
+                  // 2. Fallback to legacy [PROPUESTA_RUTINA: {...}]
+                  if (!actionData) {
+                    const proposalMatch = msg.content.match(
+                      /\[PROPUESTA_RUTINA:\s*(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]/i
+                    );
+                    if (proposalMatch) {
+                      try {
+                        const parsed = JSON.parse(proposalMatch[1]);
+                        actionData = { ...parsed, action: 'sustituir_ejercicio' };
+                      } catch {
+                        // ignore parse errors
+                      }
+                    }
+                  }
+
+                  // 3. Fallback: Raw code block with action or proposal JSON
+                  if (!actionData) {
                     const jsonBlocks = msg.content.matchAll(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi);
                     for (const block of jsonBlocks) {
                       try {
                         const parsed = JSON.parse(block[1]);
+                        if (parsed.action && parsed.clientName) {
+                          actionData = parsed;
+                          break;
+                        }
                         if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
-                          proposalData = parsed;
+                          actionData = { ...parsed, action: 'sustituir_ejercicio' };
                           break;
                         }
                       } catch {
@@ -252,14 +274,15 @@ export function ClinicalAgentTerminal({
                   }
 
                   let cleanText = msg.content
+                    .replace(/\[ACCION_RUTINA:[\s\S]*?\]/gi, '')
                     .replace(/\[PROPUESTA_RUTINA:[\s\S]*?\]/gi, '')
                     .replace(/\[COMANDO_RUTINA:[\s\S]*?\]/g, '')
                     .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
                     .trim();
 
-                  if (proposalData) {
+                  if (actionData) {
                     cleanText = cleanText
-                      .replace(/```(?:json)?\s*\{[\s\S]*?"clientName"[\s\S]*?"proposedExercise"[\s\S]*?\}\s*```/gi, '')
+                      .replace(/```(?:json)?\s*\{[\s\S]*?"(?:clientName|action)"[\s\S]*?\}\s*```/gi, '')
                       .trim();
                   }
 
@@ -331,10 +354,10 @@ export function ClinicalAgentTerminal({
                             </ReactMarkdown>
                           </div>
 
-                          {/* Interactive Clinical Routine Proposal Diff Card */}
-                          {proposalData && (
+                          {/* Interactive Clinical Routine Action Card */}
+                          {actionData && (
                             <ClinicalRoutineProposalCard
-                              proposal={proposalData}
+                              actionData={actionData}
                               trainerId={trainerId}
                             />
                           )}
