@@ -100,8 +100,10 @@ export default function OnboardingPage() {
   // Métricas nutricionales interactivas
   const [recommendedCalories, setRecommendedCalories] = useState<number>(2450);
   const [customCalories, setCustomCalories] = useState<number>(2450);
+  const [isCaloriesManuallyEdited, setIsCaloriesManuallyEdited] = useState<boolean>(false);
+  const [manualCalorieInput, setManualCalorieInput] = useState<string>("2450");
   const [macroPreset, setMacroPreset] = useState<
-    "balanceada" | "mediterranea" | "baja_grasas" | "baja_carbos" | "keto"
+    "balanceada" | "mediterranea" | "baja_grasas" | "baja_carbos" | "keto" | "personalizada"
   >("balanceada");
   const [macroPercentages, setMacroPercentages] = useState<{
     protein: number;
@@ -205,8 +207,11 @@ export default function OnboardingPage() {
     else if (purposes.includes("maintenance")) targetCal += 0;
 
     setRecommendedCalories(targetCal);
-    setCustomCalories(targetCal);
-  }, [weight, weightUnit, height, calculatedAge, gender, purposes, activityTypes]);
+    if (!isCaloriesManuallyEdited) {
+      setCustomCalories(targetCal);
+      setManualCalorieInput(String(targetCal));
+    }
+  }, [weight, weightUnit, height, calculatedAge, gender, purposes, activityTypes, isCaloriesManuallyEdited]);
 
   // Manejo de macro preset
   const handleSelectMacroPreset = (
@@ -2135,43 +2140,113 @@ export default function OnboardingPage() {
                   </p>
                 </div>
 
-                <div className="text-center my-auto py-6">
-                  <span className="text-xs font-mono uppercase text-zinc-500 font-semibold">
-                    Calorías recomendadas
+                <div className="text-center my-auto py-4">
+                  <span className="text-xs font-mono uppercase text-zinc-500 font-semibold tracking-wider">
+                    {isCaloriesManuallyEdited ? "Calorías (Ajuste manual activo)" : "Calorías recomendadas"}
                   </span>
 
                   {/* HERO STEPPER [-] 2874 kcal [+] */}
                   <div className="flex items-center justify-center gap-4 mt-3">
                     <button
+                      type="button"
                       onClick={() => {
-                        setCustomCalories((c) => Math.max(1200, c - 50));
-                        setShowCalorieWarningModal(true);
+                        setIsCaloriesManuallyEdited(true);
+                        setCustomCalories((c) => {
+                          const next = Math.max(1000, c - 50);
+                          setManualCalorieInput(String(next));
+                          return next;
+                        });
                       }}
-                      className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 active:scale-95"
+                      className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 hover:text-white active:scale-95 transition-all shadow-sm"
+                      aria-label="Disminuir 50 calorías"
                     >
                       <Minus className="w-5 h-5" />
                     </button>
 
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-6xl sm:text-7xl font-black text-blue-500 tracking-tight">
+                    <div
+                      onClick={() => {
+                        setManualCalorieInput(String(customCalories));
+                        setShowCalorieWarningModal(true);
+                      }}
+                      className="flex items-baseline gap-1.5 cursor-pointer group px-3 py-1 rounded-2xl hover:bg-zinc-900/60 transition-all border border-transparent hover:border-zinc-800"
+                      title="Clic para editar manualmente"
+                    >
+                      <span className="text-6xl sm:text-7xl font-black text-blue-500 tracking-tight group-hover:text-blue-400 transition-colors">
                         {customCalories}
                       </span>
                       <span className="text-2xl font-bold text-zinc-400">kcal</span>
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => {
-                        setCustomCalories((c) => Math.min(5000, c + 50));
-                        setShowCalorieWarningModal(true);
+                        setIsCaloriesManuallyEdited(true);
+                        setCustomCalories((c) => {
+                          const next = Math.min(6000, c + 50);
+                          setManualCalorieInput(String(next));
+                          return next;
+                        });
                       }}
-                      className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 active:scale-95"
+                      className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 hover:text-white active:scale-95 transition-all shadow-sm"
+                      aria-label="Aumentar 50 calorías"
                     >
                       <Plus className="w-5 h-5" />
                     </button>
                   </div>
 
+                  {/* BOTÓN Y ACCIONES DE AJUSTE MANUAL */}
+                  <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualCalorieInput(String(customCalories));
+                        setShowCalorieWarningModal(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-300 transition-all active:scale-95 shadow-sm"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Ajuste manual de calorías</span>
+                    </button>
+
+                    {isCaloriesManuallyEdited && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomCalories(recommendedCalories);
+                          setManualCalorieInput(String(recommendedCalories));
+                          setIsCaloriesManuallyEdited(false);
+                          toast.success(`Restablecido a recomendación: ${recommendedCalories} kcal`);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-zinc-400 bg-zinc-900 border border-zinc-800 hover:text-zinc-200 hover:border-zinc-700 transition-all active:scale-95"
+                      >
+                        <span>↺ Restablecer ({recommendedCalories})</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* CHIPS RÁPIDOS */}
+                  <div className="flex items-center justify-center gap-1.5 mt-3">
+                    {[-100, -50, +50, +100].map((delta) => (
+                      <button
+                        key={delta}
+                        type="button"
+                        onClick={() => {
+                          setIsCaloriesManuallyEdited(true);
+                          setCustomCalories((c) => {
+                            const next = Math.max(1000, Math.min(6000, c + delta));
+                            setManualCalorieInput(String(next));
+                            return next;
+                          });
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 active:scale-95 transition-all"
+                      >
+                        {delta > 0 ? `+${delta}` : delta}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* AVISO PEDAGÓGICO DE RIGOR Y ENTRENADOR */}
-                  <div className="max-w-sm mx-auto mt-8 p-4 rounded-2xl bg-zinc-900/70 border border-zinc-800 text-left">
+                  <div className="max-w-sm mx-auto mt-6 p-4 rounded-2xl bg-zinc-900/70 border border-zinc-800 text-left">
                     <p className="text-xs text-zinc-300 leading-relaxed">
                       La recomendación de calorías se calcula en base a tu información personal y
                       tiene en cuenta el enfoque metabólico y la evidencia científica.{" "}
@@ -2255,6 +2330,20 @@ export default function OnboardingPage() {
 
                 {/* PRESETS DE DISTRIBUCIÓN */}
                 <div className="flex flex-col gap-2 max-w-sm mx-auto w-full my-2">
+                  {macroPreset === "personalizada" && (
+                    <div className="p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between bg-blue-600/10 border-blue-500 ring-1 ring-blue-500/40">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-zinc-200">Personalizada</span>
+                        <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-extrabold uppercase tracking-wide">
+                          AJUSTE MANUAL
+                        </span>
+                      </div>
+                      <div className="w-5 h-5 rounded-full border border-blue-500 bg-blue-600 text-white flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    </div>
+                  )}
+
                   {[
                     { id: "balanceada", title: "Balanceada", badge: "RECOMENDADA" },
                     { id: "mediterranea", title: "Mediterránea", badge: null },
@@ -2811,26 +2900,104 @@ export default function OnboardingPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: ADVERTENCIA AJUSTE MANUAL DE CALORÍAS */}
+      {/* MODAL: AJUSTE MANUAL DE CALORÍAS (INTERACTIVO Y EDITABLE) */}
       {/* ========================================================================= */}
       {showCalorieWarningModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3">
-              <SlidersHorizontal className="w-6 h-6" />
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <SlidersHorizontal className="w-5 h-5" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCalorieWarningModal(false)}
+                className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <h3 className="text-base font-bold text-white mb-2">Ajuste manual de calorías</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed mb-6">
-              Al ajustar tus calorías manualmente, reemplazarás la recomendación personalizada de
-              Vital Fit. Recomendamos hacerlo solo si cuentas con una indicación específica de tu
-              entrenador o profesional de la salud.
+
+            <h3 className="text-base font-bold text-white mb-1">Ajuste manual de calorías</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+              Ingresa el objetivo calórico específico indicado por tu coach o ajústalo a tu medida.
             </p>
-            <button
-              onClick={() => setShowCalorieWarningModal(false)}
-              className="w-full py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors"
-            >
-              Entendido
-            </button>
+
+            {/* INPUT DIRECTO NUMÉRICO */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 mb-3 text-center">
+              <span className="text-[11px] font-mono uppercase text-zinc-500 font-semibold block mb-1">
+                Calorías diarias objetivo
+              </span>
+              <div className="flex items-center justify-center gap-2">
+                <input
+                  type="number"
+                  min={1000}
+                  max={6000}
+                  step={10}
+                  value={manualCalorieInput}
+                  onChange={(e) => setManualCalorieInput(e.target.value)}
+                  className="w-36 bg-transparent text-4xl font-black text-center text-blue-400 focus:outline-none border-b-2 border-blue-500/50 focus:border-blue-400 pb-1"
+                  autoFocus
+                />
+                <span className="text-xl font-bold text-zinc-400">kcal</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-2 font-mono">
+                Recomendación calculada: {recommendedCalories} kcal
+              </p>
+            </div>
+
+            {/* ATILLOS RÁPIDOS */}
+            <div className="grid grid-cols-4 gap-1.5 mb-4">
+              {[-200, -100, +100, +200].map((delta) => (
+                <button
+                  key={delta}
+                  type="button"
+                  onClick={() => {
+                    const current = parseInt(manualCalorieInput, 10) || customCalories;
+                    const next = Math.max(1000, Math.min(6000, current + delta));
+                    setManualCalorieInput(String(next));
+                  }}
+                  className="py-1.5 rounded-xl text-xs font-mono font-semibold bg-zinc-850 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-all active:scale-95 border border-zinc-800"
+                >
+                  {delta > 0 ? `+${delta}` : delta}
+                </button>
+              ))}
+            </div>
+
+            {/* BOTONES DE ACCIÓN */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const val = parseInt(manualCalorieInput, 10);
+                  if (isNaN(val) || val < 1000 || val > 6000) {
+                    toast.error("Por favor ingresa un valor entre 1.000 y 6.000 kcal");
+                    return;
+                  }
+                  setCustomCalories(val);
+                  setIsCaloriesManuallyEdited(true);
+                  setShowCalorieWarningModal(false);
+                  toast.success(`Calorías ajustadas a ${val} kcal`);
+                }}
+                className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-lg shadow-blue-600/20 active:scale-[0.99]"
+              >
+                Aplicar ajuste manual
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomCalories(recommendedCalories);
+                  setManualCalorieInput(String(recommendedCalories));
+                  setIsCaloriesManuallyEdited(false);
+                  setShowCalorieWarningModal(false);
+                  toast.success(`Restablecido a ${recommendedCalories} kcal`);
+                }}
+                className="w-full py-2.5 rounded-2xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-medium transition-colors"
+              >
+                Restablecer a recomendada ({recommendedCalories} kcal)
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3023,8 +3190,12 @@ export default function OnboardingPage() {
             </p>
 
             <button
-              onClick={() => setShowMacroModal(false)}
-              className="mt-6 w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors"
+              onClick={() => {
+                setMacroPreset("personalizada");
+                setShowMacroModal(false);
+                toast.success("Distribución personalizada guardada");
+              }}
+              className="mt-6 w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-lg shadow-blue-600/20 active:scale-[0.99]"
             >
               Confirmar distribución
             </button>
