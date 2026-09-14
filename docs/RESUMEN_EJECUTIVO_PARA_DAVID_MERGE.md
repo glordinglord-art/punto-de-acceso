@@ -26,6 +26,7 @@ Asimismo, este release garantiza:
 | **Diseño Pulso UI** | [`docs/PULSO_UI_DESIGN_SYSTEM.md`](./PULSO_UI_DESIGN_SYSTEM.md) | Especificación de las 27 micro-screens, tokens visuales, modales, transiciones y componentes interactivos. |
 | **Plan de Implementación** | [`docs/PLAN_IMPLEMENTACION_ONBOARDING_CLINICO.md`](./PLAN_IMPLEMENTACION_ONBOARDING_CLINICO.md) | Plan técnico completo de arquitectura hexagonal, DTOs, casos de uso y sincronización transaccional. |
 | **Walkthrough Técnico** | [`docs/WALKTHROUGH_PULSO_ONBOARDING.md`](./WALKTHROUGH_PULSO_ONBOARDING.md) | Bitácora de ejecución, pruebas de compilación y verificación de endpoints. |
+| **Innovación Food Scanner** | [`docs/INNOVACION_FOOD_SCANNER_PRECISION_Y_UX.md`](./INNOVACION_FOOD_SCANNER_PRECISION_Y_UX.md) | Fundamentación científica del 75% al 95% de precisión, carga dual (cámara/galería) y dashboard multimodal. |
 
 ---
 
