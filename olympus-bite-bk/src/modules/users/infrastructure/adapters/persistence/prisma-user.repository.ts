@@ -107,7 +107,10 @@ export class PrismaUserRepository implements UserRepositoryPort {
       }
     }
 
-    const orConditions: any[] = [{ trainerId: { in: Array.from(trainerIds) } }];
+    const orConditions: any[] = [
+      { trainerId: { in: Array.from(trainerIds) } },
+      { id: trainerId },
+    ];
     if (specificClientIds.size > 0) {
       orConditions.push({ id: { in: Array.from(specificClientIds) } });
     }

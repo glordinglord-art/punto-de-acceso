@@ -26,7 +26,7 @@ interface InvCode {
 }
 
 export default function ClientsPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { confirm } = useConfirm();
   const [clients, setClients] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +164,14 @@ export default function ClientsPage() {
             : c,
         ),
       );
+      if (user && clientId === user.id) {
+        updateUser({
+          ...user,
+          dietaryGoal: data.dietaryGoal !== undefined ? (data.dietaryGoal as User["dietaryGoal"]) : user.dietaryGoal,
+          targetCalories: data.targetCalories !== undefined ? data.targetCalories : user.targetCalories,
+        });
+      }
+      toast.success("Perfil actualizado correctamente");
     } catch (err) {
       alert(
         err instanceof Error
@@ -321,6 +329,11 @@ export default function ClientsPage() {
                           <h3 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
                             {client.name}
                           </h3>
+                          {client.id === user?.id && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-condensed font-bold uppercase tracking-wider">
+                              Tú (Entrenador)
+                            </span>
+                          )}
                           <Badge variant={client.isActive ? "success" : "danger"} className="text-[10px] px-2 py-0.5">
                             {client.isActive ? "ACTIVO" : "INACTIVO"}
                           </Badge>
@@ -566,7 +579,7 @@ export default function ClientsPage() {
         initialTab={selectedClientTab}
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
-        onDelete={async (clientId) => {
+        onDelete={selectedClient?.id === user?.id ? undefined : async (clientId) => {
           const ok = await confirm({
             title: '¿Eliminar cliente?',
             description: 'Se borrarán sus rutinas, comidas y datos permanentemente. Esta acción no se puede deshacer.',

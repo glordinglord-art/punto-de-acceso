@@ -22,7 +22,7 @@ export class InMemoryUserRepository implements UserRepositoryPort {
 
   async findByTrainerId(trainerId: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(
-      (u) => u.trainerId === trainerId,
+      (u) => u.trainerId === trainerId || u.id === trainerId,
     );
   }
 

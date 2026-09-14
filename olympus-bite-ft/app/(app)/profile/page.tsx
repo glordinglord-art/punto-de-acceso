@@ -12,7 +12,7 @@ import { Badge } from "@/shared/components/ui/Badge";
 import type { User } from "@/shared/types/common.types";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
 import type { FitnessGoal } from "@/features/meals/types/meals.types";
-import { UserCircle, KeyRound, LogOut, ArrowLeft, Save, Scale, Ruler, Dumbbell, ShieldAlert, Apple, Sparkles, Activity, Bell, BellRing, Clock, Send } from "lucide-react";
+import { UserCircle, KeyRound, LogOut, ArrowLeft, Save, Scale, Ruler, Dumbbell, ShieldAlert, Apple, Sparkles, Activity, Bell, BellRing, Clock, Send, Flame } from "lucide-react";
 import { notificationsService } from "@/features/notifications/services/notifications.service";
 import { isPushSupported, registerPushSubscription } from "@/features/notifications/lib/push";
 import type { NotificationConfig, NotificationPreferences } from "@/features/notifications/types/notifications.types";
@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const [editPhone, setEditPhone] = useState("");
   const [editWeight, setEditWeight] = useState("");
   const [editHeight, setEditHeight] = useState("");
+  const [editTargetCalories, setEditTargetCalories] = useState("");
   const [editDietaryGoal, setEditDietaryGoal] = useState("");
   const [editExperience, setEditExperience] = useState("");
   const [editEquipment, setEditEquipment] = useState("");
@@ -181,6 +182,7 @@ export default function ProfilePage() {
     setEditPhone(profile.phone ?? "");
     setEditWeight(profile.weight?.toString() ?? "");
     setEditHeight(profile.height?.toString() ?? "");
+    setEditTargetCalories(profile.targetCalories?.toString() ?? "");
     setEditDietaryGoal(profile.dietaryGoal ?? "");
     setEditExperience(profile.experienceLevel ?? "");
     setEditEquipment(profile.equipmentAccess ?? "");
@@ -206,6 +208,8 @@ export default function ProfilePage() {
           editWeight === "" ? ("" as unknown as number) : Number(editWeight),
         height:
           editHeight === "" ? ("" as unknown as number) : Number(editHeight),
+        targetCalories:
+          editTargetCalories === "" ? undefined : Number(editTargetCalories),
         dietaryGoal: editDietaryGoal,
         experienceLevel: editExperience,
         equipmentAccess: editEquipment,
@@ -219,6 +223,8 @@ export default function ProfilePage() {
         try {
           const parsed = JSON.parse(savedUser);
           parsed.name = res.data.name;
+          parsed.targetCalories = res.data.targetCalories;
+          parsed.dietaryGoal = res.data.dietaryGoal;
           localStorage.setItem("ob_user", JSON.stringify(parsed));
         } catch {
           /* ignore */
@@ -378,7 +384,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Input
                       label="Peso (kg)"
                       type="number"
@@ -393,6 +399,13 @@ export default function ProfilePage() {
                       placeholder="Ej: 175"
                       value={editHeight}
                       onChange={(e) => setEditHeight(e.target.value)}
+                    />
+                    <Input
+                      label="Calorías Meta (kcal)"
+                      type="number"
+                      placeholder="Ej: 2400"
+                      value={editTargetCalories}
+                      onChange={(e) => setEditTargetCalories(e.target.value)}
                     />
                   </div>
 
@@ -644,7 +657,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Fitness Profile Section */}
-          {(displayUser.weight != null || displayUser.height != null || displayUser.dietaryGoal || displayUser.experienceLevel) && (
+          {(displayUser.weight != null || displayUser.height != null || displayUser.dietaryGoal || displayUser.experienceLevel || displayUser.targetCalories != null) && (
             <Card>
               <div className="flex items-center gap-3 mb-6">
                 <Activity className="text-primary-500 w-5 h-5" />
@@ -689,6 +702,15 @@ export default function ProfilePage() {
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Objetivo</p>
                     <p className="text-sm font-bold text-slate-900 leading-tight dark:text-white">
                       {FITNESS_GOALS[displayUser.dietaryGoal as FitnessGoal]?.label || displayUser.dietaryGoal}
+                    </p>
+                  </div>
+                )}
+                {displayUser.targetCalories != null && (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
+                    <Flame className="w-5 h-5 text-red-500 mx-auto mb-2" />
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Calorías Meta</p>
+                    <p className="text-xl font-bold text-red-500 font-condensed dark:text-red-400">
+                      {displayUser.targetCalories} <span className="text-sm text-neutral-500 font-mono">kcal</span>
                     </p>
                   </div>
                 )}
