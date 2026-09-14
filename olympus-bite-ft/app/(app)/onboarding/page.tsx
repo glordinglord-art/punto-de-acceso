@@ -41,7 +41,24 @@ import {
   ClipboardList,
   Wand2,
   LogOut,
+  Calendar,
+  Globe,
 } from "lucide-react";
+
+const MONTHS_LIST = [
+  { value: 1, label: "ENE", full: "Enero" },
+  { value: 2, label: "FEB", full: "Febrero" },
+  { value: 3, label: "MAR", full: "Marzo" },
+  { value: 4, label: "ABR", full: "Abril" },
+  { value: 5, label: "MAY", full: "Mayo" },
+  { value: 6, label: "JUN", full: "Junio" },
+  { value: 7, label: "JUL", full: "Julio" },
+  { value: 8, label: "AGO", full: "Agosto" },
+  { value: 9, label: "SEP", full: "Septiembre" },
+  { value: 10, label: "OCT", full: "Octubre" },
+  { value: 11, label: "NOV", full: "Noviembre" },
+  { value: 12, label: "DIC", full: "Diciembre" },
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -146,6 +163,16 @@ export default function OnboardingPage() {
     return Math.max(14, Math.min(100, age));
   }, [birthYear, birthMonth, birthDay]);
 
+  const daysInSelectedMonth = useMemo(() => {
+    return new Date(birthYear, birthMonth, 0).getDate();
+  }, [birthYear, birthMonth]);
+
+  useEffect(() => {
+    if (birthDay > daysInSelectedMonth) {
+      setBirthDay(daysInSelectedMonth);
+    }
+  }, [daysInSelectedMonth, birthDay]);
+
   // Gramos calculados en tiempo real
   const calculatedMacros = useMemo(() => {
     const proteinKcal = (customCalories * macroPercentages.protein) / 100;
@@ -217,17 +244,32 @@ export default function OnboardingPage() {
     return { text: "Fase de volumen", color: "bg-rose-500/10 text-rose-400 border-rose-500/30" };
   }, [targetWeight, weight]);
 
-  // Lista de países más frecuentes
+  // Lista completa de países con código ISO para renderizado consistente de banderas reales en cualquier sistema operativo
   const countries = [
-    { name: "Argentina", flag: "🇦🇷" },
-    { name: "Chile", flag: "🇨🇱" },
-    { name: "Colombia", flag: "🇨🇴" },
-    { name: "Ecuador", flag: "🇪🇨" },
-    { name: "España", flag: "🇪🇸" },
-    { name: "Estados Unidos", flag: "🇺🇸" },
-    { name: "México", flag: "🇲🇽" },
-    { name: "Perú", flag: "🇵🇪" },
-    { name: "Uruguay", flag: "🇺🇾" },
+    { name: "Argentina", code: "ar" },
+    { name: "Bolivia", code: "bo" },
+    { name: "Brasil", code: "br" },
+    { name: "Canadá", code: "ca" },
+    { name: "Chile", code: "cl" },
+    { name: "Colombia", code: "co" },
+    { name: "Costa Rica", code: "cr" },
+    { name: "Cuba", code: "cu" },
+    { name: "Ecuador", code: "ec" },
+    { name: "El Salvador", code: "sv" },
+    { name: "España", code: "es" },
+    { name: "Estados Unidos", code: "us" },
+    { name: "Guatemala", code: "gt" },
+    { name: "Honduras", code: "hn" },
+    { name: "México", code: "mx" },
+    { name: "Nicaragua", code: "ni" },
+    { name: "Panamá", code: "pa" },
+    { name: "Paraguay", code: "py" },
+    { name: "Perú", code: "pe" },
+    { name: "Puerto Rico", code: "pr" },
+    { name: "República Dominicana", code: "do" },
+    { name: "Uruguay", code: "uy" },
+    { name: "Venezuela", code: "ve" },
+    { name: "Otro / Internacional", code: "un" },
   ];
 
   const filteredCountries = countries.filter((c) =>
@@ -634,87 +676,205 @@ export default function OnboardingPage() {
                     Indica tu fecha de nacimiento
                   </h1>
                   <p className="text-sm text-zinc-400">
-                    Tu edad influye en tu metabolismo y en tus necesidades nutricionales
+                    Tu edad influye en tu metabolismo basal y requerimientos nutricionales
                   </p>
                 </div>
 
-                {/* SELECTOR DRUM / WHEEL PICKER VISUAL */}
-                <div className="relative py-6 max-w-sm mx-auto w-full flex items-center justify-center gap-3">
-                  {/* Banda de selección horizontal activa */}
-                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-14 bg-zinc-800/80 rounded-2xl pointer-events-none border border-zinc-700/60" />
-
-                  {/* DÍA */}
-                  <div className="flex-1 flex flex-col items-center z-10">
-                    <span className="text-xs font-mono uppercase text-zinc-500 mb-2 font-semibold">
-                      Día
-                    </span>
-                    <select
-                      value={birthDay}
-                      onChange={(e) => setBirthDay(parseInt(e.target.value, 10))}
-                      className="bg-transparent text-2xl font-black text-center text-white py-2 focus:outline-none cursor-pointer w-full"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                        <option key={d} value={d} className="bg-zinc-900 text-white">
-                          {d < 10 ? `0${d}` : d}
-                        </option>
-                      ))}
-                    </select>
+                <div className="my-auto max-w-sm mx-auto w-full space-y-4">
+                  {/* Hero card de fecha seleccionada */}
+                  <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-zinc-800/80 rounded-2xl p-4 text-center shadow-lg shadow-black/20">
+                    <div className="flex items-center justify-center gap-1.5 text-zinc-400 mb-1">
+                      <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Fecha Seleccionada
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-white capitalize">
+                      {birthDay} de {MONTHS_LIST[birthMonth - 1]?.full || "Mes"}, {birthYear}
+                    </p>
+                    <div className="mt-2.5 flex items-center justify-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold font-mono">
+                        <Flame className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                        {calculatedAge} años cumplidos
+                      </span>
+                    </div>
+                    {/* Insight metabólico */}
+                    <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-zinc-900/70 border border-zinc-800/60 text-[11px] text-zinc-400">
+                      {calculatedAge < 25 && "⚡ Tasa metabólica alta • Alta síntesis proteica y rápida recuperación"}
+                      {calculatedAge >= 25 && calculatedAge < 35 && "🔥 Pico de rendimiento biológico • Tasa metabólica basal óptima"}
+                      {calculatedAge >= 35 && calculatedAge < 50 && "💪 Eficiencia metabólica • Prioridad en balance hormonal y masa magra"}
+                      {calculatedAge >= 50 && "🛡️ Longevidad y salud articular • Preservación muscular activa"}
+                    </div>
                   </div>
 
-                  {/* MES */}
-                  <div className="flex-[1.4] flex flex-col items-center z-10">
-                    <span className="text-xs font-mono uppercase text-zinc-500 mb-2 font-semibold">
-                      Mes
-                    </span>
-                    <select
-                      value={birthMonth}
-                      onChange={(e) => setBirthMonth(parseInt(e.target.value, 10))}
-                      className="bg-transparent text-2xl font-black text-center text-white py-2 focus:outline-none cursor-pointer w-full"
-                    >
-                      {[
-                        "Ene",
-                        "Feb",
-                        "Mar",
-                        "Abr",
-                        "May",
-                        "Jun",
-                        "Jul",
-                        "Ago",
-                        "Sep",
-                        "Oct",
-                        "Nov",
-                        "Dic",
-                      ].map((m, idx) => (
-                        <option key={m} value={idx + 1} className="bg-zinc-900 text-white">
-                          {m}
-                        </option>
-                      ))}
-                    </select>
+                  {/* 3 TARJETAS INTERACTIVAS (DÍA, MES, AÑO) */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {/* DÍA */}
+                    <div className="relative bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700/90 rounded-2xl p-2.5 flex flex-col items-center justify-between text-center transition-all group shadow-sm">
+                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider">
+                        Día
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthDay((d) => (d >= daysInSelectedMonth ? 1 : d + 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Incrementar día"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <div className="relative py-0.5 w-full text-center">
+                        <span className="text-3xl font-black text-white tracking-tight">
+                          {birthDay < 10 ? `0${birthDay}` : birthDay}
+                        </span>
+                        {/* Selector nativo invisible para toque directo */}
+                        <select
+                          value={birthDay}
+                          onChange={(e) => setBirthDay(parseInt(e.target.value, 10))}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        >
+                          {Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={d} className="bg-zinc-900 text-white">
+                              {d < 10 ? `0${d}` : d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthDay((d) => (d <= 1 ? daysInSelectedMonth : d - 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Decrementar día"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* MES */}
+                    <div className="relative bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700/90 rounded-2xl p-2.5 flex flex-col items-center justify-between text-center transition-all group shadow-sm">
+                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider">
+                        Mes
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthMonth((m) => (m >= 12 ? 1 : m + 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Incrementar mes"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <div className="relative py-0.5 w-full text-center">
+                        <span className="text-2xl font-black text-blue-400 tracking-tight block">
+                          {MONTHS_LIST[birthMonth - 1]?.label || "ENE"}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-medium block -mt-0.5">
+                          {MONTHS_LIST[birthMonth - 1]?.full || "Enero"}
+                        </span>
+                        {/* Selector nativo invisible para toque directo */}
+                        <select
+                          value={birthMonth}
+                          onChange={(e) => setBirthMonth(parseInt(e.target.value, 10))}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        >
+                          {MONTHS_LIST.map((m) => (
+                            <option key={m.value} value={m.value} className="bg-zinc-900 text-white">
+                              {m.full}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthMonth((m) => (m <= 1 ? 12 : m - 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Decrementar mes"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* AÑO */}
+                    <div className="relative bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700/90 rounded-2xl p-2.5 flex flex-col items-center justify-between text-center transition-all group shadow-sm">
+                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold tracking-wider">
+                        Año
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthYear((y) => Math.min(new Date().getFullYear() - 14, y + 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Incrementar año"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <div className="relative py-0.5 w-full text-center">
+                        <span className="text-2xl font-black text-white tracking-tight">
+                          {birthYear}
+                        </span>
+                        {/* Selector nativo invisible para toque directo */}
+                        <select
+                          value={birthYear}
+                          onChange={(e) => setBirthYear(parseInt(e.target.value, 10))}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        >
+                          {Array.from({ length: 70 }, (_, i) => new Date().getFullYear() - 14 - i).map((y) => (
+                            <option key={y} value={y} className="bg-zinc-900 text-white">
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBirthYear((y) => Math.max(1930, y - 1));
+                        }}
+                        className="w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 hover:text-white transition-colors active:scale-90 my-1"
+                        aria-label="Decrementar año"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* AÑO */}
-                  <div className="flex-[1.2] flex flex-col items-center z-10">
-                    <span className="text-xs font-mono uppercase text-zinc-500 mb-2 font-semibold">
-                      Año
-                    </span>
-                    <select
-                      value={birthYear}
-                      onChange={(e) => setBirthYear(parseInt(e.target.value, 10))}
-                      className="bg-transparent text-2xl font-black text-center text-white py-2 focus:outline-none cursor-pointer w-full"
-                    >
-                      {Array.from({ length: 70 }, (_, i) => 2012 - i).map((y) => (
-                        <option key={y} value={y} className="bg-zinc-900 text-white">
-                          {y}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Acceso rápido a décadas */}
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[11px] text-zinc-500 font-mono mr-1">Década:</span>
+                    {[
+                      { label: "70s", year: 1975 },
+                      { label: "80s", year: 1985 },
+                      { label: "90s", year: 1995 },
+                      { label: "00s", year: 2002 },
+                      { label: "10s", year: 2008 },
+                    ].map((d) => (
+                      <button
+                        key={d.label}
+                        type="button"
+                        onClick={() => setBirthYear(d.year)}
+                        className={`px-2.5 py-0.5 rounded-lg text-xs font-mono transition-all ${
+                          birthYear >= d.year - 5 && birthYear <= d.year + 5
+                            ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                            : "bg-zinc-900/60 text-zinc-400 border border-zinc-800 hover:border-zinc-700 hover:text-zinc-200"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
                   </div>
-                </div>
-
-                <div className="text-center">
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-sm font-bold">
-                    {calculatedAge} años cumplidos
-                  </span>
                 </div>
 
                 <div className="mt-auto pt-8">
@@ -1669,41 +1829,70 @@ export default function OnboardingPage() {
                       value={countrySearch}
                       onChange={(e) => setCountrySearch(e.target.value)}
                       placeholder="Buscar país..."
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-blue-500"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-blue-500 transition-colors"
                     />
+                    {countrySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCountrySearch("")}
+                        className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300"
+                        aria-label="Limpiar búsqueda"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 max-w-sm mx-auto w-full my-auto overflow-y-auto max-h-60 pr-1">
-                  {filteredCountries.map((c) => {
-                    const isSelected = country === c.name;
-                    return (
-                      <div
-                        key={c.name}
-                        onClick={() => {
-                          setCountry(c.name);
-                          setTimeout(nextStep, 150);
-                        }}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between active:scale-[0.99] ${
-                          isSelected
-                            ? "bg-blue-600/10 border-blue-500 ring-1 ring-blue-500/40"
-                            : "bg-zinc-900/60 border-zinc-800 hover:border-zinc-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{c.flag}</span>
-                          <span className="text-sm font-semibold text-zinc-200">{c.name}</span>
-                        </div>
+                <div className="flex flex-col gap-2 max-w-sm mx-auto w-full my-auto overflow-y-auto max-h-[340px] pr-1">
+                  {filteredCountries.length === 0 ? (
+                    <div className="text-center py-8 text-zinc-500 text-sm">
+                      No encontramos coincidencias para &quot;{countrySearch}&quot;. Puedes seleccionar &quot;Otro / Internacional&quot;.
+                    </div>
+                  ) : (
+                    filteredCountries.map((c) => {
+                      const isSelected = country === c.name;
+                      return (
                         <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                            isSelected ? "border-blue-500 bg-blue-600 text-white" : "border-zinc-700"
+                          key={c.name}
+                          onClick={() => {
+                            setCountry(c.name);
+                            setTimeout(nextStep, 180);
+                          }}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between active:scale-[0.99] ${
+                            isSelected
+                              ? "bg-blue-600/10 border-blue-500 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/10"
+                              : "bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90"
                           }`}
                         >
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-5 rounded overflow-hidden shadow-sm border border-zinc-700/60 bg-zinc-800 flex items-center justify-center shrink-0">
+                              {c.code === "un" ? (
+                                <Globe className="w-3.5 h-3.5 text-blue-400" />
+                              ) : (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={`https://flagcdn.com/w80/${c.code}.png`}
+                                  srcSet={`https://flagcdn.com/w160/${c.code}.png 2x`}
+                                  alt={c.name}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              )}
+                            </div>
+                            <span className="text-sm font-semibold text-zinc-200">{c.name}</span>
+                          </div>
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                              isSelected ? "border-blue-500 bg-blue-600 text-white" : "border-zinc-700"
+                            }`}
+                          >
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="mt-auto pt-6">
