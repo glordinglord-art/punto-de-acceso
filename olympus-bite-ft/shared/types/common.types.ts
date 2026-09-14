@@ -19,6 +19,13 @@ export interface User {
   weight?: number | null;
   height?: number | null;
   targetCalories?: number | null;
+  targetProtein?: number | null;
+  targetCarbs?: number | null;
+  targetFats?: number | null;
+  weightUnitPreference?: string | null;
+  gender?: string | null;
+  age?: number | null;
+  anamnesisData?: any;
   onboardingCompleted?: boolean;
 
   experienceLevel?: string | null;

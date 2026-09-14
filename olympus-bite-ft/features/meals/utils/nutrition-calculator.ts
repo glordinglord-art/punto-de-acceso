@@ -20,6 +20,9 @@ export function calculateNutritionTargets(user?: {
   height?: number | null;
   dietaryGoal?: string | null;
   targetCalories?: number | null;
+  targetProtein?: number | null;
+  targetCarbs?: number | null;
+  targetFats?: number | null;
 } | null): MacroTarget {
   const weight = user?.weight && user.weight > 30 ? user.weight : 75;
   const height = user?.height && user.height > 100 ? user.height : 175;
@@ -61,6 +64,17 @@ export function calculateNutritionTargets(user?: {
     protein = Math.round(weight * 2.0); // 2.0g/kg
     fat = Math.round(weight * 1.0);     // 1.0g/kg
     carbs = Math.max(Math.round((calories - (protein * 4 + fat * 9)) / 4), 100);
+  }
+
+  // Si el usuario ya tiene macros prescritos por la Anamnesis / IA, respetarlos
+  if (user?.targetProtein && user.targetProtein > 20) {
+    protein = Math.round(user.targetProtein);
+  }
+  if (user?.targetCarbs && user.targetCarbs > 20) {
+    carbs = Math.round(user.targetCarbs);
+  }
+  if (user?.targetFats && user.targetFats > 10) {
+    fat = Math.round(user.targetFats);
   }
 
   // Water recommendation: ~35ml per kg of bodyweight

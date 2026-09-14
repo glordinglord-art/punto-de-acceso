@@ -110,6 +110,13 @@ model User {
   weight              Float?
   height              Float?
   targetCalories      Int?     @map("target_calories")
+  targetProtein       Float?   @map("target_protein")
+  targetCarbs         Float?   @map("target_carbs")
+  targetFats          Float?   @map("target_fats")
+  weightUnitPreference String  @default("kg") @map("weight_unit_preference")
+  gender              String?  @map("gender")
+  age                 Int?     @map("age")
+  anamnesisData       Json?    @map("anamnesis_data")
   onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
 
   // Perfil Avanzado (Onboarding Extendido)

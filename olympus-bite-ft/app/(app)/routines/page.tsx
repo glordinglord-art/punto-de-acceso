@@ -22,12 +22,63 @@ import type {
 } from "@/features/routines/types/routines.types";
 import type { User } from "@/shared/types/common.types";
 import { cn } from "@/shared/lib/utils";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine";
 type OverviewTab = "calendar" | "cards" | "templates";
 
 import { useRouter } from 'next/navigation';
+
+function DeleteRoutineModal({
+  routine,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  routine: Routine | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading: boolean;
+}) {
+  if (!routine) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-md rounded-[24px] border border-white/12 bg-slate-950 p-6 shadow-2xl">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/30">
+          <Trash2 className="w-7 h-7" />
+        </div>
+        <h3 className="text-lg font-bold text-white">
+          ¿Eliminar rutina?
+        </h3>
+        <p className="mt-2 text-sm text-slate-400">
+          Se eliminará permanentemente la rutina{" "}
+          <strong className="text-white">&quot;{routine.name}&quot;</strong> con
+          todos sus días y ejercicios asignados. Esta acción no se puede deshacer.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            loading={loading}
+            onClick={onConfirm}
+          >
+            Sí, eliminar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function RoutinesPage() {
   const { activeMode } = useAuth();
@@ -57,7 +108,7 @@ function TrainerRoutinesPage() {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [overviewTab, setOverviewTab] = useState<OverviewTab>("calendar");
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [routineToDelete, setRoutineToDelete] = useState<Routine | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showGlobalTemplates, setShowGlobalTemplates] = useState(false);
   const [preselectedPreset, setPreselectedPreset] = useState<RoutinePreset | null>(null);
@@ -138,16 +189,36 @@ function TrainerRoutinesPage() {
   };
 
   const handleDeleteRoutine = async () => {
-    if (!selectedRoutine) return;
+    if (!routineToDelete) return;
     setDeleting(true);
     try {
-      await routinesService.remove(selectedRoutine.id);
-      await loadData();
-      setShowDeleteModal(false);
-      setView("overview");
-      setSelectedRoutine(null);
+      await routinesService.remove(routineToDelete.id);
+      setRoutines((prev) => prev.filter((r) => r.id !== routineToDelete.id));
+      toast.success(`Rutina "${routineToDelete.name}" eliminada correctamente`, {
+        style: {
+          borderRadius: "16px",
+          background: "#0c0e17",
+          color: "#fff",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+        },
+      });
+      if (selectedRoutine?.id === routineToDelete.id) {
+        setSelectedRoutine(null);
+        setView("overview");
+      }
+      setRoutineToDelete(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error eliminando rutina");
+      toast.error(
+        err instanceof Error ? err.message : "Error al eliminar la rutina",
+        {
+          style: {
+            borderRadius: "16px",
+            background: "#0c0e17",
+            color: "#fff",
+            border: "1px solid rgba(244, 63, 94, 0.3)",
+          },
+        },
+      );
     } finally {
       setDeleting(false);
     }
@@ -355,7 +426,7 @@ function TrainerRoutinesPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {routines.map((routine) => (
               <div key={routine.id} className="relative">
-                <div className="absolute -right-2 -top-2 z-10">
+                <div className="absolute -right-2 -top-2 z-10 pointer-events-none">
                   <span className="inline-block rounded-full border border-white/8 bg-slate-900 px-2 py-0.5 text-xs font-semibold text-slate-300 shadow-md">
                     {getClientName(routine.clientId)}
                   </span>
@@ -363,6 +434,7 @@ function TrainerRoutinesPage() {
                 <RoutineCard
                   routine={routine}
                   onClick={() => handleRoutineClick(routine)}
+                  onDelete={() => setRoutineToDelete(routine)}
                 />
               </div>
             ))}
@@ -377,6 +449,13 @@ function TrainerRoutinesPage() {
             setShowGlobalTemplates(false);
             setView("create");
           }}
+        />
+
+        <DeleteRoutineModal
+          routine={routineToDelete}
+          onClose={() => setRoutineToDelete(null)}
+          onConfirm={handleDeleteRoutine}
+          loading={deleting}
         />
       </>
     );
@@ -538,7 +617,7 @@ function TrainerRoutinesPage() {
           <Button
             size="sm"
             variant="danger"
-            onClick={() => setShowDeleteModal(true)}
+            onClick={() => setRoutineToDelete(selectedRoutine)}
           >
             🗑️ Eliminar
           </Button>
@@ -586,42 +665,12 @@ function TrainerRoutinesPage() {
           })}
         </div>
 
-        {/* Delete confirmation modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-[24px] border border-white/12 bg-slate-950 p-6 shadow-2xl">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20 text-rose-500">
-                <span className="text-2xl">⚠️</span>
-              </div>
-              <h3 className="text-lg font-semibold text-white">
-                ¿Eliminar rutina?
-              </h3>
-              <p className="mt-2 text-sm text-slate-400">
-                Se eliminará <strong>&quot;{selectedRoutine.name}&quot;</strong>{" "}
-                con todos sus días y ejercicios. Esta acción no se puede
-                deshacer.
-              </p>
-              <div className="mt-6 flex justify-end gap-3">
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => setShowDeleteModal(false)}
-                  disabled={deleting}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="danger"
-                  size="md"
-                  loading={deleting}
-                  onClick={handleDeleteRoutine}
-                >
-                  Sí, eliminar
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <DeleteRoutineModal
+          routine={routineToDelete}
+          onClose={() => setRoutineToDelete(null)}
+          onConfirm={handleDeleteRoutine}
+          loading={deleting}
+        />
       </>
     );
   }

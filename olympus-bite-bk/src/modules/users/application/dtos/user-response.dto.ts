@@ -9,6 +9,13 @@ export class UserResponseDto {
   phone: string | null;
   dietaryGoal: string | null;
   targetCalories: number | null;
+  targetProtein: number | null;
+  targetCarbs: number | null;
+  targetFats: number | null;
+  weightUnitPreference: string;
+  gender: string | null;
+  age: number | null;
+  anamnesisData: any;
   weight: number | null;
   height: number | null;
   onboardingCompleted: boolean;
@@ -38,6 +45,13 @@ export class UserResponseDto {
     dto.branchId = user.branchId;
     dto.dietaryGoal = user.dietaryGoal;
     dto.targetCalories = user.targetCalories;
+    dto.targetProtein = user.targetProtein;
+    dto.targetCarbs = user.targetCarbs;
+    dto.targetFats = user.targetFats;
+    dto.weightUnitPreference = user.weightUnitPreference;
+    dto.gender = user.gender;
+    dto.age = user.age;
+    dto.anamnesisData = user.anamnesisData;
     dto.weight = user.weight;
     dto.height = user.height;
     dto.onboardingCompleted = user.onboardingCompleted;
