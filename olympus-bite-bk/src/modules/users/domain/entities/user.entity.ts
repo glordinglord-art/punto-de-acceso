@@ -15,6 +15,13 @@ export interface CreateUserProps {
   weight?: number;
   height?: number;
   targetCalories?: number;
+  targetProtein?: number;
+  targetCarbs?: number;
+  targetFats?: number;
+  weightUnitPreference?: string;
+  gender?: string;
+  age?: number;
+  anamnesisData?: any;
   onboardingCompleted?: boolean;
 
   // Advanced Profile
@@ -38,6 +45,13 @@ export class User extends BaseEntity {
   weight: number | null;
   height: number | null;
   targetCalories: number | null;
+  targetProtein: number | null;
+  targetCarbs: number | null;
+  targetFats: number | null;
+  weightUnitPreference: string;
+  gender: string | null;
+  age: number | null;
+  anamnesisData: any;
   onboardingCompleted: boolean;
 
   // Advanced Profile
@@ -65,6 +79,13 @@ export class User extends BaseEntity {
     this.weight = props.weight ?? null;
     this.height = props.height ?? null;
     this.targetCalories = props.targetCalories ?? null;
+    this.targetProtein = props.targetProtein ?? null;
+    this.targetCarbs = props.targetCarbs ?? null;
+    this.targetFats = props.targetFats ?? null;
+    this.weightUnitPreference = props.weightUnitPreference ?? 'kg';
+    this.gender = props.gender ?? null;
+    this.age = props.age ?? null;
+    this.anamnesisData = props.anamnesisData ?? null;
     this.onboardingCompleted = props.onboardingCompleted ?? false;
 
     this.experienceLevel = props.experienceLevel ?? null;
@@ -139,6 +160,13 @@ export class User extends BaseEntity {
     height: number;
     dietaryGoal: string;
     targetCalories?: number;
+    targetProtein?: number;
+    targetCarbs?: number;
+    targetFats?: number;
+    weightUnitPreference?: string;
+    gender?: string;
+    age?: number;
+    anamnesisData?: any;
     experienceLevel?: string;
     equipmentAccess?: string;
     medicalConditions?: string;
@@ -149,6 +177,20 @@ export class User extends BaseEntity {
     this.dietaryGoal = data.dietaryGoal;
     if (data.targetCalories !== undefined)
       this.targetCalories = data.targetCalories;
+    if (data.targetProtein !== undefined)
+      this.targetProtein = data.targetProtein;
+    if (data.targetCarbs !== undefined)
+      this.targetCarbs = data.targetCarbs;
+    if (data.targetFats !== undefined)
+      this.targetFats = data.targetFats;
+    if (data.weightUnitPreference !== undefined)
+      this.weightUnitPreference = data.weightUnitPreference;
+    if (data.gender !== undefined)
+      this.gender = data.gender;
+    if (data.age !== undefined)
+      this.age = data.age;
+    if (data.anamnesisData !== undefined)
+      this.anamnesisData = data.anamnesisData;
 
     if (data.experienceLevel !== undefined)
       this.experienceLevel = data.experienceLevel;

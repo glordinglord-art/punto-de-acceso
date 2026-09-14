@@ -27,6 +27,8 @@ import {
   CompleteOnboardingUseCase,
   CompleteOnboardingDto,
 } from '../../../application/use-cases/complete-onboarding.use-case';
+import { ProcessOnboardingUseCase } from '../../../application/use-cases/process-onboarding.use-case';
+import { OnboardingSubmissionDto } from '../../../application/dtos/onboarding-submission.dto';
 import {
   USER_REPOSITORY,
   UserRepositoryPort,
@@ -41,6 +43,7 @@ export class UsersController {
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly completeOnboardingUseCase: CompleteOnboardingUseCase,
+    private readonly processOnboardingUseCase: ProcessOnboardingUseCase,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: UserRepositoryPort,
   ) {}
@@ -89,6 +92,16 @@ export class UsersController {
   ) {
     const user = await this.completeOnboardingUseCase.execute(id, dto);
     return { success: true, data: UserResponseDto.fromEntity(user) };
+  }
+
+  @Post(':id/onboarding')
+  @HttpCode(HttpStatus.OK)
+  async submitOnboarding(
+    @Param('id') id: string,
+    @Body() dto: OnboardingSubmissionDto,
+  ) {
+    const result = await this.processOnboardingUseCase.execute(id, dto);
+    return { success: true, data: result };
   }
 
   @Patch('trainer/:trainerId/link-client')

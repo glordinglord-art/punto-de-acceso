@@ -16,6 +16,7 @@ interface AuthState {
   availableModes: ('client' | 'trainer' | 'superadmin')[];
   login: (data: AuthResponse) => void;
   logout: () => void;
+  updateUser: (updatedData: Partial<AuthResponse['user']>) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -81,6 +82,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/';
   };
 
+  const updateUser = (updatedData: Partial<AuthResponse['user']>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, ...updatedData };
+      localStorage.setItem('ob_user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const setActiveMode = (mode: 'client' | 'trainer' | 'superadmin', redirect = true) => {
     setActiveModeState(mode);
     localStorage.setItem('ob_mode', mode);
@@ -119,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         availableModes,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

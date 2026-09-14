@@ -1,12 +1,13 @@
 "use client";
 
 import type { Routine, RoutineDay } from "../types/routines.types";
-import { ChevronRight, Dumbbell, Calendar } from "lucide-react";
+import { ChevronRight, Dumbbell, Calendar, Trash2 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface RoutineCardProps {
   routine: Routine;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
 function DayPreview({ day }: { day: RoutineDay }) {
@@ -40,7 +41,7 @@ function DayPreview({ day }: { day: RoutineDay }) {
   );
 }
 
-export function RoutineCard({ routine, onClick }: RoutineCardProps) {
+export function RoutineCard({ routine, onClick, onDelete }: RoutineCardProps) {
   const trainingDays = routine.days.filter((d) => !d.isRestDay);
 
   return (
@@ -67,16 +68,32 @@ export function RoutineCard({ routine, onClick }: RoutineCardProps) {
               </span>
             </div>
           </div>
-          <span
-            className={cn(
-              "px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 border",
-              routine.isActive
-                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                : "bg-white/5 text-slate-400 border-white/10",
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={cn(
+                "px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 border",
+                routine.isActive
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  : "bg-white/5 text-slate-400 border-white/10",
+              )}
+            >
+              {routine.isActive ? "● Activa" : "Inactiva"}
+            </span>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-all cursor-pointer"
+                title="Eliminar rutina"
+                aria-label="Eliminar rutina"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
-          >
-            {routine.isActive ? "● Activa" : "Inactiva"}
-          </span>
+          </div>
         </div>
 
         {routine.description && (
@@ -101,7 +118,23 @@ export function RoutineCard({ routine, onClick }: RoutineCardProps) {
       {/* Footer action */}
       <div className="mt-4 pt-3 border-t border-white/6 flex items-center justify-between text-xs font-black uppercase tracking-wider text-primary-400 group-hover:text-primary-300">
         <span>Gestionar Rutina</span>
-        <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+        <div className="flex items-center gap-2">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="px-2.5 py-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-all flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+              title="Eliminar rutina"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Eliminar</span>
+            </button>
+          )}
+          <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,11 @@
 
 ---
 
+> 🚀 **Nuevo en esta rama (`feature/dani-mejoras`):** Flujo integral de Onboarding y Anamnesis Deportiva estilo **Pulso / Fitia** con 27 micro-pantallas interactivas, modales de precisión, Hard Gatekeeper y prescripción nutricional híbrida (Mifflin-St Jeor + Gemini 2.5 Flash).
+> 📖 **Guía para David:** Consulta el [Resumen Ejecutivo y Guía de Merge](docs/RESUMEN_EJECUTIVO_PARA_DAVID_MERGE.md), el [Sistema de Diseño Pulso UI](docs/PULSO_UI_DESIGN_SYSTEM.md) y el [Walkthrough Técnico](docs/WALKTHROUGH_PULSO_ONBOARDING.md).
+
+---
+
 ## 📑 Tabla de Contenidos
 
 1. [¿Qué es Punto de Inflexión?](#-qué-es-punto-de-inflexión)

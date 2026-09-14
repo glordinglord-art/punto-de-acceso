@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSettings } from "@/shared/contexts/SettingsContext";
 import { Sidebar } from "@/shared/components/layout/Sidebar";
 import { MobileNav } from "@/shared/components/layout/MobileNav";
-import { OnboardingSurveyModal } from "@/features/clients/components/OnboardingSurveyModal";
 import { SettingsTrigger } from "@/shared/components/ui/SettingsTrigger";
 import { GlobalAiAssistant } from "@/shared/components/ui/GlobalAiAssistant";
 import { NotificationPrompt } from "@/features/notifications/components/NotificationPrompt";
@@ -15,15 +14,28 @@ import { BackgroundAnalysisProvider } from "@/features/meals/contexts/Background
 import { ConfirmProvider } from "@/shared/contexts/ConfirmContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, activeMode } = useAuth();
   const { layout } = useSettings();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Aplica para clientes directos y para entrenadores / superadmins cuando están en MODO ATLETA
+  const isAthleteMode = user?.role === "client" || activeMode === "client";
+  const needsOnboarding = Boolean(user && isAthleteMode && !user.onboardingCompleted);
+  const isOnboardingRoute = pathname === "/onboarding";
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [isLoading, isAuthenticated, router]);
+
+    if (!isLoading && isAuthenticated) {
+      if (needsOnboarding && !isOnboardingRoute) {
+        router.replace("/onboarding");
+      }
+    }
+  }, [isLoading, isAuthenticated, needsOnboarding, isOnboardingRoute, router]);
 
   if (isLoading) {
     return (
@@ -37,6 +49,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) return null;
+
+  // HARD GATEKEEPER: Bloqueo estricto para clientes sin onboarding
+  if (needsOnboarding && !isOnboardingRoute) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+          <p className="text-xs font-mono uppercase tracking-widest text-neutral-400">
+            Redirigiendo a evaluación inicial...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // AISLAMIENTO VISUAL: /onboarding en pantalla completa sin barras ni distracciones
+  if (isOnboardingRoute) {
+    return (
+      <div className="min-h-screen bg-[#07090c] text-white selection:bg-red-500 selection:text-white">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <ConfirmProvider>
@@ -54,8 +89,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </main>
           <MobileNav />
-          {/* Modal para clientes nuevos */}
-          <OnboardingSurveyModal />
           <SettingsTrigger />
           <GlobalAiAssistant />
           <NotificationPrompt />
