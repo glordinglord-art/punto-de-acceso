@@ -9,6 +9,7 @@ import type { Exercise } from "../types/routines.types";
 import type { ExerciseDict } from "../services/exercise-dictionary.service";
 import { MUSCLE_GROUPS } from "@/shared/lib/constants";
 import { Info, CheckCircle } from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export function ExerciseCard({
   exercise,
@@ -31,6 +32,9 @@ export function ExerciseCard({
   onRestSkip: () => void;
   dictEntry?: ExerciseDict | null;
 }) {
+  const { user } = useAuth();
+  const userUnit = (user?.weightUnitPreference === "lbs" ? "lbs" : "kg") as "kg" | "lbs";
+
   const isResting = restRemaining > 0;
   const allDone = completedSetCount >= exercise.sets;
   const [showGuide, setShowGuide] = useState(false);
@@ -192,6 +196,7 @@ export function ExerciseCard({
           intensity={exercise.intensity}
           previousWeight={null}
           previousReps={null}
+          defaultUnit={userUnit}
           disabled={isSaving}
           onComplete={(w, r) => onSetComplete(activeSetIndex, w, r)}
         />

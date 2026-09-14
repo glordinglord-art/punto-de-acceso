@@ -285,7 +285,14 @@ REGLAS DE COMUNICACIÓN Y FORMATO (INNEGOCIABLES):
    - Emite SOLO UN bloque [ACCION_RUTINA: ...] por mensaje. Si hay múltiples cambios, aplica el más urgente primero y pregunta si desea continuar.
    - Cuando el entrenador aplique un cambio, si consideras que aún faltan ajustes, menciónalo: "Nota: aún falta configurar X e Y para completar la transformación."
 
-4. CORPUS CIENTÍFICO DE SOPORTE (Lehninger, Guyton & Hall, Schoenfeld, Israetel, Beardsley, Zatsiorsky):
+4. SISTEMA DE SEMÁFORO DE SERIES Y ALERTAS ARTICULARES:
+   Los atletas registran sus series bajo el Modelo Semáforo de Vital Fit:
+   - 🟢 Verde: Carga real dentro de ±10% de la sugerencia prescrita por el entrenador.
+   - 🟡 Amarillo: Desviación del 10% al 20% (por polea diferente, mancuernas disponibles o readiness diario).
+   - 🔴 Rojo (Alerta de Seguridad): Desviación >20% (riesgo de ego lifting/lesión mecánica) o reporte de molestia articular (hombro, rodilla, lumbar, etc.).
+   Cuando el entrenador consulte por banderas rojas o estado de atletas, prioriza de inmediato a quienes reporten alertas Rojas o molestias articulares, proponiendo la sustitución biomecánica preventiva de inmediato.
+
+5. CORPUS CIENTÍFICO DE SOPORTE (Lehninger, Guyton & Hall, Schoenfeld, Israetel, Beardsley, Zatsiorsky):
    - Prioriza la recuperación celular (MPS via mTORC1 vs AMPK).
    - Plano escapular ante dolor de hombro; prensa 45° o apoyo esternal ante dolor lumbar; bisagra de cadera ante gonalgias.
    - Filosofía estoica y antifragilidad: consistencia y salud articular sobre ego en las cargas.
@@ -633,7 +640,7 @@ ${clientsContextSummary}
     // 4. Update the exercise with the new name and clinical rationale
     const updatedObs = [
       matchedExercise.observations,
-      rationale ? `[Ajuste Clínico IA: ${rationale}]` : null,
+      rationale ? `[Ajuste Equipo Vital Fit: ${rationale}]` : null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -901,7 +908,7 @@ ${clientsContextSummary}
             restSeconds: ex.restSeconds || 60,
             observations:
               ex.observations ||
-              `[Ajuste Clínico IA: ${payload.rationale || 'Rediseño del día'}]`,
+              `[Ajuste Equipo Vital Fit: ${payload.rationale || 'Rediseño del día'}]`,
             order: idx + 1,
           },
         }),
@@ -984,7 +991,7 @@ ${clientsContextSummary}
             reps: ex.reps || '8-12',
             muscleGroup: this.resolveMuscleGroup(ex.muscleGroup),
             restSeconds: ex.restSeconds || 60,
-            observations: `[Agregado por IA: ${payload.rationale || 'Complemento de entrenamiento'}]`,
+            observations: `[Ajuste Equipo Vital Fit: ${payload.rationale || 'Complemento de entrenamiento'}]`,
             order: maxOrder + idx + 1,
           },
         }),
@@ -1072,7 +1079,7 @@ ${clientsContextSummary}
     payload: Record<string, any>,
   ) {
     const routineName =
-      (payload.routineName as string) || `Rutina IA - ${athlete.name}`;
+      (payload.routineName as string) || `Rutina Vital Fit - ${athlete.name}`;
     const description = (payload.description as string) || '';
     const weekCount = (payload.weekCount as number) || 4;
     const days = (payload.days || []) as Array<{
@@ -1123,7 +1130,7 @@ ${clientsContextSummary}
                 reps: ex.reps || '8-12',
                 muscleGroup: this.resolveMuscleGroup(ex.muscleGroup),
                 restSeconds: ex.restSeconds || 60,
-                observations: `[Creado por IA Clínica]`,
+                observations: `[Diseñado por Equipo Vital Fit]`,
                 order: idx + 1,
               })),
             },

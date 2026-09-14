@@ -53,7 +53,9 @@ export class ApplyClinicalAdjustmentUseCase {
 
     const observations = [
       dto.replacementExercise.observations,
-      dto.clinicalRationale ? `[Clínico: ${dto.clinicalRationale}]` : null,
+      dto.clinicalRationale
+        ? `[Ajuste Equipo Vital Fit: ${dto.clinicalRationale}]`
+        : null,
     ]
       .filter(Boolean)
       .join(' · ');
