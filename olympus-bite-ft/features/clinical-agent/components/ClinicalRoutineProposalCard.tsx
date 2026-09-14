@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Plus,
   Trash2,
-  AlertTriangle,
   Calendar,
   Check,
 } from 'lucide-react';
@@ -156,12 +155,25 @@ export function ClinicalRoutineProposalCard({
         };
       case 'eliminar_rutina':
         return {
-          title: 'Desactivación de Rutina',
-          badge: 'Desactivar',
+          title: ('purgeAllInactive' in action && action.purgeAllInactive)
+            ? 'Purga de Rutinas Duplicadas'
+            : 'Eliminación de Rutina',
+          badge: ('purgeAllInactive' in action && action.purgeAllInactive)
+            ? 'Depuración'
+            : 'Eliminar',
           color: 'rose',
-          icon: <AlertTriangle className="h-4 w-4 text-rose-300" />,
+          icon: <Trash2 className="h-4 w-4 text-rose-300" />,
           borderColor: 'border-rose-500/30',
           gradient: 'from-rose-950/40 via-rose-900/20 to-transparent',
+        };
+      case 'modificar_rutina':
+        return {
+          title: 'Modificación de Rutina',
+          badge: 'Actualizar',
+          color: 'amber',
+          icon: <RefreshCw className="h-4 w-4 text-amber-300" />,
+          borderColor: 'border-amber-500/30',
+          gradient: 'from-amber-950/40 via-amber-900/20 to-transparent',
         };
       default:
         return {
@@ -507,15 +519,44 @@ export function ClinicalRoutineProposalCard({
         {action.action === 'eliminar_rutina' && (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
             <div className="flex items-center gap-2 mb-2 text-rose-400 font-bold text-xs">
-              <AlertTriangle className="h-4 w-4" />
-              🔴 Módulo que se desactivará:
+              <Trash2 className="h-4 w-4" />
+              🔴 {action.purgeAllInactive ? 'Purga de registros duplicados:' : 'Rutina a eliminar:'}
             </div>
             <p className="text-xs text-rose-200/90 leading-relaxed font-semibold">
-              Rutina: &quot;{action.routineName || 'Rutina Activa'}&quot; de {action.clientName}
+              {action.purgeAllInactive
+                ? `Todas las rutinas inactivas y duplicadas de ${action.clientName}`
+                : `Rutina: "${action.routineName || 'Rutina seleccionada'}" de ${action.clientName}${
+                    action.routineId ? ` (ID: ${action.routineId.slice(0, 8)}...)` : ''
+                  }`}
             </p>
             <p className="text-[11px] text-rose-200/60 mt-1 leading-relaxed">
-              La rutina quedará archivada de forma segura para preservar todos los registros y progresos históricos del atleta.
+              {action.purgeAllInactive
+                ? 'Se eliminarán de forma permanente todos los registros duplicados e inactivos de la base de datos para mantener limpio el catálogo.'
+                : 'Esta rutina se eliminará permanentemente de la base de datos de PostgreSQL.'}
             </p>
+          </div>
+        )}
+
+        {/* 7. MODIFICAR RUTINA */}
+        {action.action === 'modificar_rutina' && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="flex items-center gap-2 mb-2 text-amber-400 font-bold text-xs">
+              <RefreshCw className="h-4 w-4" />
+              ✏️ Modificación de parámetros de rutina:
+            </div>
+            <p className="text-xs text-amber-200/90 leading-relaxed font-semibold">
+              Rutina: &quot;{action.routineName || 'Rutina Actual'}&quot; de {action.clientName}
+            </p>
+            {action.changes && (
+              <div className="mt-2 text-[11px] text-amber-200/70 space-y-1">
+                {Object.entries(action.changes).map(([k, v]) => (
+                  <div key={k}>
+                    • <span className="font-bold text-white capitalize">{k}:</span>{' '}
+                    {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

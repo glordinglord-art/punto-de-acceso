@@ -59,10 +59,7 @@ export class ClinicalAgentController {
     @Param('trainerId') trainerId: string,
     @Body() dto: Record<string, any>,
   ) {
-    const result = await this.agentService.executeRoutineAction(
-      trainerId,
-      dto,
-    );
+    const result = await this.agentService.executeRoutineAction(trainerId, dto);
     return {
       success: true,
       data: result,

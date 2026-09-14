@@ -154,7 +154,11 @@ export class OnboardingSubmissionDto {
   anxietyTrigger: 'afternoon' | 'night' | 'weekends' | 'none';
 
   @IsIn(['good', 'bloated', 'lactose_intolerant', 'gluten_sensitive'])
-  digestiveHealth: 'good' | 'bloated' | 'lactose_intolerant' | 'gluten_sensitive';
+  digestiveHealth:
+    | 'good'
+    | 'bloated'
+    | 'lactose_intolerant'
+    | 'gluten_sensitive';
 
   @IsIn(['2_to_3', '4_to_5'])
   mealFrequency: '2_to_3' | '4_to_5';

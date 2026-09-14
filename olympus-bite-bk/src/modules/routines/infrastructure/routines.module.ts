@@ -63,6 +63,12 @@ import { ApplyClinicalAdjustmentUseCase } from '../application/use-cases/apply-c
     ProposeClinicalAdjustmentUseCase,
     ApplyClinicalAdjustmentUseCase,
   ],
-  exports: [ROUTINE_REPOSITORY, EXERCISE_DICTIONARY_REPOSITORY],
+  exports: [
+    ROUTINE_REPOSITORY,
+    EXERCISE_DICTIONARY_REPOSITORY,
+    DeleteRoutineUseCase,
+    UpdateRoutineUseCase,
+    CreateRoutineUseCase,
+  ],
 })
 export class RoutinesModule {}

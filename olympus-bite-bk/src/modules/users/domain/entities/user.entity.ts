@@ -179,16 +179,12 @@ export class User extends BaseEntity {
       this.targetCalories = data.targetCalories;
     if (data.targetProtein !== undefined)
       this.targetProtein = data.targetProtein;
-    if (data.targetCarbs !== undefined)
-      this.targetCarbs = data.targetCarbs;
-    if (data.targetFats !== undefined)
-      this.targetFats = data.targetFats;
+    if (data.targetCarbs !== undefined) this.targetCarbs = data.targetCarbs;
+    if (data.targetFats !== undefined) this.targetFats = data.targetFats;
     if (data.weightUnitPreference !== undefined)
       this.weightUnitPreference = data.weightUnitPreference;
-    if (data.gender !== undefined)
-      this.gender = data.gender;
-    if (data.age !== undefined)
-      this.age = data.age;
+    if (data.gender !== undefined) this.gender = data.gender;
+    if (data.age !== undefined) this.age = data.age;
     if (data.anamnesisData !== undefined)
       this.anamnesisData = data.anamnesisData;
 

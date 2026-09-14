@@ -1,7 +1,14 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+} from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Exercise, MuscleGroup, RoutineDay } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { DeleteRoutineUseCase } from '../../../routines/application/use-cases/delete-routine.use-case';
+import { UpdateRoutineUseCase } from '../../../routines/application/use-cases/update-routine.use-case';
 
 export interface SendClinicalAgentMessageDto {
   message: string;
@@ -21,7 +28,11 @@ export class ClinicalAgentService implements OnModuleInit {
     'gemini-2.5-flash-lite',
   ];
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly deleteRoutineUseCase: DeleteRoutineUseCase,
+    private readonly updateRoutineUseCase: UpdateRoutineUseCase,
+  ) {}
 
   private getModelsForKey(key: string): string[] {
     if (key.startsWith('AQ.')) {
@@ -131,7 +142,7 @@ export class ClinicalAgentService implements OnModuleInit {
     const endOfToday = new Date(`${todayStr}T23:59:59.999Z`);
     const clientIds = allClients.map((c) => c.id);
 
-    const [todayMeals, todayStress, activeRoutines] = await Promise.all([
+    const [todayMeals, todayStress, allRoutines] = await Promise.all([
       this.prisma.meal.findMany({
         where: {
           userId: { in: clientIds },
@@ -147,7 +158,6 @@ export class ClinicalAgentService implements OnModuleInit {
       this.prisma.routine.findMany({
         where: {
           clientId: { in: clientIds },
-          isActive: true,
         },
         include: {
           routineDays: {
@@ -156,6 +166,7 @@ export class ClinicalAgentService implements OnModuleInit {
             },
           },
         },
+        orderBy: { createdAt: 'desc' },
       }),
     ]);
 
@@ -164,7 +175,8 @@ export class ClinicalAgentService implements OnModuleInit {
       .map((c) => {
         const cMeals = todayMeals.filter((m) => m.userId === c.id);
         const cStress = todayStress.find((s) => s.userId === c.id);
-        const cRoutine = activeRoutines.find((r) => r.clientId === c.id);
+        const clientRoutines = allRoutines.filter((r) => r.clientId === c.id);
+        const activeRoutine = clientRoutines.find((r) => r.isActive);
 
         const totalKcal = cMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
         const totalProt = cMeals.reduce((acc, m) => acc + (m.protein || 0), 0);
@@ -181,12 +193,22 @@ export class ClinicalAgentService implements OnModuleInit {
           }
         }
 
-        const routineDetails = cRoutine
-          ? `Rutina: "${cRoutine.name}" (${cRoutine.routineDays.length} días configurados). Ejercicios clave: ${cRoutine.routineDays
+        const activeRoutineDetails = activeRoutine
+          ? `Rutina Activa: "${activeRoutine.name}" [ID: ${activeRoutine.id}] (${activeRoutine.routineDays.length} días configurados). Ejercicios clave: ${activeRoutine.routineDays
               .flatMap((d) => d.exercises.map((e) => e.name))
               .slice(0, 6)
               .join(', ')}`
           : 'Sin rutina activa asignada';
+
+        const routinesCatalog =
+          clientRoutines.length > 0
+            ? clientRoutines
+                .map(
+                  (r) =>
+                    `[ID: ${r.id}] "${r.name}" (${r.isActive ? '🟢 ACTIVA' : '⚪ INACTIVA'}, ${r.routineDays.length} días, creada ${r.createdAt.toISOString().slice(0, 10)})`,
+                )
+                .join(' | ')
+            : 'Sin rutinas registradas';
 
         return `
 - ATLETA: ${c.name}
@@ -198,7 +220,9 @@ export class ClinicalAgentService implements OnModuleInit {
     - Comidas: ${cMeals.length > 0 ? `${cMeals.length} comidas (${totalKcal} kcal, ${totalProt}g proteína)` : 'Sin comidas registradas hoy'}
     - Estrés / Ánimo: ${cStress ? `Nivel ${cStress.stressLevel}/10 (${cStress.mood || 'Normal'})` : 'No registrado hoy'}
     - Sueño: ${sleepInfo}
-  • Plan de Entrenamiento: ${routineDetails}
+  • Plan de Entrenamiento:
+    - ${activeRoutineDetails}
+    - Catálogo Completo de Rutinas: ${routinesCatalog}
 `;
       })
       .join('\n');
@@ -246,8 +270,14 @@ REGLAS DE COMUNICACIÓN Y FORMATO (INNEGOCIABLES):
    e) CREAR UNA RUTINA COMPLETA DESDE CERO:
    [ACCION_RUTINA: {"action": "crear_rutina", "clientName": "NombreAtleta", "previousRoutineName": "NombreDeRutinaActualSiExiste", "routineName": "Nombre de la Nueva Rutina", "description": "Descripción breve", "weekCount": 4, "days": [{"dayNumber": 1, "focusArea": "Pierna y Empuje", "isRestDay": false, "exercises": [{"name": "Sentadilla", "sets": 4, "reps": "6-8", "muscleGroup": "quads", "restSeconds": 120}]}, {"dayNumber": 2, "focusArea": "Descanso", "isRestDay": true, "restDayNote": "Recuperación activa", "exercises": []}], "rationale": "Criterio clínico"}]
 
-   f) ELIMINAR / DESACTIVAR UNA RUTINA:
-   [ACCION_RUTINA: {"action": "eliminar_rutina", "clientName": "NombreAtleta", "routineName": "NombreRutina", "rationale": "Criterio clínico"}]
+   f) ELIMINAR / PURGAR UNA RUTINA (físicamente de la base de datos):
+   [ACCION_RUTINA: {"action": "eliminar_rutina", "clientName": "NombreAtleta", "routineId": "UUID_de_la_rutina", "routineName": "NombreRutina", "rationale": "Criterio clínico o purga de duplicados"}]
+   - Si el entrenador te pide "elimina las rutinas duplicadas" o "elimina la rutina inactiva X", consulta el Catálogo Completo de Rutinas del atleta, extrae el UUID de la rutina a purgar y emite este comando con su routineId.
+   - Si solicita purgar todas las rutinas inactivas o duplicadas de un atleta:
+   [ACCION_RUTINA: {"action": "eliminar_rutina", "clientName": "NombreAtleta", "purgeAllInactive": true, "rationale": "Depuración de rutinas inactivas/duplicadas"}]
+
+   g) MODIFICAR RUTINA INTEGRALMENTE:
+   [ACCION_RUTINA: {"action": "modificar_rutina", "clientName": "NombreAtleta", "routineId": "UUID_de_la_rutina", "routineName": "NombreRutina", "changes": {"name": "Nuevo Nombre", "description": "Nueva descripción"}, "rationale": "Criterio clínico"}]
 
    REGLAS PARA LAS ACCIONES:
    - Utiliza SIEMPRE los nombres REALES de atletas, rutinas y ejercicios de la telemetría.
@@ -352,11 +382,13 @@ ${clientsContextSummary}
       `✅ Consulta clínica resuelta exitosamente con [${providerUsed}]`,
     );
 
-    // Clean up legacy command tags or stray UUIDs, but preserve [ACCION_RUTINA: ...]
+    // Convert legacy [COMANDO_RUTINA: ...] or [PROPUESTA_RUTINA: ...] to [ACCION_RUTINA: ...]
     replyText = replyText
-      .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
-      .replace(/\[PROPUESTA_RUTINA:/gi, '[ACCION_RUTINA: {"action": "sustituir_ejercicio", ')
-      .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
+      .replace(/\[COMANDO_RUTINA:\s*/gi, '[ACCION_RUTINA: ')
+      .replace(
+        /\[PROPUESTA_RUTINA:/gi,
+        '[ACCION_RUTINA: {"action": "sustituir_ejercicio", ',
+      )
       .trim();
 
     // Save to chat history with clinical roles so they never collide with meal/diet chat
@@ -638,10 +670,7 @@ ${clientsContextSummary}
   // MÓDULO DE CONTROL TOTAL DE RUTINAS — 6 ACCIONES
   // ═══════════════════════════════════════════════════════════════
 
-  async executeRoutineAction(
-    trainerId: string,
-    payload: Record<string, any>,
-  ) {
+  async executeRoutineAction(trainerId: string, payload: Record<string, any>) {
     const action = payload.action as string;
     const clientName = payload.clientName as string;
 
@@ -676,7 +705,11 @@ ${clientsContextSummary}
         break;
 
       case 'reemplazar_dia':
-        result = await this.actionReplaceDayExercises(trainerId, athlete, payload);
+        result = await this.actionReplaceDayExercises(
+          trainerId,
+          athlete,
+          payload,
+        );
         break;
 
       case 'agregar_ejercicio':
@@ -692,7 +725,13 @@ ${clientsContextSummary}
         break;
 
       case 'eliminar_rutina':
+      case 'delete_routine':
         result = await this.actionDeleteRoutine(trainerId, athlete, payload);
+        break;
+
+      case 'modificar_rutina':
+      case 'update_routine':
+        result = await this.actionUpdateRoutine(trainerId, athlete, payload);
         break;
 
       default:
@@ -718,13 +757,22 @@ ${clientsContextSummary}
         followUpMessage = `🗑️ **Ejercicios Retirados:** Se removieron ${(result.removedExercises || []).join(', ')} de la rutina de **${athlete.name}** para proteger su recuperación.\n\n🛡️ **Criterio:** ${payload.rationale || 'Descarga articular estratégica.'}\n\n¿Deseas programar una alternativa sin carga axial más adelante?`;
         break;
 
-      case 'crear_rutina':
-        const prevText = result.previousRoutineName ? ` (reemplazando la rutina anterior "${result.previousRoutineName}")` : '';
+      case 'crear_rutina': {
+        const prevText = result.previousRoutineName
+          ? ` (reemplazando la rutina anterior "${result.previousRoutineName}")`
+          : '';
         followUpMessage = `✨ **Nueva Rutina Activada:** He configurado y asignado la rutina **"${result.routineName}"**${prevText} para **${athlete.name}** con ${result.daysCount} días de trabajo y ${result.exercisesCount} ejercicios.\n\n🧬 **Fundamento Clínico:** ${payload.rationale || 'Mesociclo optimizado para adaptación neuromuscular y protección articular.'}\n\n📌 **Siguiente paso del Director Clínico:** Dado que el volumen y la frecuencia cambiaron, es clave sincronizar las metas nutricionales de ${athlete.name}. ¿Deseas que calculemos el balance calórico y proteico ideal para acompañar este nuevo estímulo?`;
         break;
+      }
 
       case 'eliminar_rutina':
-        followUpMessage = `⚠️ **Rutina Desactivada:** La rutina **"${result.routineName}"** de **${athlete.name}** fue desactivada y resguardada de forma segura en su expediente.\n\n🎯 **Próximo paso:** El atleta no tiene rutina activa actualmente. ¿Deseas que le diseñe una nueva rutina desde cero? Solo dime cuántos días y el enfoque deseado.`;
+      case 'delete_routine':
+        followUpMessage = `🗑️ **Rutina Eliminada:** La rutina **"${result.routineName || 'solicitada'}"** de **${athlete.name}** fue eliminada permanentemente de la base de datos para mantener el expediente limpio y sin registros duplicados.\n\n🎯 **Próximo paso:** ${result.deletedCount ? `Se purgaron ${result.deletedCount} rutinas inactivas/duplicadas.` : 'El catálogo de rutinas ha sido actualizado.'} ¿Deseas que le diseñe una nueva rutina desde cero o revisar a otro atleta?`;
+        break;
+
+      case 'modificar_rutina':
+      case 'update_routine':
+        followUpMessage = `✏️ **Rutina Actualizada:** La rutina **"${result.routineName}"** de **${athlete.name}** fue modificada exitosamente en la base de datos.\n\n📌 **Siguiente paso:** Recomiendo validar los cambios en la ficha del atleta. ¿Deseas hacer algún otro ajuste biomecánico?`;
         break;
     }
 
@@ -750,10 +798,7 @@ ${clientsContextSummary}
   }
 
   // ── Helper: Find active routine for athlete ──
-  private async findActiveRoutine(
-    athleteId: string,
-    routineName?: string,
-  ) {
+  private async findActiveRoutine(athleteId: string, routineName?: string) {
     let routine = await this.prisma.routine.findFirst({
       where: { clientId: athleteId, isActive: true },
       include: {
@@ -822,9 +867,9 @@ ${clientsContextSummary}
     let targetDay = routine.routineDays.find((d) => d.dayNumber === dayNumber);
     if (!targetDay && payload.dayFocus) {
       targetDay = routine.routineDays.find((d) =>
-        d.focusArea.toLowerCase().includes(
-          (payload.dayFocus as string).toLowerCase(),
-        ),
+        d.focusArea
+          .toLowerCase()
+          .includes((payload.dayFocus as string).toLowerCase()),
       );
     }
 
@@ -848,13 +893,15 @@ ${clientsContextSummary}
       ...newExercises.map((ex, idx) =>
         this.prisma.exercise.create({
           data: {
-            routineDayId: targetDay!.id,
+            routineDayId: targetDay.id,
             name: ex.name,
             sets: ex.sets || 3,
             reps: ex.reps || '8-12',
             muscleGroup: this.resolveMuscleGroup(ex.muscleGroup),
             restSeconds: ex.restSeconds || 60,
-            observations: ex.observations || `[Ajuste Clínico IA: ${payload.rationale || 'Rediseño del día'}]`,
+            observations:
+              ex.observations ||
+              `[Ajuste Clínico IA: ${payload.rationale || 'Rediseño del día'}]`,
             order: idx + 1,
           },
         }),
@@ -911,9 +958,9 @@ ${clientsContextSummary}
     );
     if (!targetDay && payload.dayFocus) {
       targetDay = routine.routineDays.find((d) =>
-        d.focusArea.toLowerCase().includes(
-          (payload.dayFocus as string).toLowerCase(),
-        ),
+        d.focusArea
+          .toLowerCase()
+          .includes((payload.dayFocus as string).toLowerCase()),
       );
     }
     if (!targetDay) {
@@ -931,7 +978,7 @@ ${clientsContextSummary}
       ...exercises.map((ex, idx) =>
         this.prisma.exercise.create({
           data: {
-            routineDayId: targetDay!.id,
+            routineDayId: targetDay.id,
             name: ex.name,
             sets: ex.sets || 3,
             reps: ex.reps || '8-12',
@@ -1093,7 +1140,8 @@ ${clientsContextSummary}
       0,
     );
 
-    const prevName = previousRoutine?.name || payload.previousRoutineName || null;
+    const prevName =
+      previousRoutine?.name || payload.previousRoutineName || null;
 
     this.logger.log(
       `✅ Rutina "${routineName}" creada para ${athlete.name} (anterior: "${prevName || 'ninguna'}"): ${routine.routineDays.length} días, ${totalExercises} ejercicios`,
@@ -1111,37 +1159,185 @@ ${clientsContextSummary}
     };
   }
 
-  // ── ACTION: Delete (deactivate) a routine ──
+  // ── ACTION: Delete routine (by routineId, purge inactive/duplicates, or active routine) ──
   private async actionDeleteRoutine(
     trainerId: string,
     athlete: { id: string; name: string },
     payload: Record<string, any>,
   ) {
-    const routine = await this.findActiveRoutine(
-      athlete.id,
-      payload.routineName,
-    );
-    if (!routine) {
-      throw new Error(
-        `${athlete.name} no tiene una rutina activa para eliminar.`,
+    // 1. Purge all inactive/duplicate routines if requested
+    if (payload.purgeAllInactive) {
+      const inactiveRoutines = await this.prisma.routine.findMany({
+        where: {
+          clientId: athlete.id,
+          isActive: false,
+        },
+      });
+
+      if (inactiveRoutines.length === 0) {
+        return {
+          success: true,
+          action: 'eliminar_rutina',
+          message: `${athlete.name} no tiene rutinas inactivas o duplicadas pendientes por eliminar.`,
+          clientName: athlete.name,
+          deletedCount: 0,
+        };
+      }
+
+      for (const r of inactiveRoutines) {
+        await this.deleteRoutineUseCase.execute(r.id);
+      }
+
+      this.logger.log(
+        `✅ Purga de ${inactiveRoutines.length} rutinas inactivas/duplicadas para ${athlete.name} completada.`,
       );
+
+      return {
+        success: true,
+        action: 'eliminar_rutina',
+        message: `Se eliminaron ${inactiveRoutines.length} rutinas inactivas/duplicadas de ${athlete.name} exitosamente de la base de datos.`,
+        clientName: athlete.name,
+        deletedCount: inactiveRoutines.length,
+        deletedRoutines: inactiveRoutines.map((r) => r.name),
+      };
     }
 
-    await this.prisma.routine.update({
-      where: { id: routine.id },
-      data: { isActive: false },
-    });
+    // 2. Specific routine by ID
+    const targetRoutineId = payload.routineId as string | undefined;
+    let routineName = payload.routineName as string | undefined;
+
+    if (targetRoutineId) {
+      const routine = await this.prisma.routine.findUnique({
+        where: { id: targetRoutineId },
+      });
+      if (!routine || routine.clientId !== athlete.id) {
+        throw new NotFoundException(
+          `La rutina con ID ${targetRoutineId} no pertenece a ${athlete.name} o no existe en la base de datos.`,
+        );
+      }
+      routineName = routine.name;
+      await this.deleteRoutineUseCase.execute(targetRoutineId);
+    } else {
+      // 3. Fallback: find by routineName or active routine
+      let routine: { id: string; name: string } | null = null;
+      if (routineName) {
+        routine = await this.prisma.routine.findFirst({
+          where: {
+            clientId: athlete.id,
+            name: { contains: routineName, mode: 'insensitive' },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      if (!routine) {
+        routine = await this.findActiveRoutine(athlete.id, routineName);
+      }
+
+      if (!routine) {
+        throw new NotFoundException(
+          `No se encontró ninguna rutina para ${athlete.name} que coincida con la búsqueda.`,
+        );
+      }
+
+      routineName = routine.name;
+      await this.deleteRoutineUseCase.execute(routine.id);
+    }
 
     this.logger.log(
-      `✅ Rutina "${routine.name}" desactivada para ${athlete.name} por entrenador ${trainerId}`,
+      `✅ Rutina "${routineName}" eliminada permanentemente de la base de datos para ${athlete.name} por entrenador ${trainerId}`,
     );
 
     return {
       success: true,
       action: 'eliminar_rutina',
-      message: `La rutina "${routine.name}" de ${athlete.name} ha sido desactivada. Los datos no se han borrado permanentemente por seguridad.`,
+      message: `La rutina "${routineName}" de ${athlete.name} ha sido eliminada permanentemente de la base de datos.`,
       clientName: athlete.name,
-      routineName: routine.name,
+      routineName,
+    };
+  }
+
+  // ── ACTION: Update routine integral (using UpdateRoutineUseCase or direct) ──
+  private async actionUpdateRoutine(
+    trainerId: string,
+    athlete: { id: string; name: string },
+    payload: Record<string, any>,
+  ) {
+    let targetRoutineId = payload.routineId as string | undefined;
+
+    if (!targetRoutineId) {
+      const active = await this.findActiveRoutine(
+        athlete.id,
+        payload.routineName,
+      );
+      if (!active) {
+        throw new NotFoundException(
+          `No se encontró ninguna rutina activa para ${athlete.name} para modificar.`,
+        );
+      }
+      targetRoutineId = active.id;
+    }
+
+    const routine = await this.prisma.routine.findUnique({
+      where: { id: targetRoutineId },
+      include: {
+        routineDays: {
+          include: { exercises: { orderBy: { order: 'asc' } } },
+          orderBy: { dayNumber: 'asc' },
+        },
+      },
+    });
+
+    if (!routine || routine.clientId !== athlete.id) {
+      throw new NotFoundException(
+        `Rutina con ID ${targetRoutineId} no encontrada para ${athlete.name}.`,
+      );
+    }
+
+    const changes = (payload.changes || {}) as Record<string, any>;
+    const updatedName =
+      (changes.name as string) ||
+      (payload.routineName as string) ||
+      routine.name;
+    const updatedDescription =
+      changes.description !== undefined
+        ? (changes.description as string)
+        : routine.description;
+    const updatedWeekCount =
+      changes.weekCount !== undefined
+        ? Number(changes.weekCount)
+        : routine.weekCount;
+
+    if (changes.days && Array.isArray(changes.days)) {
+      await this.updateRoutineUseCase.execute(routine.id, {
+        name: updatedName,
+        description: updatedDescription || '',
+        clientId: athlete.id,
+        weekCount: updatedWeekCount,
+        days: changes.days,
+      });
+    } else {
+      await this.prisma.routine.update({
+        where: { id: routine.id },
+        data: {
+          name: updatedName,
+          description: updatedDescription,
+          weekCount: updatedWeekCount,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    this.logger.log(
+      `✅ Rutina "${updatedName}" (${routine.id}) actualizada para ${athlete.name}`,
+    );
+
+    return {
+      success: true,
+      action: 'modificar_rutina',
+      message: `La rutina "${updatedName}" de ${athlete.name} ha sido actualizada exitosamente en la base de datos.`,
+      clientName: athlete.name,
+      routineName: updatedName,
     };
   }
 

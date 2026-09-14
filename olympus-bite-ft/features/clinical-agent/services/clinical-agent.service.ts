@@ -23,9 +23,11 @@ export interface ExerciseSpec {
 export interface RoutineActionBase {
   action: string;
   clientName: string;
+  routineId?: string;
   routineName?: string;
   previousRoutineName?: string;
   rationale?: string;
+  purgeAllInactive?: boolean;
 }
 
 export interface SustituirEjercicioAction extends RoutineActionBase {
@@ -70,7 +72,13 @@ export interface CrearRutinaAction extends RoutineActionBase {
 }
 
 export interface EliminarRutinaAction extends RoutineActionBase {
-  action: 'eliminar_rutina';
+  action: 'eliminar_rutina' | 'delete_routine';
+  purgeAllInactive?: boolean;
+}
+
+export interface ModificarRutinaAction extends RoutineActionBase {
+  action: 'modificar_rutina' | 'update_routine';
+  changes?: Record<string, unknown>;
 }
 
 export type RoutineAction =
@@ -79,7 +87,8 @@ export type RoutineAction =
   | AgregarEjercicioAction
   | EliminarEjercicioAction
   | CrearRutinaAction
-  | EliminarRutinaAction;
+  | EliminarRutinaAction
+  | ModificarRutinaAction;
 
 // Legacy type kept for backward compat
 export interface RoutineProposal {
@@ -155,7 +164,7 @@ export function parseRoutineAction(content: string): {
   actionData: RoutineAction | null;
   cleanText: string;
 } {
-  const markers = ['[ACCION_RUTINA:', '[PROPUESTA_RUTINA:'];
+  const markers = ['[ACCION_RUTINA:', '[PROPUESTA_RUTINA:', '[COMANDO_RUTINA:'];
   let markerFound = '';
   let markerIdx = -1;
 
@@ -209,6 +218,12 @@ export function parseRoutineAction(content: string): {
           const parsed = JSON.parse(jsonStr);
           if (markerFound === '[PROPUESTA_RUTINA:' && !parsed.action) {
             parsed.action = 'sustituir_ejercicio';
+          }
+          if (parsed.action === 'delete_routine') {
+            parsed.action = 'eliminar_rutina';
+          }
+          if (parsed.action === 'update_routine') {
+            parsed.action = 'modificar_rutina';
           }
           actionData = parsed as RoutineAction;
         } catch (err) {

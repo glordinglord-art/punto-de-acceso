@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   USER_REPOSITORY,
   UserRepositoryPort,
@@ -46,7 +41,9 @@ export class ProcessOnboardingUseCase {
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
     } else {
-      this.logger.warn('⚠️ GEMINI_API_KEY no encontrada en ProcessOnboardingUseCase');
+      this.logger.warn(
+        '⚠️ GEMINI_API_KEY no encontrada en ProcessOnboardingUseCase',
+      );
     }
   }
 
@@ -361,9 +358,7 @@ Responde ÚNICAMENTE un JSON válido (sin formato markdown ni texto adicional) c
         break;
     }
 
-    const targetCalories = Math.round(
-      tdee * (1 + adjustmentPercentage / 100),
-    );
+    const targetCalories = Math.round(tdee * (1 + adjustmentPercentage / 100));
     const targetProtein = Math.round(weightKg * proteinGPerKg);
     const targetFats = Math.round(weightKg * fatGPerKg);
     const carbsCalories = Math.max(
