@@ -1085,7 +1085,9 @@ export default function OnboardingPage() {
                       <div
                         key={b.id}
                         onClick={() => {
-                          setWeightBehavior(b.id as any);
+                          setWeightBehavior(
+                            b.id as "stable" | "fluctuating" | "increasing" | "decreasing",
+                          );
                           setTimeout(nextStep, 150);
                         }}
                         className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between active:scale-[0.99] ${
@@ -2087,7 +2089,16 @@ export default function OnboardingPage() {
                     return (
                       <div
                         key={p.id}
-                        onClick={() => handleSelectMacroPreset(p.id as any)}
+                        onClick={() =>
+                          handleSelectMacroPreset(
+                            p.id as
+                              | "balanceada"
+                              | "mediterranea"
+                              | "baja_grasas"
+                              | "baja_carbos"
+                              | "keto",
+                          )
+                        }
                         className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between active:scale-[0.99] ${
                           isSelected
                             ? "bg-blue-600/10 border-blue-500 ring-1 ring-blue-500/40"

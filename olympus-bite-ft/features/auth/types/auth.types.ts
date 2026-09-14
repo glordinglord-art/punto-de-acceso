@@ -30,7 +30,7 @@ export interface AuthResponse {
     weightUnitPreference?: string | null;
     gender?: string | null;
     age?: number | null;
-    anamnesisData?: any;
+    anamnesisData?: Record<string, unknown> | null;
     onboardingCompleted?: boolean;
     experienceLevel?: string | null;
     equipmentAccess?: string | null;
