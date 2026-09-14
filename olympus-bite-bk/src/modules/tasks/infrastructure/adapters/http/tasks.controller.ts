@@ -24,6 +24,7 @@ import {
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { WeeklyAuditService } from '../../../application/services/weekly-audit.service';
+import { StorageCleanupService } from '../../../application/services/storage-cleanup.service';
 
 @Controller('tasks')
 export class TasksController {
@@ -32,6 +33,7 @@ export class TasksController {
     private readonly taskRepo: TaskRepositoryPort,
     private readonly prisma: PrismaService,
     private readonly weeklyAuditService: WeeklyAuditService,
+    private readonly storageCleanupService: StorageCleanupService,
   ) {}
 
   /* ─── Motor 1: Auditoría Semanal de la Regla del 80% ─ */
@@ -46,6 +48,17 @@ export class TasksController {
   @HttpCode(HttpStatus.OK)
   async triggerWeeklyAudit(@Query('trainerId') trainerId?: string) {
     const result = await this.weeklyAuditService.runAudit(trainerId);
+    return { success: true, data: result };
+  }
+
+  /* ─── Limpieza de Almacenamiento Supabase ─ */
+
+  @Post('storage/cleanup')
+  @HttpCode(HttpStatus.OK)
+  async triggerStorageCleanup(@Query('days') days?: string) {
+    const daysToKeep = days ? parseInt(days, 10) : 2;
+    const result =
+      await this.storageCleanupService.cleanupOldImages(daysToKeep);
     return { success: true, data: result };
   }
 

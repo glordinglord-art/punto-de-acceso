@@ -10,7 +10,8 @@ import { FITNESS_GOALS, GOAL_RATING_CONFIG } from "../types/meals.types";
 import type { FoodAnalysis, FitnessGoal } from "../types/meals.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getLocalDateString, localDateToISO } from "@/shared/lib/utils";
-import { Sparkles, Camera, FileText, ArrowLeft, RefreshCw } from "lucide-react";
+import { Camera, FileText, RefreshCw } from "lucide-react";
+import { compressImageFile } from "../utils/image-compression";
 
 interface FoodScannerProps {
   userId: string;
@@ -60,20 +61,19 @@ export function FoodScanner({
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    // Read all selected files as base64
-    const readers = files.map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-    });
+    // Compress and resize images to prevent exceeding storage quotas
+    const compressions = files.map((file) => compressImageFile(file, 1200, 1200, 0.75));
 
-    Promise.all(readers).then((results) => {
-      setImagesBase64((prev) => [...prev, ...results]);
-      setAnalysis(null);
-      setError("");
-    });
+    Promise.all(compressions)
+      .then((results) => {
+        setImagesBase64((prev) => [...prev, ...results]);
+        setAnalysis(null);
+        setError("");
+      })
+      .catch((err) => {
+        console.error("Error comprimiendo imagen:", err);
+        setError("Error al procesar la imagen seleccionada");
+      });
   };
 
   const removeImage = (index: number) => {
