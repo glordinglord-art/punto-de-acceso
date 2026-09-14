@@ -120,13 +120,19 @@ export class OnboardingSubmissionDto {
   @IsIn(['stable', 'fluctuating', 'increasing', 'decreasing'])
   weightBehavior: 'stable' | 'fluctuating' | 'increasing' | 'decreasing';
 
-  // Paso 2: Objetivo
-  @IsIn(['fat_loss', 'muscle_gain', 'recomposition', 'health_performance'])
+  @IsIn([
+    'fat_loss',
+    'muscle_gain',
+    'recomposition',
+    'health_performance',
+    'maintenance',
+  ])
   dietaryGoal:
     | 'fat_loss'
     | 'muscle_gain'
     | 'recomposition'
-    | 'health_performance';
+    | 'health_performance'
+    | 'maintenance';
 
   // Paso 3: Biomecánica y Salud
   @IsIn(['beginner', 'intermediate', 'advanced'])

@@ -348,13 +348,14 @@ Responde ÚNICAMENTE un JSON válido (sin formato markdown ni texto adicional) c
           'Estrategia normocalórica con ligero ajuste (-5%) y proteína elevada (2.3g/kg) para promover recomposición corporal simultánea.';
         break;
 
+      case 'maintenance':
       case 'health_performance':
       default:
         adjustmentPercentage = 0;
-        proteinGPerKg = 1.8;
+        proteinGPerKg = 1.9;
         fatGPerKg = 1.0;
         justification =
-          'Equilibrio energético pleno al 100% de tu TDEE para maximizar tu vitalidad, enfoque diario y rendimiento general.';
+          'Equilibrio normocalórico al 100% de tu TDEE enfocado en mantenimiento de composición corporal, consolidación de hábitos y rendimiento.';
         break;
     }
 

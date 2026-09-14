@@ -23,7 +23,6 @@ import {
   Droplets,
   Zap,
   Dumbbell,
-  Apple,
   Heart,
   Footprints,
   Scale,
@@ -175,6 +174,8 @@ export default function OnboardingPage() {
     let targetCal = Math.round(bmr * neatFactor);
     if (purposes.includes("fat_loss")) targetCal -= 400;
     else if (purposes.includes("muscle_gain")) targetCal += 300;
+    else if (purposes.includes("recomposition")) targetCal -= 150;
+    else if (purposes.includes("maintenance")) targetCal += 0;
 
     setRecommendedCalories(targetCal);
     setCustomCalories(targetCal);
@@ -276,12 +277,15 @@ export default function OnboardingPage() {
       if (!user) throw new Error("Sesión no válida");
 
       // Mapear propósito
-      let dietaryGoal: "fat_loss" | "muscle_gain" | "recomposition" | "health_performance" =
-        "fat_loss";
+      let dietaryGoal:
+        | "fat_loss"
+        | "muscle_gain"
+        | "recomposition"
+        | "health_performance"
+        | "maintenance" = "fat_loss";
       if (purposes.includes("muscle_gain")) dietaryGoal = "muscle_gain";
       else if (purposes.includes("recomposition")) dietaryGoal = "recomposition";
-      else if (purposes.includes("longevity") || purposes.includes("performance"))
-        dietaryGoal = "health_performance";
+      else if (purposes.includes("maintenance")) dietaryGoal = "maintenance";
 
       // Mapear NEAT
       let neatLevel: "sedentary" | "standing" | "heavy_labor" = "standing";
@@ -480,7 +484,7 @@ export default function OnboardingPage() {
             )}
 
             {/* ========================================================================= */}
-            {/* 02. PROPÓSITO */}
+            {/* 02. PROPÓSITO (LOS 4 PILARES VITAL FIT) */}
             {/* ========================================================================= */}
             {currentStep === 2 && (
               <div className="flex-1 flex flex-col justify-between py-4">
@@ -488,7 +492,7 @@ export default function OnboardingPage() {
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
                     Cuéntanos para qué quieres usar Vital Fit
                   </h1>
-                  <p className="text-sm text-zinc-400">Puedes elegir hasta 2 propósitos</p>
+                  <p className="text-sm text-zinc-400">Selecciona tu objetivo principal</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto w-full">
@@ -497,31 +501,25 @@ export default function OnboardingPage() {
                       id: "fat_loss",
                       icon: Flame,
                       title: "Perder grasa",
-                      desc: "Reducir porcentaje graso de forma sostenible",
+                      desc: "Reducir porcentaje graso y peso de forma sostenible",
                     },
                     {
                       id: "muscle_gain",
                       icon: Dumbbell,
-                      title: "Ganar músculo",
-                      desc: "Aumentar masa muscular y fuerza",
+                      title: "Ganar más músculo",
+                      desc: "Aumentar masa muscular magra, fuerza y volumen",
                     },
                     {
-                      id: "longevity",
-                      icon: Heart,
-                      title: "Salud y longevidad",
-                      desc: "Hábitos y bienestar preventivo",
+                      id: "recomposition",
+                      icon: Activity,
+                      title: "Recomposición corporal",
+                      desc: "Perder grasa y construir músculo simultáneamente",
                     },
                     {
-                      id: "digestion",
-                      icon: Apple,
-                      title: "Digestión y energía",
-                      desc: "Menos pesadez, más vitalidad diaria",
-                    },
-                    {
-                      id: "performance",
-                      icon: Zap,
-                      title: "Rendimiento deportivo",
-                      desc: "Optimizar fuerza, resistencia y recuperación",
+                      id: "maintenance",
+                      icon: Scale,
+                      title: "Mantenimiento",
+                      desc: "Mantener tu peso, consolidar hábitos y rendimiento",
                     },
                   ].map((p) => {
                     const isSelected = purposes.includes(p.id);
@@ -529,17 +527,7 @@ export default function OnboardingPage() {
                       <div
                         key={p.id}
                         onClick={() => {
-                          if (isSelected) {
-                            if (purposes.length > 1) {
-                              setPurposes(purposes.filter((x) => x !== p.id));
-                            }
-                          } else {
-                            if (purposes.length < 2) {
-                              setPurposes([...purposes, p.id]);
-                            } else {
-                              setPurposes([purposes[1], p.id]);
-                            }
-                          }
+                          setPurposes([p.id]);
                         }}
                         className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between active:scale-[0.98] ${
                           isSelected

@@ -29,7 +29,12 @@ export interface OnboardingSubmission {
   weight: number;
   weightUnit: 'kg' | 'lbs';
   weightBehavior: 'stable' | 'fluctuating' | 'increasing' | 'decreasing';
-  dietaryGoal: 'fat_loss' | 'muscle_gain' | 'recomposition' | 'health_performance';
+  dietaryGoal:
+    | 'fat_loss'
+    | 'muscle_gain'
+    | 'recomposition'
+    | 'health_performance'
+    | 'maintenance';
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   equipmentAccess: 'commercial_gym' | 'building_gym' | 'home';
   jointDiscomfort: string[];
