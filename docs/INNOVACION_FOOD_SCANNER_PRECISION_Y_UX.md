@@ -82,6 +82,17 @@ La siguiente tabla resume la evolución de la precisión diagnóstica del Food S
 - El usuario puede activar dictado de voz, marcar chips de cocción y seleccionar porciones simultáneamente.
 - Cada dato seleccionado genera una etiqueta interactiva con botón `✕` para remover o editar en tiempo real.
 
+### 5. Entrada Híbrida Inteligente: Escribir o Dictar en un Solo Lugar
+- **Problema previo:** Si el reconocimiento por voz fallaba por permisos o falta de HTTPS, el usuario quedaba bloqueado sin una vía clara para escribir detalles.
+- **Solución implementada:** Se integró un cuadro de texto permanente con un botón de micrófono `[ 🎙️ Dictar ]` incrustado. El usuario puede tipear directamente, dictar por voz (con transcripción en tiempo real sobre la misma caja), o combinar ambas acciones sin fricción y con manejo tolerante de errores.
+
+### 6. Revelación Progresiva y Cero Scroll Pre-Análisis
+- **Problema de Sobrecarga:** Anteriormente se mostraban más de 25 botones/chips estáticos simultáneos (cocción, nivel de grasa, 12 porciones antropométricas, salsas y bebidas) sumados a 2 tarjetas voluminosas de contexto ("Objetivo actual" y "Contexto IA"), ocupando más de 400px verticales.
+- **Solución implementada:**
+  - **Selector On-Demand de 3 Píldoras:** `[ 🔥 Cocción / Grasa ]`, `[ ✋ Porción Mano ]`, `[ 🥤 Bebida / Salsas ]`. Cada sub-panel se despliega solo cuando el usuario lo solicita y cuenta con un botón de `✕ Cerrar`.
+  - **Feedback Visual Dinámico:** Las píldoras activas se iluminan con su color temático y un punto indicador, manteniendo la pantalla despejada pero informando que hay contexto configurado.
+  - **Acceso Inmediato al CTA:** El botón `[ 🔍 Analizar comida ]` queda a la vista directa sin necesidad de scroll, acompañado de una micro-línea elegante `✨ Calibrado con tu perfil • [Objetivo]`.
+
 ---
 
 ## ✅ 4. Verificación de Calidad y Cero Regresiones
@@ -89,3 +100,4 @@ La siguiente tabla resume la evolución de la precisión diagnóstica del Food S
 - **TypeScript:** `npx tsc --noEmit` completado con código de salida `0` (**cero errores de tipos**).
 - **Control de Archivos:** Las imágenes se limitan estrictamente a un máximo de 4, con previsualización individual y limpieza del `event.target.value` para permitir re-selección del mismo archivo.
 - **Merge Limpio:** Las modificaciones están 100% contenidas en el frontend y no alteran firmas de endpoints existentes ni modelos de base de datos.
+
