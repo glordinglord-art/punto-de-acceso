@@ -9,8 +9,14 @@ import {
   type ExerciseDict,
 } from "../services/exercise-dictionary.service";
 import { findPreciseDictEntry } from "../utils/exercise-matching";
-import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { ArrowLeft, Trophy } from "lucide-react";
+import type {
+  Exercise,
+  Routine,
+  RoutineDay,
+  SetLogData,
+  WorkoutLog,
+} from "../types/routines.types";
+import { ArrowLeft, RefreshCw, Trophy } from "lucide-react";
 
 export function GuidedSessionView({
   day,
@@ -42,6 +48,8 @@ export function GuidedSessionView({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
+  // Aviso flotante: confirma correcciones y avisa de series pendientes
+  const [flash, setFlash] = useState<string | null>(null);
 
   // Live session elapsed timer
   useEffect(() => {
@@ -50,6 +58,13 @@ export function GuidedSessionView({
     }, 1000);
     return () => clearInterval(timer);
   }, [sessionStart]);
+
+  // El aviso flotante se limpia solo
+  useEffect(() => {
+    if (!flash) return;
+    const timeout = setTimeout(() => setFlash(null), 2600);
+    return () => clearTimeout(timeout);
+  }, [flash]);
 
   const formatElapsed = (sec: number) => {
     const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -83,14 +98,53 @@ export function GuidedSessionView({
     [dictByName, dictionary],
   );
 
-  const getCompletedCount = useCallback(
-    (exId: string) => {
+  const getSetsData = useCallback(
+    (exId: string): SetLogData[] => {
       const log = logs.find(
         (l) => l.exerciseId === exId && l.weekNumber === weekNumber,
       );
-      return log?.setsData?.filter((s) => s.completed).length ?? 0;
+      return log?.setsData ?? [];
     },
     [logs, weekNumber],
+  );
+
+  const getCompletedCount = useCallback(
+    (exId: string) => getSetsData(exId).filter((s) => s.completed).length,
+    [getSetsData],
+  );
+
+  // Con navegacion libre las series pueden registrarse en desorden, asi que la
+  // siguiente pendiente se busca en el log y no con un contador secuencial.
+  const firstPendingSetIndex = useCallback((ex: Exercise, sets: SetLogData[]) => {
+    for (let i = 0; i < ex.sets; i += 1) {
+      if (!sets.some((s) => s.set === i + 1 && s.completed)) return i;
+    }
+    return Math.max(0, ex.sets - 1);
+  }, []);
+
+  // Siguiente ejercicio con series pendientes a partir de fromIdx, dando la
+  // vuelta al final para recuperar lo que se haya saltado antes. Devuelve -1
+  // cuando ya no queda nada pendiente. La serie recien guardada se cuenta a
+  // mano porque los logs del padre aun no se han refrescado en ese momento.
+  const nextPendingExerciseIndex = useCallback(
+    (fromIdx: number, justSavedExId: string, justSavedSet: number) => {
+      const total = exercises.length;
+      for (let step = 0; step < total; step += 1) {
+        const i = (fromIdx + step) % total;
+        const ex = exercises[i];
+        const sets = getSetsData(ex.id);
+        let done = sets.filter((s) => s.completed).length;
+        if (
+          ex.id === justSavedExId &&
+          !sets.some((s) => s.set === justSavedSet && s.completed)
+        ) {
+          done += 1;
+        }
+        if (done < ex.sets) return i;
+      }
+      return -1;
+    },
+    [exercises, getSetsData],
   );
 
   const totalSteps = exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -123,22 +177,56 @@ export function GuidedSessionView({
     reps: number | null,
   ) => {
     if (!exercise) return;
+
+    const wasAlreadyLogged = getSetsData(exercise.id).some(
+      (s) => s.set === sIdx + 1 && s.completed,
+    );
+
     await onSaveSet(exercise, sIdx + 1, weight, reps);
 
-    const nextSetIdx = sIdx + 1;
-    if (nextSetIdx < exercise.sets) {
-      setRestRemaining(exercise.restSeconds);
-      setSetIndex(nextSetIdx);
-    } else {
-      const nextExIdx = exerciseIndex + 1;
-      if (nextExIdx < exercises.length) {
+    // Correccion de una serie ya registrada: se queda donde esta, sin descanso
+    // ni salto automatico, para poder seguir revisando el resto.
+    if (wasAlreadyLogged) {
+      setFlash(`Serie ${sIdx + 1} actualizada`);
+      return;
+    }
+
+    // La sesion se cierra cuando no queda ninguna serie pendiente en ningun
+    // ejercicio, sin importar el orden en que se hayan ido registrando.
+    if (nextPendingExerciseIndex(0, exercise.id, sIdx + 1) === -1) {
+      setShowSuccess(true);
+      return;
+    }
+
+    // Siguiente serie pendiente de este ejercicio, saltando las ya registradas.
+    const currentExSets = getSetsData(exercise.id);
+    for (let i = sIdx + 1; i < exercise.sets; i += 1) {
+      if (!currentExSets.some((s) => s.set === i + 1 && s.completed)) {
         setRestRemaining(exercise.restSeconds);
-        setExerciseIndex(nextExIdx);
-        const comp = getCompletedCount(exercises[nextExIdx].id);
-        setSetIndex(comp < exercises[nextExIdx].sets ? comp : Math.max(0, exercises[nextExIdx].sets - 1));
-      } else {
-        setShowSuccess(true);
+        setSetIndex(i);
+        return;
       }
+    }
+
+    // Este ejercicio queda cerrado: al siguiente que tenga series pendientes.
+    const nextExIdx = nextPendingExerciseIndex(
+      (exerciseIndex + 1) % exercises.length,
+      exercise.id,
+      sIdx + 1,
+    );
+    if (nextExIdx === -1) {
+      setShowSuccess(true);
+      return;
+    }
+
+    const nextEx = exercises[nextExIdx];
+    setRestRemaining(exercise.restSeconds);
+    setExerciseIndex(nextExIdx);
+    setSetIndex(firstPendingSetIndex(nextEx, getSetsData(nextEx.id)));
+
+    // Si toca retroceder es porque antes se salto algo: conviene avisarlo.
+    if (nextExIdx <= exerciseIndex) {
+      setFlash(`Te quedan series pendientes en ${nextEx.name}`);
     }
   };
 
@@ -182,7 +270,38 @@ export function GuidedSessionView({
   if (!exercise) return null;
 
   const completedSetCount = getCompletedCount(exercise.id);
+  const currentSets = getSetsData(exercise.id);
   const currentDictEntry = getDictEntry(exercise.name);
+
+  // Ir a cualquier serie del ejercicio actual, este registrada o no.
+  const handleSelectSet = (idx: number) => {
+    setRestRemaining(0);
+    setSetIndex(idx);
+  };
+
+  // Saltar avanza sin registrar nada: a la siguiente serie, o al siguiente
+  // ejercicio. Siempre se puede volver desde las pildoras de serie.
+  const skipTarget = (() => {
+    if (setIndex + 1 < exercise.sets) {
+      return { exerciseIdx: exerciseIndex, setIdx: setIndex + 1 };
+    }
+    if (exerciseIndex + 1 < exercises.length) {
+      const nextEx = exercises[exerciseIndex + 1];
+      return {
+        exerciseIdx: exerciseIndex + 1,
+        setIdx: firstPendingSetIndex(nextEx, getSetsData(nextEx.id)),
+      };
+    }
+    return null;
+  })();
+
+  const handleSkipSet = skipTarget
+    ? () => {
+        setRestRemaining(0);
+        setExerciseIndex(skipTarget.exerciseIdx);
+        setSetIndex(skipTarget.setIdx);
+      }
+    : undefined;
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-between overflow-y-auto scrollbar-none bg-[#090a0f] text-white select-none pb-12">
@@ -243,8 +362,7 @@ export function GuidedSessionView({
                 type="button"
                 onClick={() => {
                   setExerciseIndex(idx);
-                  const comp = getCompletedCount(exercises[idx].id);
-                  setSetIndex(comp < exercises[idx].sets ? comp : Math.max(0, exercises[idx].sets - 1));
+                  setSetIndex(firstPendingSetIndex(ex, getSetsData(ex.id)));
                   setRestRemaining(0);
                 }}
                 className={cn(
@@ -276,9 +394,12 @@ export function GuidedSessionView({
           exercise={exercise}
           activeSetIndex={setIndex}
           completedSetCount={completedSetCount}
+          loggedSets={currentSets}
           restRemaining={restRemaining}
           isSaving={isSaving}
           onSetComplete={handleSetComplete}
+          onSelectSet={handleSelectSet}
+          onSkipSet={handleSkipSet}
           onRestFinish={handleRestFinish}
           onRestSkip={handleRestSkip}
           dictEntry={currentDictEntry}
@@ -293,6 +414,18 @@ export function GuidedSessionView({
           sessionStartTime={sessionStart}
         />
       </div>
+
+      {/* Aviso flotante de correccion / series pendientes */}
+      {flash && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 w-full max-w-xs -translate-x-1/2 px-4">
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-amber-500/40 bg-[#141620]/95 px-4 py-2.5 text-center shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <RefreshCw className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-200">
+              {flash}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

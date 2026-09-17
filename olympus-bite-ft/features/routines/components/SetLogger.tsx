@@ -13,6 +13,9 @@ import {
   ShieldCheck,
   Activity,
   HeartCrack,
+  Pencil,
+  RefreshCw,
+  SkipForward,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
@@ -22,11 +25,17 @@ interface SetLoggerProps {
   targetWeight?: number | null;
   targetReps?: string;
   intensity?: "relax" | "medium" | "failure" | string | null;
-  previousWeight?: number | null;
-  previousReps?: number | null;
+  /** Peso ya guardado para ESTA serie (null si aun no se registra) */
+  loggedWeight?: number | null;
+  /** Reps ya guardadas para ESTA serie (null si aun no se registra) */
+  loggedReps?: number | null;
+  /** True si la serie ya quedo registrada: el boton pasa a modo correccion */
+  isLogged?: boolean;
   defaultUnit?: "kg" | "lbs";
   disabled: boolean;
   onComplete: (weight: number | null, reps: number | null) => void;
+  /** Avanza sin registrar nada (saltar serie) */
+  onSkip?: () => void;
 }
 
 const LBS_FACTOR = 2.20462;
@@ -37,11 +46,13 @@ export function SetLogger({
   targetWeight,
   targetReps = "10-12",
   intensity = "medium",
-  previousWeight,
-  previousReps,
+  loggedWeight = null,
+  loggedReps = null,
+  isLogged = false,
   defaultUnit = "kg",
   disabled,
   onComplete,
+  onSkip,
 }: SetLoggerProps) {
   // Parse target reps from string (e.g. "10-12" -> 12, "10" -> 10)
   const defaultTargetReps = (() => {
@@ -51,7 +62,11 @@ export function SetLogger({
     return parseInt(matches[matches.length - 1], 10);
   })();
 
-  const suggestedWeightKg = targetWeight ?? previousWeight ?? null;
+  const suggestedWeightKg = targetWeight ?? null;
+
+  // Al corregir una serie ya registrada se parte del dato real del usuario,
+  // no de la sugerencia del coach: si no, se pierde lo que realmente levanto.
+  const startingWeightKg = loggedWeight ?? suggestedWeightKg;
 
   // Unit toggle state: 'kg' vs 'lbs'
   const [unit, setUnit] = useState<"kg" | "lbs">(defaultUnit);
@@ -71,9 +86,9 @@ export function SetLogger({
 
   // State: Actual Weight Lifted (stored in current display unit)
   const [actualWeight, setActualWeight] = useState<number | null>(
-    toDisplay(suggestedWeightKg)
+    toDisplay(startingWeightKg)
   );
-  const [reps, setReps] = useState<number>(previousReps ?? defaultTargetReps);
+  const [reps, setReps] = useState<number>(loggedReps ?? defaultTargetReps);
   const [rir, setRir] = useState<number>(2); // Default RIR 2 (safe standard)
 
   // Reason selector for yellow deviation
@@ -84,15 +99,21 @@ export function SetLogger({
   const [selectedJointPain, setSelectedJointPain] = useState<string | null>(null);
 
   // Key tracking for set changes
-  const [prevKey, setPrevKey] = useState({ setNumber, previousReps, defaultUnit });
+  const [prevKey, setPrevKey] = useState({
+    setNumber,
+    loggedWeight,
+    loggedReps,
+    defaultUnit,
+  });
   if (
     prevKey.setNumber !== setNumber ||
-    prevKey.previousReps !== previousReps ||
+    prevKey.loggedWeight !== loggedWeight ||
+    prevKey.loggedReps !== loggedReps ||
     prevKey.defaultUnit !== defaultUnit
   ) {
-    setPrevKey({ setNumber, previousReps, defaultUnit });
-    setActualWeight(toDisplay(suggestedWeightKg));
-    setReps(previousReps ?? defaultTargetReps);
+    setPrevKey({ setNumber, loggedWeight, loggedReps, defaultUnit });
+    setActualWeight(toDisplay(startingWeightKg));
+    setReps(loggedReps ?? defaultTargetReps);
     setAdjustmentReason(null);
     setSelectedJointPain(null);
     setShowJointPicker(false);
@@ -208,7 +229,15 @@ export function SetLogger({
       {/* Header: Set Number & Unit Selector Switch */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 text-xs font-black uppercase tracking-wider text-red-400 border border-red-500/30 shadow-sm">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm",
+              isLogged
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                : "bg-red-500/20 text-red-400 border-red-500/30"
+            )}
+          >
+            {isLogged && <Pencil className="w-3 h-3 shrink-0" />}
             Serie {setNumber} de {totalSets}
           </span>
           <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
@@ -244,6 +273,17 @@ export function SetLogger({
           </button>
         </div>
       </div>
+
+      {/* Aviso de correccion: la serie ya existe y se puede reescribir */}
+      {isLogged && (
+        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 animate-in fade-in duration-200">
+          <Pencil className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
+          <p className="text-[11px] font-bold leading-snug text-amber-200">
+            Esta serie ya está registrada. Ajusta el peso o las reps y pulsa
+            Actualizar para corregirla.
+          </p>
+        </div>
+      )}
 
       {/* Semáforo Visual Card in Real-Time */}
       <div
@@ -555,13 +595,35 @@ export function SetLogger({
         type="button"
         onClick={handleComplete}
         disabled={disabled}
-        className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white font-black uppercase tracking-wider text-sm shadow-[0_0_25px_rgba(239,68,68,0.4)] hover:shadow-[0_0_35px_rgba(239,68,68,0.6)] active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+        className={cn(
+          "w-full py-4 px-4 rounded-2xl font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer",
+          isLogged
+            ? "bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)]"
+            : "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white shadow-[0_0_25px_rgba(239,68,68,0.4)] hover:shadow-[0_0_35px_rgba(239,68,68,0.6)]"
+        )}
       >
-        <Check className="w-5 h-5 stroke-[3]" />
+        {isLogged ? (
+          <RefreshCw className="w-5 h-5 stroke-[3]" />
+        ) : (
+          <Check className="w-5 h-5 stroke-[3]" />
+        )}
         <span>
-          Completar Serie {setNumber} ({actualWeight ?? 0} {unit} · {reps} Reps)
+          {isLogged ? "Actualizar" : "Completar"} Serie {setNumber} (
+          {actualWeight ?? 0} {unit} · {reps} Reps)
         </span>
       </button>
+
+      {/* Saltar sin registrar: se puede volver luego desde las pildoras de serie */}
+      {onSkip && (
+        <button
+          type="button"
+          onClick={onSkip}
+          className="w-full -mt-1 py-1.5 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <SkipForward className="w-3.5 h-3.5" />
+          {isLogged ? "Ir a la siguiente serie" : "Saltar esta serie sin registrar"}
+        </button>
+      )}
     </div>
   );
 }
