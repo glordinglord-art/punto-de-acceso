@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
+import { TrainerScopeModule } from './shared/application/trainer-scope/trainer-scope.module';
 import { AuthModule } from './modules/auth/infrastructure/auth.module';
 import { UsersModule } from './modules/users/infrastructure/users.module';
 import { MealsModule } from './modules/meals/infrastructure/meals.module';
@@ -15,6 +16,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     PrismaModule,
+    TrainerScopeModule,
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,

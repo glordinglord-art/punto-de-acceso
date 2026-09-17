@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { TrainerScopeService } from '../../../../shared/application/trainer-scope/trainer-scope.service';
 import { DashboardStatsDto } from '../dtos/dashboard-stats.dto';
 
 @Injectable()
 export class GetDashboardStatsUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly trainerScope: TrainerScopeService,
+  ) {}
 
   async execute(trainerId: string, tzOffset = 0): Promise<DashboardStatsDto> {
     // Calcular "hoy" en la zona horaria del usuario
@@ -35,6 +39,13 @@ export class GetDashboardStatsUseCase {
     const thirtyDaysAgo = new Date(todayStart);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Clientes directos MAS los compartidos por colegas vinculados. Sin esto
+    // el panel solo contaba la cartera propia y los vinculados no aparecian.
+    const clientsWhere = await this.trainerScope.buildVisibleUsersWhere(
+      trainerId,
+      { includeSelf: false },
+    );
+
     // ── BATCH: Todo en una sola ronda de queries paralelas ──
     const [trainer, clients] = await Promise.all([
       this.prisma.user.findUnique({
@@ -42,7 +53,7 @@ export class GetDashboardStatsUseCase {
         select: { id: true, name: true, avatarUrl: true },
       }),
       this.prisma.user.findMany({
-        where: { trainerId, isActive: true },
+        where: clientsWhere,
         select: { id: true, name: true, avatarUrl: true },
       }),
     ]);

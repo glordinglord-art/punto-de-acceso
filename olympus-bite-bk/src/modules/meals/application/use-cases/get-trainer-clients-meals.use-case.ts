@@ -4,6 +4,7 @@ import {
   MealRepositoryPort,
 } from '../../domain/ports/meal.repository.port';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { TrainerScopeService } from '../../../../shared/application/trainer-scope/trainer-scope.service';
 import { MealResponseDto } from '../dtos/meal-response.dto';
 
 export interface ClientMealsGroup {
@@ -25,6 +26,7 @@ export class GetTrainerClientsMealsUseCase {
     @Inject(MEAL_REPOSITORY)
     private readonly mealRepository: MealRepositoryPort,
     private readonly prisma: PrismaService,
+    private readonly trainerScope: TrainerScopeService,
   ) {}
 
   async execute(
@@ -32,8 +34,14 @@ export class GetTrainerClientsMealsUseCase {
     startDate: Date,
     endDate: Date,
   ): Promise<ClientMealsGroup[]> {
+    // Clientes directos MAS los que comparten los colegas vinculados. Antes
+    // esto filtraba solo por trainerId y los vinculados no salian en la lista.
+    const where = await this.trainerScope.buildVisibleUsersWhere(trainerId, {
+      includeSelf: false,
+    });
+
     const clients = await this.prisma.user.findMany({
-      where: { trainerId, isActive: true },
+      where,
       select: { id: true, name: true, avatarUrl: true },
       orderBy: { name: 'asc' },
     });

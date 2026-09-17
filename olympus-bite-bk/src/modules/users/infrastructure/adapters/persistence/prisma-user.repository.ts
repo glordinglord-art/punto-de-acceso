@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
+import { TrainerScopeService } from '../../../../../shared/application/trainer-scope/trainer-scope.service';
 import { UserRepositoryPort } from '../../../domain/ports/user.repository.port';
 import { User } from '../../../domain/entities/user.entity';
 import { UserRole } from '../../../domain/enums/user-role.enum';
@@ -7,7 +8,10 @@ import type { User as PrismaUser } from '@prisma/client';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepositoryPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly trainerScope: TrainerScopeService,
+  ) {}
 
   private toDomain(raw: PrismaUser): User {
     const user = new User(
@@ -64,62 +68,14 @@ export class PrismaUserRepository implements UserRepositoryPort {
   }
 
   async findByTrainerId(trainerId: string): Promise<User[]> {
-    // Find all linked colleague trainers
-    const colleagueLinks = await this.prisma.trainerColleague.findMany({
-      where: {
-        OR: [{ trainerAId: trainerId }, { trainerBId: trainerId }],
-      },
+    // La resolucion de colegas vinculados vive en TrainerScopeService para que
+    // comidas, panel y clientes vean exactamente la misma cartera.
+    const where = await this.trainerScope.buildVisibleUsersWhere(trainerId, {
+      includeSelf: true,
     });
 
-    interface ColleagueRow {
-      trainerAId: string;
-      trainerBId: string;
-      mode?: string;
-      sharedClientIds?: string[];
-    }
-
-    const trainerIds = new Set<string>([trainerId]);
-    const specificClientIds = new Set<string>();
-
-    for (const link of colleagueLinks as unknown as ColleagueRow[]) {
-      const mode = link.mode || 'bidirectional';
-      const hasSpecific =
-        Array.isArray(link.sharedClientIds) && link.sharedClientIds.length > 0;
-
-      if (mode === 'bidirectional') {
-        const otherId =
-          link.trainerAId === trainerId ? link.trainerBId : link.trainerAId;
-        if (hasSpecific) {
-          link.sharedClientIds!.forEach((id) => specificClientIds.add(id));
-        } else {
-          trainerIds.add(otherId);
-        }
-      } else {
-        // Unidirectional: trainerAId shares with trainerBId
-        // If current coach is trainerBId (the recipient), they see trainerAId's clients
-        if (trainerId === link.trainerBId) {
-          if (hasSpecific) {
-            link.sharedClientIds!.forEach((id) => specificClientIds.add(id));
-          } else {
-            trainerIds.add(link.trainerAId);
-          }
-        }
-      }
-    }
-
-    const orConditions: any[] = [
-      { trainerId: { in: Array.from(trainerIds) } },
-      { id: trainerId },
-    ];
-    if (specificClientIds.size > 0) {
-      orConditions.push({ id: { in: Array.from(specificClientIds) } });
-    }
-
     const rows = await this.prisma.user.findMany({
-      where: {
-        OR: orConditions,
-        isActive: true,
-      },
+      where,
       orderBy: { name: 'asc' },
     });
     return rows.map((r) => this.toDomain(r));
