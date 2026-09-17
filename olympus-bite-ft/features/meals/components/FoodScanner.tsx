@@ -21,9 +21,8 @@ import {
   Utensils,
   Hand,
   RotateCcw,
+  Sliders,
   X,
-  ChevronDown,
-  ChevronUp,
   ImageIcon,
 } from "lucide-react";
 import { compressImageFile } from "../utils/image-compression";
@@ -36,6 +35,40 @@ interface FoodScannerProps {
 }
 
 type Mode = "choose" | "scan" | "manual";
+
+/* ─── Tipado minimo de la Web Speech API (no estandarizada en lib.dom) ─── */
+interface SpeechAlternativeLike {
+  transcript: string;
+}
+
+interface SpeechResultLike {
+  [index: number]: SpeechAlternativeLike;
+}
+
+interface SpeechResultListLike {
+  length: number;
+  [index: number]: SpeechResultLike;
+}
+
+interface SpeechResultEventLike {
+  results: SpeechResultListLike;
+}
+
+interface SpeechErrorEventLike {
+  error: string;
+}
+
+interface BrowserSpeechRecognition {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechErrorEventLike) => void) | null;
+  onresult: ((event: SpeechResultEventLike) => void) | null;
+  start: () => void;
+  stop: () => void;
+}
 
 export function FoodScanner({
   userId,
@@ -62,22 +95,6 @@ export function FoodScanner({
   const [cookingMethod, setCookingMethod] = useState<string | null>(null);
   const [oilLevel, setOilLevel] = useState<string | null>(null);
   const [drinkChoice, setDrinkChoice] = useState<string | null>(null);
-interface BrowserSpeechRecognition {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  onresult:
-    | ((event: {
-        results: { [index: number]: { [index: number]: { transcript: string } } };
-      }) => void)
-    | null;
-  start: () => void;
-  stop: () => void;
-}
-
   const [sauceChoice, setSauceChoice] = useState<string | null>(null);
   const [proteinPortion, setProteinPortion] = useState<string | null>(null);
   const [carbPortion, setCarbPortion] = useState<string | null>(null);
@@ -85,8 +102,9 @@ interface BrowserSpeechRecognition {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [freeNotes, setFreeNotes] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [showHandPortions, setShowHandPortions] = useState(true);
-  const [showDrinkSauces, setShowDrinkSauces] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [activeDrawer, setActiveDrawer] = useState<"cooking" | "portions" | "drinks" | null>(null);
   const [showRawText, setShowRawText] = useState(false);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
@@ -112,6 +130,10 @@ interface BrowserSpeechRecognition {
     const n = updates.notes !== undefined ? updates.notes : freeNotes;
 
     const parts: string[] = [];
+    if (n && n.trim()) {
+      parts.push(n.trim());
+    }
+
     if (c) {
       parts.push(o ? `Cocción: ${c} con ${o}` : `Cocción: ${c}`);
     } else if (o) {
@@ -126,8 +148,9 @@ interface BrowserSpeechRecognition {
 
     if (d) parts.push(`Bebida: ${d}`);
     if (s) parts.push(`Salsas: ${s}`);
-    if (v) parts.push(`Voz: "${v}"`);
-    if (n) parts.push(`Detalles: ${n}`);
+    if (v && v.trim() && (!n || !n.includes(v.trim()))) {
+      parts.push(`Voz: "${v.trim()}"`);
+    }
 
     const compiled = parts.join(" | ");
     setUserDescription(compiled);
@@ -135,6 +158,8 @@ interface BrowserSpeechRecognition {
 
   const toggleVoiceDictation = () => {
     if (typeof window === "undefined") return;
+    setVoiceError(null);
+
     const windowWithSpeech = window as unknown as {
       SpeechRecognition?: new () => BrowserSpeechRecognition;
       webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
@@ -144,14 +169,17 @@ interface BrowserSpeechRecognition {
       windowWithSpeech.webkitSpeechRecognition;
 
     if (!SpeechRecognitionClass) {
-      alert(
-        "El reconocimiento de voz no está soportado en este navegador. Puedes usar los chips táctiles o escribir.",
+      setVoiceError(
+        "El dictado por voz no está habilitado en este navegador o entorno (requiere HTTPS o Chrome/Safari). Puedes escribir directamente aquí.",
       );
+      textareaRef.current?.focus();
       return;
     }
 
     if (isListening) {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {}
       setIsListening(false);
       return;
     }
@@ -159,21 +187,42 @@ interface BrowserSpeechRecognition {
     try {
       const recognition = new SpeechRecognitionClass();
       recognition.lang = "es-ES";
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
 
-      recognition.onstart = () => setIsListening(true);
-      recognition.onend = () => setIsListening(false);
-      recognition.onerror = () => setIsListening(false);
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event) => {
+        setIsListening(false);
+        const err = event.error;
+        if (err === "not-allowed" || err === "service-not-allowed") {
+          setVoiceError("Permiso de micrófono bloqueado. Puedes escribir los detalles en el cuadro de texto.");
+        } else if (err === "no-speech") {
+          setVoiceError("No se detectó sonido. Intenta hablar más cerca o escribe directamente aquí.");
+        } else if (err === "network") {
+          setVoiceError("Error de red con el reconocimiento de voz. Puedes escribir los detalles.");
+        } else {
+          setVoiceError("No se pudo iniciar el dictado. Puedes escribir directamente aquí.");
+        }
+        textareaRef.current?.focus();
+      };
 
       recognition.onresult = (event) => {
-        const text = event.results[0]?.[0]?.transcript;
+        const lastResultIndex = event.results.length - 1;
+        const text = event.results[lastResultIndex]?.[0]?.transcript?.trim();
         if (text) {
-          const newVoice = voiceTranscript
-            ? `${voiceTranscript}. ${text}`
-            : text;
-          setVoiceTranscript(newVoice);
-          updateCompiledDescription({ voice: newVoice });
+          setFreeNotes((prev) => {
+            const next = prev ? `${prev}, ${text}` : text;
+            updateCompiledDescription({ notes: next });
+            return next;
+          });
         }
       };
 
@@ -181,6 +230,8 @@ interface BrowserSpeechRecognition {
       recognition.start();
     } catch {
       setIsListening(false);
+      setVoiceError("No se pudo iniciar el micrófono. Puedes escribir directamente aquí.");
+      textareaRef.current?.focus();
     }
   };
 
@@ -194,6 +245,8 @@ interface BrowserSpeechRecognition {
     setFatPortion(null);
     setVoiceTranscript("");
     setFreeNotes("");
+    setVoiceError(null);
+    setActiveDrawer(null);
     setUserDescription("");
   };
 
@@ -723,148 +776,274 @@ date: localDateToISO(scanDate),
                 )}
               </div>
 
-              {/* 1. BARRA DE VOZ DIRECTA (ALWAYS-ON) */}
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-neutral-100 to-white dark:from-white/[0.04] dark:to-white/[0.01] border border-neutral-200/80 dark:border-white/10 shadow-sm">
-                <div className="flex items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={toggleVoiceDictation}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                        isListening
-                          ? "bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse scale-105"
-                          : "bg-primary-500 hover:bg-primary-400 text-white shadow-md shadow-primary-500/25 active:scale-95"
-                      }`}
-                      title="Toca para dictar por voz"
-                    >
-                      {isListening ? (
-                        <MicOff className="w-5 h-5 animate-bounce" />
-                      ) : (
-                        <Mic className="w-5 h-5" />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
-                        {isListening ? "🔴 Escuchando... habla ahora" : "Dictado por Voz IA"}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-                        {voiceTranscript
-                          ? `"${voiceTranscript}"`
-                          : "Toca el micro y habla (ej: 'pechuga con arroz y café')"}
-                      </p>
-                    </div>
-                  </div>
+              {/* 1. SECCIÓN PRINCIPAL UNIFICADA: ESCRIBIR O DICTAR */}
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-neutral-200/80 dark:border-white/10 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="food-notes-textarea"
+                    className="flex items-center gap-1.5 text-xs font-bold font-condensed tracking-wider uppercase text-neutral-800 dark:text-neutral-200"
+                  >
+                    <span>📝 Descripción o ingredientes</span>
+                    <span className="text-[10px] font-normal lowercase text-neutral-400">
+                      (escribe o dicta)
+                    </span>
+                  </label>
 
-                  {voiceTranscript && (
+                  {freeNotes && (
                     <button
                       type="button"
                       onClick={() => {
-                        setVoiceTranscript("");
-                        updateCompiledDescription({ voice: "" });
+                        setFreeNotes("");
+                        updateCompiledDescription({ notes: "" });
                       }}
-                      className="p-1 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-200 dark:hover:bg-white/10 text-xs"
-                      title="Borrar audio"
+                      className="text-[11px] font-semibold text-neutral-400 hover:text-red-400 transition-colors flex items-center gap-1"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3 h-3" />
+                      <span>Borrar texto</span>
                     </button>
                   )}
                 </div>
-              </div>
 
-              {/* 2. PREPARACIÓN Y ACEITE (CHIPS DE COCCIÓN) */}
-              <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 space-y-3">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                  <Flame className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Método de cocción y grasa añadida</span>
-                </div>
+                <div className="relative">
+                  <textarea
+                    id="food-notes-textarea"
+                    ref={textareaRef}
+                    value={freeNotes}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFreeNotes(val);
+                      updateCompiledDescription({ notes: val });
+                      if (voiceError) setVoiceError(null);
+                    }}
+                    placeholder="Ej: Pechuga a la plancha con 5 cucharadas de arroz, ensalada mixta y café negro sin azúcar..."
+                    rows={3}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50/70 p-3 pr-28 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-white dark:placeholder:text-neutral-500 dark:focus:bg-neutral-900 resize-none transition-all"
+                  />
 
-                {/* Métodos de cocción */}
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: "Sartén / Plancha", icon: "🍳" },
-                    { id: "Airfryer / Horno", icon: "💨" },
-                    { id: "Hervido / Vapor", icon: "💧" },
-                    { id: "Frito / Rebozado", icon: "🍟" },
-                    { id: "Crudo / Fresco", icon: "🥗" },
-                  ].map((item) => (
+                  {/* Botón de Dictado flotante integrado dentro del cuadro de texto */}
+                  <div className="absolute right-2.5 bottom-3 flex items-center gap-1.5">
                     <button
-                      key={item.id}
                       type="button"
-                      onClick={() => {
-                        const next = cookingMethod === item.id ? null : item.id;
-                        setCookingMethod(next);
-                        updateCompiledDescription({ cooking: next });
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                        cookingMethod === item.id
-                          ? "bg-primary-500 text-white font-bold shadow-md shadow-primary-500/20 ring-1 ring-primary-400"
-                          : "bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
+                      onClick={toggleVoiceDictation}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
+                        isListening
+                          ? "bg-red-500 text-white shadow-red-500/30 animate-pulse scale-105"
+                          : "bg-primary-500 hover:bg-primary-400 text-white shadow-primary-500/20 active:scale-95"
                       }`}
+                      title={isListening ? "Toca para detener" : "Toca para dictar por voz"}
                     >
-                      <span>{item.icon}</span>
-                      <span>{item.id}</span>
+                      {isListening ? (
+                        <>
+                          <MicOff className="w-3.5 h-3.5 animate-bounce" />
+                          <span>Parar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3.5 h-3.5" />
+                          <span>Dictar</span>
+                        </>
+                      )}
                     </button>
-                  ))}
-                </div>
-
-                {/* Nivel de aceite / grasa */}
-                <div className="pt-1">
-                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                    Aceite / Grasa añadida:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { id: "Sin aceite / Spray (0 kcal)", label: "🚫 Sin aceite" },
-                      { id: "1 cdta de aceite (+45 kcal)", label: "🥄 1 cdta (+45 kcal)" },
-                      { id: "1 cda de aceite (+120 kcal)", label: "🥣 1 cda (+120 kcal)" },
-                      { id: "Mantequilla / Manteca (+100 kcal)", label: "🧈 Mantequilla (+100 kcal)" },
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          const next = oilLevel === item.id ? null : item.id;
-                          setOilLevel(next);
-                          updateCompiledDescription({ oil: next });
-                        }}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                          oilLevel === item.id
-                            ? "bg-amber-500 text-white font-bold shadow-md shadow-amber-500/20 ring-1 ring-amber-400"
-                            : "bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
                   </div>
                 </div>
+
+                {/* Banner de estado de escucha */}
+                {isListening && (
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-red-500 animate-pulse pt-0.5">
+                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                    <span>🔴 Escuchando... habla con naturalidad (se escribe automáticamente)</span>
+                  </div>
+                )}
+
+                {/* Banner de error o aviso amigable */}
+                {voiceError && !isListening && (
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] leading-tight">
+                    <span className="shrink-0 text-xs">ℹ️</span>
+                    <span className="flex-1">{voiceError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceError(null)}
+                      className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white"
+                      title="Cerrar aviso"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                  💡 También puedes usar los atajos rápidos de abajo para añadir método y porciones con un solo toque:
+                </p>
               </div>
 
-              {/* 3. PORCIONES POR MANO (COLAPSIBLE / DIRECTO) */}
-              <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setShowHandPortions(!showHandPortions)}
-                  className="w-full flex items-center justify-between text-left"
-                >
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                    <Hand className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Porciones relativas a la mano</span>
-                    {(proteinPortion || carbPortion || fatPortion) && (
-                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    )}
-                  </div>
-                  <div className="text-neutral-400 hover:text-white">
-                    {showHandPortions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-                </button>
+              {/* ATRIBUTOS DE PRECISIÓN: REVELACIÓN PROGRESIVA */}
+              <div className="space-y-2 pt-0.5">
+                <div className="flex items-center justify-between px-0.5">
+                  <span className="text-[11px] font-bold font-condensed tracking-wider uppercase text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-primary-400" />
+                    <span>Afinar detalles con atajos (opcional)</span>
+                  </span>
+                  {(cookingMethod || oilLevel || proteinPortion || carbPortion || fatPortion || drinkChoice || sauceChoice) && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full">
+                      Personalizado
+                    </span>
+                  )}
+                </div>
 
-                {showHandPortions && (
-                  <div className="space-y-3 pt-1 animate-in fade-in duration-200">
+                {/* Barra de 3 Píldoras Selectoras Compactas */}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Píldora 1: Cocción y Aceite */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveDrawer(activeDrawer === "cooking" ? null : "cooking")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                      activeDrawer === "cooking"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20"
+                        : (cookingMethod || oilLevel)
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40"
+                        : "bg-white/60 dark:bg-white/[0.04] text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20"
+                    }`}
+                  >
+                    <Flame className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                    <span className="truncate">Cocción / Grasa</span>
+                    {(cookingMethod || oilLevel) && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>}
+                  </button>
+
+                  {/* Píldora 2: Porciones de Mano */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveDrawer(activeDrawer === "portions" ? null : "portions")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                      activeDrawer === "portions"
+                        ? "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/20"
+                        : (proteinPortion || carbPortion || fatPortion)
+                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/40"
+                        : "bg-white/60 dark:bg-white/[0.04] text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20"
+                    }`}
+                  >
+                    <Hand className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                    <span className="truncate">Porción Mano</span>
+                    {(proteinPortion || carbPortion || fatPortion) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>}
+                  </button>
+
+                  {/* Píldora 3: Bebida y Salsas */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveDrawer(activeDrawer === "drinks" ? null : "drinks")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                      activeDrawer === "drinks"
+                        ? "bg-purple-500 text-white border-purple-500 shadow-md shadow-purple-500/20"
+                        : (drinkChoice || sauceChoice)
+                        ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/40"
+                        : "bg-white/60 dark:bg-white/[0.04] text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20"
+                    }`}
+                  >
+                    <Utensils className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+                    <span className="truncate">Bebida / Salsas</span>
+                    {(drinkChoice || sauceChoice) && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>}
+                  </button>
+                </div>
+
+                {/* Panel Revelado Progresivo */}
+                {activeDrawer === "cooking" && (
+                  <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-amber-500/30 space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5" />
+                        <span>Método de cocción y grasa añadida</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveDrawer(null)}
+                        className="text-[10px] font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-white"
+                      >
+                        ✕ Cerrar
+                      </button>
+                    </div>
+
+                    {/* Métodos de cocción */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "Sartén / Plancha", icon: "🍳" },
+                        { id: "Airfryer / Horno", icon: "💨" },
+                        { id: "Hervido / Vapor", icon: "💧" },
+                        { id: "Frito / Rebozado", icon: "🍟" },
+                        { id: "Crudo / Fresco", icon: "🥗" },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            const next = cookingMethod === item.id ? null : item.id;
+                            setCookingMethod(next);
+                            updateCompiledDescription({ cooking: next });
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                            cookingMethod === item.id
+                              ? "bg-amber-500 text-white font-bold shadow-md shadow-amber-500/20 ring-1 ring-amber-400"
+                              : "bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
+                          }`}
+                        >
+                          <span>{item.icon}</span>
+                          <span>{item.id}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Nivel de aceite / grasa */}
+                    <div className="pt-1 border-t border-neutral-200/60 dark:border-white/5">
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
+                        Aceite / Grasa añadida:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { id: "Sin aceite / Spray (0 kcal)", label: "🚫 Sin aceite" },
+                          { id: "1 cdta de aceite (+45 kcal)", label: "🥄 1 cdta (+45 kcal)" },
+                          { id: "1 cda de aceite (+120 kcal)", label: "🥣 1 cda (+120 kcal)" },
+                          { id: "Mantequilla / Manteca (+100 kcal)", label: "🧈 Mantequilla (+100 kcal)" },
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              const next = oilLevel === item.id ? null : item.id;
+                              setOilLevel(next);
+                              updateCompiledDescription({ oil: next });
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                              oilLevel === item.id
+                                ? "bg-amber-500 text-white font-bold shadow-md shadow-amber-500/20 ring-1 ring-amber-400"
+                                : "bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeDrawer === "portions" && (
+                  <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-blue-500/30 space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Hand className="w-3.5 h-3.5" />
+                        <span>Porciones según tu mano</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveDrawer(null)}
+                        className="text-[10px] font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-white"
+                      >
+                        ✕ Cerrar
+                      </button>
+                    </div>
+
                     {/* Proteína */}
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">
-                        🥩 Proteína (Tamaño de la palma):
+                        🥩 Proteína (Palma):
                       </span>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {[
@@ -896,7 +1075,7 @@ date: localDateToISO(scanDate),
                     {/* Carbohidratos */}
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">
-                        🍚 Carbohidrato (Tamaño del puño):
+                        🍚 Carbohidrato (Puño):
                       </span>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {[
@@ -928,7 +1107,7 @@ date: localDateToISO(scanDate),
                     {/* Grasas y quesos */}
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">
-                        🥑 Grasa / Queso / Aguacate (Tamaño del pulgar):
+                        🥑 Grasa / Aguacate (Pulgar):
                       </span>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[
@@ -957,29 +1136,23 @@ date: localDateToISO(scanDate),
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* 4. BEBIDA Y SALSAS (DESPLEGABLE / RÁPIDO) */}
-              <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowDrinkSauces(!showDrinkSauces)}
-                  className="w-full flex items-center justify-between text-left"
-                >
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                    <Utensils className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Bebida y Salsas adicionales</span>
-                    {(drinkChoice || sauceChoice) && (
-                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                    )}
-                  </div>
-                  <div className="text-neutral-400 hover:text-white">
-                    {showDrinkSauces ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-                </button>
+                {activeDrawer === "drinks" && (
+                  <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-purple-500/30 space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-purple-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Utensils className="w-3.5 h-3.5" />
+                        <span>Bebidas y Salsas adicionales</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveDrawer(null)}
+                        className="text-[10px] font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-white"
+                      >
+                        ✕ Cerrar
+                      </button>
+                    </div>
 
-                {showDrinkSauces && (
-                  <div className="space-y-2.5 pt-1 animate-in fade-in duration-200">
                     <div>
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">
                         Bebida:
@@ -1011,7 +1184,7 @@ date: localDateToISO(scanDate),
                       </div>
                     </div>
 
-                    <div>
+                    <div className="pt-1 border-t border-neutral-200/60 dark:border-white/5">
                       <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">
                         Salsas / Aderezos:
                       </span>
@@ -1114,6 +1287,16 @@ date: localDateToISO(scanDate),
                     onRemove: () => {
                       setSauceChoice(null);
                       updateCompiledDescription({ sauce: null });
+                    },
+                  });
+                }
+                if (freeNotes && freeNotes.trim()) {
+                  activeTags.push({
+                    id: "notes",
+                    label: `📝 "${freeNotes.trim().length > 30 ? freeNotes.trim().slice(0, 30) + "..." : freeNotes.trim()}"`,
+                    onRemove: () => {
+                      setFreeNotes("");
+                      updateCompiledDescription({ notes: "" });
                     },
                   });
                 }
@@ -1252,64 +1435,33 @@ date: localDateToISO(scanDate),
             </div>
           </div>
 
-          {/* Fitness Goal Display */}
-          <div className="space-y-2">
-            <label className="block text-sm font-bold font-condensed tracking-widest uppercase text-neutral-800 dark:text-neutral-200">
-              🎯 Objetivo actual
-            </label>
-            <div className="flex items-center gap-3 rounded-xl bg-white/50 dark:bg-white/5 px-4 py-3 border border-neutral-200 dark:border-white/10 backdrop-blur-md">
-              <span className="text-3xl drop-shadow-md">
-                {user?.dietaryGoal
-                  ? FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.icon || "🎯"
-                  : "🎯"}
-              </span>
-              <div>
-                <p className="font-semibold text-neutral-900 dark:text-white text-sm">
-                  {user?.dietaryGoal
-                    ? FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.label ||
-                      user.dietaryGoal
-                    : "No especificado"}
-                </p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                  Se usará para la evaluación de la IA
-                </p>
-              </div>
-              <span className="ml-auto text-[10px] uppercase font-bold text-neutral-400 bg-white dark:bg-neutral-900 px-2 py-0.5 rounded-md shadow-sm border border-neutral-100 dark:border-neutral-800">
-                Automático
+          {/* Botón de Análisis Directo + Micro-línea de Calibración */}
+          <div className="space-y-2.5 pt-1">
+            <Button
+              onClick={handleAnalyze}
+              fullWidth
+              loading={analyzing}
+              size="lg"
+              className="py-4 font-condensed font-bold tracking-widest uppercase shadow-lg shadow-primary-500/20 text-sm"
+            >
+              {analyzing ? "Analizando con IA..." : "🔍 Analizar comida"}
+            </Button>
+
+            <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+              <Sparkles className="w-3.5 h-3.5 text-primary-400 shrink-0" />
+              <span>
+                Calibrado con tu perfil
+                {user?.dietaryGoal && (
+                  <>
+                    {" "}•{" "}
+                    <strong className="text-neutral-700 dark:text-neutral-300 font-semibold">
+                      {FITNESS_GOALS[user.dietaryGoal as FitnessGoal]?.label || user.dietaryGoal}
+                    </strong>
+                  </>
+                )}
               </span>
             </div>
           </div>
-
-          {/* AI Context Info Display */}
-          <div className="space-y-2 mt-4">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              🧠 Contexto de IA
-            </label>
-            <div className="flex items-center gap-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 px-4 py-3 border border-blue-100 dark:border-blue-800/30">
-              <span className="text-2xl">👤</span>
-              <div>
-                <p className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
-                  Perfil Personalizado
-                </p>
-                <p className="text-[11px] text-blue-700/80 dark:text-blue-300/70 leading-tight mt-0.5">
-                  La IA utilizará tu peso, estatura y condiciones médicas para
-                  darte una recomendación a la medida.
-                </p>
-              </div>
-              <span className="ml-auto text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-neutral-900 px-2 py-0.5 rounded-md shadow-sm border border-blue-100 dark:border-blue-800/50">
-                Activo
-              </span>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleAnalyze}
-            fullWidth
-            loading={analyzing}
-            size="lg"
-          >
-            {analyzing ? "Analizando con IA..." : "🔍 Analizar comida"}
-          </Button>
         </>
       )}
 

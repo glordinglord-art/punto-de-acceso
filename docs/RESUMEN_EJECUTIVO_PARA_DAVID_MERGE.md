@@ -69,6 +69,11 @@ Asimismo, este release garantiza:
   - Tipos actualizados para soportar todos los campos del nuevo onboarding.
 - **Gestión de Sesión (`features/auth/hooks/useAuth.tsx`):**
   - `updateUser()` sincroniza reactivamente en memoria y `localStorage` para liberar el bloqueo inmediatamente al culminar.
+- **Escáner de Comidas y Precisión IA (`features/meals/components/FoodScanner.tsx`):**
+  - Entrada Híbrida: Cuadro de texto permanente con botón integrado de dictado por voz y streaming en tiempo real, tolerante a restricciones de permisos.
+  - Revelación Progresiva: Colapso de más de 25 chips estáticos en una barra elegante de 3 píldoras on-demand (`[🔥 Cocción]`, `[✋ Porción Mano]`, `[🥤 Bebidas]`) con feedback visual activo.
+  - Eliminación de Sobrecarga: Depuración de tarjetas redundantes de contexto técnico para dejar el botón de *"Analizar comida"* a la vista directa sin scroll, acompañado de una micro-línea de calibración de perfil.
+
 
 ---
 
