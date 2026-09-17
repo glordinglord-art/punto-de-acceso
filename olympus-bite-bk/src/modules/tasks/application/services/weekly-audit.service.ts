@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { TrainerScopeService } from '../../../../shared/application/trainer-scope/trainer-scope.service';
 
 export interface WeeklyAuditResult {
   auditedAt: string;
@@ -25,7 +26,10 @@ export interface WeeklyAuditResult {
 export class WeeklyAuditService {
   private readonly logger = new Logger(WeeklyAuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly trainerScope: TrainerScopeService,
+  ) {}
 
   /**
    * Motor 1: La Regla del 80%
@@ -47,12 +51,19 @@ export class WeeklyAuditService {
   }
 
   async runAudit(trainerId?: string): Promise<WeeklyAuditResult> {
+    // Con trainerId se audita la cartera visible de ese coach: sus clientes
+    // directos mas los que le comparten los colegas vinculados. Sin el, la
+    // auditoria dominical recorre a todos los clientes activos.
+    const scopeWhere = trainerId
+      ? await this.trainerScope.buildVisibleUsersWhere(trainerId, {
+          includeSelf: false,
+        })
+      : null;
+
     const clients = await this.prisma.user.findMany({
-      where: {
-        role: 'client',
-        isActive: true,
-        ...(trainerId ? { trainerId } : {}),
-      },
+      where: scopeWhere
+        ? { AND: [scopeWhere, { role: 'client' }] }
+        : { role: 'client', isActive: true },
     });
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

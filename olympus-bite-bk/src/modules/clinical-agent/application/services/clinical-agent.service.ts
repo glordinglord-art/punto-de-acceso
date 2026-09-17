@@ -7,6 +7,7 @@ import {
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Exercise, MuscleGroup, RoutineDay } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
+import { TrainerScopeService } from '../../../../shared/application/trainer-scope/trainer-scope.service';
 import { DeleteRoutineUseCase } from '../../../routines/application/use-cases/delete-routine.use-case';
 import { UpdateRoutineUseCase } from '../../../routines/application/use-cases/update-routine.use-case';
 
@@ -32,6 +33,7 @@ export class ClinicalAgentService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly deleteRoutineUseCase: DeleteRoutineUseCase,
     private readonly updateRoutineUseCase: UpdateRoutineUseCase,
+    private readonly trainerScope: TrainerScopeService,
   ) {}
 
   private getModelsForKey(key: string): string[] {
@@ -98,43 +100,18 @@ export class ClinicalAgentService implements OnModuleInit {
       throw new Error('Entrenador no encontrado');
     }
 
-    // 1. Fetch trainer's full client portfolio (direct + shared)
-    const directClients = await this.prisma.user.findMany({
-      where: { trainerId, isActive: true, role: 'client' },
+    // 1. Cartera completa del coach: clientes directos mas los compartidos
+    //    por colegas vinculados. Antes solo se sumaban los compartidos cuando
+    //    la vinculacion traia lista explicita, asi que en una vinculacion
+    //    bidireccional de cartera completa el agente no los veia.
+    const scopeWhere = await this.trainerScope.buildVisibleUsersWhere(
+      trainerId,
+      { includeSelf: false },
+    );
+
+    const allClients = await this.prisma.user.findMany({
+      where: { AND: [scopeWhere, { role: 'client' }] },
     });
-
-    const sharedLinks = await this.prisma.trainerColleague.findMany({
-      where: {
-        OR: [
-          { trainerAId: trainerId },
-          { trainerBId: trainerId, mode: 'bidirectional' },
-        ],
-      },
-    });
-
-    const sharedClientIds = new Set<string>();
-    for (const link of sharedLinks) {
-      if (link.sharedClientIds && link.sharedClientIds.length > 0) {
-        link.sharedClientIds.forEach((id) => sharedClientIds.add(id));
-      }
-    }
-
-    const sharedClients =
-      sharedClientIds.size > 0
-        ? await this.prisma.user.findMany({
-            where: {
-              id: { in: Array.from(sharedClientIds) },
-              isActive: true,
-              role: 'client',
-            },
-          })
-        : [];
-
-    // Deduplicate all clients
-    const clientMap = new Map<string, any>();
-    directClients.forEach((c) => clientMap.set(c.id, c));
-    sharedClients.forEach((c) => clientMap.set(c.id, c));
-    const allClients = Array.from(clientMap.values());
 
     // 2. Fetch today's telemetry for all clients
     const todayStr = new Date().toISOString().slice(0, 10);
