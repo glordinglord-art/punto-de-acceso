@@ -231,10 +231,10 @@ export function SetLogger({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border shadow-sm",
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border",
               isLogged
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                : "bg-red-500/20 text-red-400 border-red-500/30"
+                ? "bg-white/10 text-slate-200 border-white/20"
+                : "bg-white/5 text-slate-300 border-white/10"
             )}
           >
             {isLogged && <Pencil className="w-3 h-3 shrink-0" />}
@@ -273,17 +273,6 @@ export function SetLogger({
           </button>
         </div>
       </div>
-
-      {/* Aviso de correccion: la serie ya existe y se puede reescribir */}
-      {isLogged && (
-        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 animate-in fade-in duration-200">
-          <Pencil className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
-          <p className="text-[11px] font-bold leading-snug text-amber-200">
-            Esta serie ya está registrada. Ajusta el peso o las reps y pulsa
-            Actualizar para corregirla.
-          </p>
-        </div>
-      )}
 
       {/* Semáforo Visual Card in Real-Time */}
       <div
@@ -353,9 +342,9 @@ export function SetLogger({
         <div className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-black/60 border border-white/10 relative overflow-hidden">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-              <Scale className="w-3 h-3 text-cyan-400" /> Carga Sugerida
+              <Scale className="w-3 h-3 text-slate-500" /> Carga Sugerida
             </span>
-            <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
               Lectura
             </span>
           </div>
@@ -375,7 +364,7 @@ export function SetLogger({
                 <span className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
                   {suggestedDisplay}
                 </span>
-                <span className="text-sm font-extrabold text-cyan-400 ml-1">
+                <span className="text-sm font-extrabold text-slate-400 ml-1">
                   {unit}
                 </span>
               </div>
@@ -390,12 +379,12 @@ export function SetLogger({
         </div>
 
         {/* Pilar 2: Carga Real Levantada (Interactivo con Stepper) */}
-        <div className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-black/60 border border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.12)] relative">
+        <div className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-white/[0.06] border border-white/15 relative">
           <div className="flex items-center justify-between text-slate-300">
-            <span className="text-[10px] font-black uppercase tracking-widest text-red-400">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-200">
               🏋️ Carga Real
             </span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-primary-400 uppercase tracking-wider">
               Editable
             </span>
           </div>
@@ -416,7 +405,7 @@ export function SetLogger({
               <span className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
                 {actualWeight ?? 0}
               </span>
-              <span className="text-xs font-bold text-red-400 ml-1">
+              <span className="text-xs font-bold text-slate-400 ml-1">
                 {unit}
               </span>
             </div>
@@ -437,7 +426,7 @@ export function SetLogger({
             <button
               type="button"
               onClick={() => setActualWeight(suggestedDisplay)}
-              className="px-2 py-0.5 rounded bg-red-500/20 text-[9px] font-black text-red-300 hover:bg-red-500/30 transition-colors uppercase tracking-wider cursor-pointer"
+              className="px-2 py-0.5 rounded bg-white/10 text-[9px] font-black text-slate-200 hover:bg-white/20 transition-colors uppercase tracking-wider cursor-pointer"
             >
               = Meta
             </button>
@@ -505,7 +494,7 @@ export function SetLogger({
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
               🎯 RIR Percibido
             </span>
-            <span className="text-[9px] font-bold text-amber-400 uppercase">
+            <span className="text-[9px] font-bold text-slate-400 uppercase">
               {rir === 0 ? "Fallo" : `${rir} en recámara`}
             </span>
           </div>
@@ -520,8 +509,8 @@ export function SetLogger({
                   "py-2 rounded-xl text-xs font-black transition-all cursor-pointer border",
                   rir === val
                     ? val === 0
-                      ? "bg-red-500 text-white border-red-400 shadow-md shadow-red-500/30"
-                      : "bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/30"
+                      ? "bg-rose-500 text-white border-rose-400"
+                      : "bg-white text-slate-950 border-white"
                     : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
                 )}
               >
@@ -538,7 +527,7 @@ export function SetLogger({
           <button
             type="button"
             onClick={() => setShowJointPicker(true)}
-            className="w-full py-2 px-3 rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl border border-white/10 bg-white/[0.03] hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 text-slate-400 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <HeartCrack className="w-3.5 h-3.5 text-rose-400" />
             <span>+ Notificar molestia o dolor articular en esta serie</span>
@@ -595,12 +584,7 @@ export function SetLogger({
         type="button"
         onClick={handleComplete}
         disabled={disabled}
-        className={cn(
-          "w-full py-4 px-4 rounded-2xl font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer",
-          isLogged
-            ? "bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)]"
-            : "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white shadow-[0_0_25px_rgba(239,68,68,0.4)] hover:shadow-[0_0_35px_rgba(239,68,68,0.6)]"
-        )}
+        className="w-full py-4 px-4 rounded-2xl font-black uppercase tracking-wider text-sm text-white bg-gradient-to-r from-red-600 to-primary-500 shadow-lg shadow-red-950/50 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
       >
         {isLogged ? (
           <RefreshCw className="w-5 h-5 stroke-[3]" />
