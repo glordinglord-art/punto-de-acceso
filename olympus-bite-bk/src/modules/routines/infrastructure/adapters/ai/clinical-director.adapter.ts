@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   ClinicalDirectorPort,
@@ -12,27 +17,30 @@ export class ClinicalDirectorAdapter
 {
   private readonly logger = new Logger(ClinicalDirectorAdapter.name);
   private genAI: GoogleGenerativeAI | null = null;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null =
-    null;
+
+  /** Del mas capaz al mas rapido; si uno esta saturado se prueba el siguiente. */
+  private static readonly MODELS = [
+    'gemini-3.6-flash',
+    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
+  ];
 
   onModuleInit() {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (
+      process.env.GEMINI_BACKUP_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      ''
+    )
+      .trim()
+      .replace(/^["']|["']$/g, '');
     if (!apiKey) {
       this.logger.warn(
-        '⚠️ GEMINI_API_KEY no configurada. El Director Clínico IA operará con reemplazos de respaldo.',
+        '⚠️ GEMINI_API_KEY no configurada. El ajuste biomecánico IA no estará disponible.',
       );
       return;
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
-    this.logger.log(
-      '✅ Gemini 2.5 Flash conectado como Director Clínico de Vital Fit',
-    );
+    this.logger.log('✅ Ajuste biomecánico IA conectado a Gemini');
   }
 
   async proposeAdjustment(
@@ -49,25 +57,10 @@ export class ClinicalDirectorAdapter
       coachNote,
     } = context;
 
-    const fallbackResult: ClinicalProposalResult = {
-      targetExerciseId: currentExercise.id,
-      targetExerciseName: currentExercise.name,
-      replacementExercise: {
-        name: `${currentExercise.name} (Variante con Polea / Cable)`,
-        muscleGroup: currentExercise.muscleGroup || 'shoulders',
-        sets: currentExercise.sets || 4,
-        reps: currentExercise.reps || '10-12',
-        restSeconds: 75,
-        observations:
-          'Tensión continua en trayectoria convergente, evitando pinzamiento articular.',
-        intensity: currentExercise.intensity || 'medium',
-      },
-      clinicalRationale:
-        'Sustitución por polea para reducir la sobrecarga articular y carga axial directa, manteniendo la tensión mecánica en el músculo objetivo.',
-    };
-
-    if (!this.genAI || !this.model) {
-      return fallbackResult;
+    if (!this.genAI) {
+      throw new ServiceUnavailableException(
+        'El ajuste biomecánico IA no está configurado en el servidor.',
+      );
     }
 
     const systemPrompt = `
@@ -128,53 +121,75 @@ REPORTE DEL ENTRENADOR EN PISO (BITÁCORA CLÍNICA):
 Proporciona la sustitución biomecánica inmediata en formato JSON.
 `;
 
-    try {
-      const response = await this.model.generateContent([
-        systemPrompt,
-        userPrompt,
-      ]);
-      const text = response.response.text();
-      const cleaned = text
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```$/i, '')
-        .trim();
+    let lastError = '';
+    for (const modelName of ClinicalDirectorAdapter.MODELS) {
+      try {
+        const model = this.genAI.getGenerativeModel(
+          {
+            model: modelName,
+            generationConfig: { responseMimeType: 'application/json' },
+          },
+          { timeout: 30_000 },
+        );
+        const response = await model.generateContent([
+          systemPrompt,
+          userPrompt,
+        ]);
+        const cleaned = response.response
+          .text()
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/```$/i, '')
+          .trim();
+        const parsed = JSON.parse(cleaned) as {
+          replacementExercise?: Record<string, unknown>;
+          clinicalRationale?: string;
+        };
+        const proposed = parsed.replacementExercise ?? {};
+        const name =
+          typeof proposed.name === 'string' ? proposed.name.trim() : '';
+        if (!name) throw new Error('la respuesta no trae ejercicio');
 
-      const parsed = JSON.parse(cleaned);
-      return {
-        targetExerciseId: parsed.targetExerciseId || currentExercise.id,
-        targetExerciseName: parsed.targetExerciseName || currentExercise.name,
-        replacementExercise: {
-          name:
-            parsed.replacementExercise?.name ||
-            fallbackResult.replacementExercise.name,
-          muscleGroup:
-            parsed.replacementExercise?.muscleGroup ||
-            currentExercise.muscleGroup,
-          sets:
-            Number(parsed.replacementExercise?.sets) ||
-            currentExercise.sets ||
-            4,
-          reps: String(
-            parsed.replacementExercise?.reps || currentExercise.reps || '10-12',
-          ),
-          restSeconds: Number(parsed.replacementExercise?.restSeconds) || 90,
-          observations:
-            parsed.replacementExercise?.observations ||
-            fallbackResult.replacementExercise.observations,
-          intensity:
-            parsed.replacementExercise?.intensity ||
-            currentExercise.intensity ||
-            'medium',
-        },
-        clinicalRationale:
-          parsed.clinicalRationale || fallbackResult.clinicalRationale,
-      };
-    } catch (err) {
-      this.logger.error(
-        `Error consultando al Director Clínico Gemini: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return fallbackResult;
+        return {
+          // Siempre el ejercicio real: antes se tomaba el id que devolvia la IA
+          // y, si lo inventaba, "Aplicar" fallaba con "ejercicio no encontrado"
+          targetExerciseId: currentExercise.id,
+          targetExerciseName: currentExercise.name,
+          replacementExercise: {
+            name,
+            muscleGroup:
+              typeof proposed.muscleGroup === 'string'
+                ? proposed.muscleGroup
+                : currentExercise.muscleGroup,
+            sets:
+              parseInt(String(proposed.sets), 10) || currentExercise.sets || 4,
+            reps:
+              typeof proposed.reps === 'string' ||
+              typeof proposed.reps === 'number'
+                ? String(proposed.reps)
+                : currentExercise.reps || '10-12',
+            restSeconds: parseInt(String(proposed.restSeconds), 10) || 90,
+            observations:
+              typeof proposed.observations === 'string'
+                ? proposed.observations
+                : '',
+            intensity:
+              typeof proposed.intensity === 'string'
+                ? proposed.intensity
+                : currentExercise.intensity || 'medium',
+          },
+          clinicalRationale: parsed.clinicalRationale || '',
+        };
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `Ajuste biomecánico con ${modelName} falló: ${lastError.slice(-160)}`,
+        );
+      }
     }
+
+    throw new ServiceUnavailableException(
+      'La IA no pudo generar la sustitución en este momento. Inténtalo de nuevo en unos segundos.',
+    );
   }
 }

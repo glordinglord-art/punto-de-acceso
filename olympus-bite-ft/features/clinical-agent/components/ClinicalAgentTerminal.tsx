@@ -17,7 +17,7 @@ import { cn } from '@/shared/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import {
   clinicalAgentService,
-  parseRoutineAction,
+  parseRoutineActions,
   type ChatMessage,
 } from '../services/clinical-agent.service';
 import { ClinicalRoutineProposalCard } from './ClinicalRoutineProposalCard';
@@ -96,7 +96,9 @@ export function ClinicalAgentTerminal({
         res?.data?.reply || 'Respuesta generada por el Director Clínico.';
 
       const tempAiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
+        // Id real del mensaje guardado: lo necesita la tarjeta para marcar la
+        // accion como aplicada en el historial
+        id: res?.data?.messageId || `ai-${Date.now()}`,
         role: 'ai',
         content: replyContent,
         createdAt: new Date().toISOString(),
@@ -104,6 +106,9 @@ export function ClinicalAgentTerminal({
 
       setMessages((prev) => [...prev, tempAiMsg]);
     } catch {
+      // Devolver el texto al input para que el coach no lo tenga que reescribir
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+      setInput(query);
       toast.error('No se pudo comunicar con el Director Clínico IA');
     } finally {
       setLoading(false);
@@ -238,7 +243,7 @@ export function ClinicalAgentTerminal({
 
                 {/* Message Bubble */}
                 {(() => {
-                  const { actionData, cleanText } = parseRoutineAction(msg.content);
+                  const { actions, cleanText } = parseRoutineActions(msg.content);
 
                   return (
                     <div
@@ -308,14 +313,18 @@ export function ClinicalAgentTerminal({
                             </ReactMarkdown>
                           </div>
 
-                          {/* Interactive Clinical Routine Action Card */}
-                          {actionData && (
+                          {/* Una tarjeta por accion propuesta en el mensaje */}
+                          {actions.map((a) => (
                             <ClinicalRoutineProposalCard
-                              actionData={actionData}
+                              key={`${msg.id}-${a.index}`}
+                              actionData={a.data}
+                              status={a.status}
+                              messageId={msg.id}
+                              actionIndex={a.index}
                               trainerId={trainerId}
                               onApplied={handleActionApplied}
                             />
-                          )}
+                          ))}
                         </>
                       )}
                     </div>

@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClinicalAgentController } from './infrastructure/adapters/http/clinical-agent.controller';
 import { ClinicalAgentService } from './application/services/clinical-agent.service';
-import { RoutinesModule } from '../routines/infrastructure/routines.module';
+import { ClinicalActionService } from './application/services/clinical-action.service';
 
 @Module({
-  imports: [RoutinesModule],
   controllers: [ClinicalAgentController],
-  providers: [ClinicalAgentService],
+  providers: [ClinicalAgentService, ClinicalActionService],
   exports: [ClinicalAgentService],
 })
 export class ClinicalAgentModule {}

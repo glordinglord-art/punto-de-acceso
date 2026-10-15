@@ -6,9 +6,8 @@ import { usePathname } from "next/navigation";
 import { mealsService } from "@/features/meals/services/meals.service";
 import {
   clinicalAgentService,
-  parseRoutineAction,
-  type RoutineAction,
-  type RoutineProposal,
+  parseRoutineActions,
+  type ParsedAction,
 } from "@/features/clinical-agent/services/clinical-agent.service";
 import { ClinicalRoutineProposalCard } from "@/features/clinical-agent/components/ClinicalRoutineProposalCard";
 import { cn } from "@/shared/lib/utils";
@@ -17,6 +16,8 @@ import { X, Send, Sparkles, UserCircle, Trash2, Stethoscope, Bot } from "lucide-
 import { useConfirm } from "@/shared/contexts/ConfirmContext";
 
 interface Message {
+  /** Id guardado en el backend; las tarjetas de accion lo usan para marcarse como aplicadas. */
+  id?: string;
   role: "user" | "ai";
   content: string;
 }
@@ -46,6 +47,9 @@ export function GlobalAiAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingHistory, setIsFetchingHistory] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Usuario+modo cuyo historial ya esta cargado. Antes se recargaba cada vez
+  // que se abria el panel y pisaba la conversacion en curso.
+  const loadedHistoryKey = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,6 +70,9 @@ export function GlobalAiAssistant() {
   // Load chat history when opened or when role changes
   useEffect(() => {
     if (!isAuthenticated || !user?.id || !isOpen) return;
+    const historyKey = `${user.id}:${isClinical ? "clinical" : "diet"}`;
+    if (loadedHistoryKey.current === historyKey) return;
+    loadedHistoryKey.current = historyKey;
 
     const fetchHistory = async () => {
       setIsFetchingHistory(true);
@@ -74,7 +81,7 @@ export function GlobalAiAssistant() {
           // Fetch coach clinical agent history
           const res = await clinicalAgentService.getHistory(user.id);
           if (res?.data && res.data.length > 0) {
-            setMessages(res.data.map((m) => ({ role: m.role, content: m.content })));
+            setMessages(res.data.map((m) => ({ id: m.id, role: m.role, content: m.content })));
           } else {
             setMessages([
               {
@@ -99,6 +106,8 @@ export function GlobalAiAssistant() {
         }
       } catch (error) {
         console.error("Error fetching chat history", error);
+        // Permite reintentar la carga la proxima vez que se abra
+        loadedHistoryKey.current = null;
       } finally {
         setIsFetchingHistory(false);
       }
@@ -160,7 +169,10 @@ export function GlobalAiAssistant() {
         // Send to clinical agent service
         const res = await clinicalAgentService.sendMessage(user.id, promptText);
         const reply = res?.data?.reply || "Respuesta generada por el Director Clínico.";
-        setMessages((prev) => [...prev, { role: "ai", content: reply }]);
+        setMessages((prev) => [
+          ...prev,
+          { id: res?.data?.messageId ?? undefined, role: "ai", content: reply },
+        ]);
       } else {
         // Send to diet recommender service
         const res = await mealsService.chatRecommendation(user.id, {
@@ -179,6 +191,8 @@ export function GlobalAiAssistant() {
       }
     } catch (error) {
       console.error("AI Chat Error:", error);
+      // El texto vuelve al input para no tener que reescribirlo
+      setInput(promptText);
       setMessages((prev) => [
         ...prev,
         {
@@ -323,12 +337,12 @@ export function GlobalAiAssistant() {
             <>
               {messages.map((msg, idx) => {
                 const isUser = msg.role === "user";
-                let actionData: RoutineAction | RoutineProposal | null = null;
+                let actions: ParsedAction[] = [];
                 let cleanContent = msg.content;
 
                 if (isClinical && !isUser) {
-                  const parsed = parseRoutineAction(msg.content);
-                  actionData = parsed.actionData;
+                  const parsed = parseRoutineActions(msg.content);
+                  actions = parsed.actions;
                   cleanContent = parsed.cleanText;
                 } else {
                   cleanContent = msg.content
@@ -339,7 +353,7 @@ export function GlobalAiAssistant() {
 
                 return (
                   <div
-                    key={idx}
+                    key={msg.id ?? idx}
                     className={cn(
                       "flex items-start gap-3",
                       isUser ? "flex-row-reverse" : "flex-row"
@@ -366,7 +380,7 @@ export function GlobalAiAssistant() {
 
                     <div
                       className={cn(
-                        actionData ? "max-w-[95%] sm:max-w-[90%]" : "max-w-[85%]",
+                        actions.length > 0 ? "max-w-[95%] sm:max-w-[90%]" : "max-w-[85%]",
                         "rounded-2xl p-4 text-xs leading-relaxed shadow-sm",
                         isUser
                           ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 rounded-tr-none font-medium"
@@ -429,15 +443,19 @@ export function GlobalAiAssistant() {
                             </ReactMarkdown>
                           </div>
 
-                          {actionData && user?.id && (
-                            <div className="mt-3">
-                              <ClinicalRoutineProposalCard
-                                actionData={actionData}
-                                trainerId={user.id}
-                                onApplied={handleActionApplied}
-                              />
-                            </div>
-                          )}
+                          {user?.id &&
+                            actions.map((a) => (
+                              <div className="mt-3" key={`${msg.id ?? idx}-${a.index}`}>
+                                <ClinicalRoutineProposalCard
+                                  actionData={a.data}
+                                  status={a.status}
+                                  messageId={msg.id}
+                                  actionIndex={a.index}
+                                  trainerId={user.id}
+                                  onApplied={handleActionApplied}
+                                />
+                              </div>
+                            ))}
                         </>
                       )}
                     </div>

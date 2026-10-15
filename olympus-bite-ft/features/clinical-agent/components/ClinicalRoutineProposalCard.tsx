@@ -13,85 +13,76 @@ import {
   Trash2,
   Calendar,
   Check,
+  AlertTriangle,
+  Utensils,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   clinicalAgentService,
+  type ActionStatus,
   type RoutineAction,
-  type RoutineProposal,
   type ExerciseSpec,
 } from '../services/clinical-agent.service';
 
 interface ClinicalRoutineProposalCardProps {
-  actionData?: RoutineAction | RoutineProposal;
-  proposal?: RoutineProposal; // legacy prop compatibility
+  actionData: RoutineAction;
+  /** Estado guardado en el historial: una accion aplicada no se vuelve a ofrecer. */
+  status?: ActionStatus;
+  /** Mensaje e indice del bloque, para que el backend lo marque como aplicado. */
+  messageId?: string;
+  actionIndex?: number;
   trainerId: string;
   onApplied?: (followUpMessage?: string) => void;
 }
 
 export function ClinicalRoutineProposalCard({
-  actionData: rawActionData,
-  proposal: rawProposal,
+  actionData: action,
+  status = 'pending',
+  messageId,
+  actionIndex,
   trainerId,
   onApplied,
 }: ClinicalRoutineProposalCardProps) {
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [applied, setApplied] = useState(status === 'applied');
   const [dismissed, setDismissed] = useState(false);
-
-  // Normalize data into RoutineAction format
-  const action: RoutineAction = (() => {
-    const data = rawActionData || rawProposal;
-    if (!data) {
-      return {
-        action: 'sustituir_ejercicio',
-        clientName: 'Atleta',
-        currentExercise: { name: 'Ejercicio' },
-        proposedExercise: { name: 'Ejercicio Propuesto' },
-      };
-    }
-    // If legacy proposal without action tag
-    if (!('action' in data)) {
-      return {
-        action: 'sustituir_ejercicio',
-        clientName: data.clientName,
-        routineName: data.routineName,
-        dayFocus: data.dayFocus,
-        currentExercise: data.currentExercise,
-        proposedExercise: data.proposedExercise,
-        rationale: data.rationale,
-      };
-    }
-    return data as RoutineAction;
-  })();
+  const [error, setError] = useState<string | null>(null);
+  const invalid = status === 'invalid';
 
   const handleApply = async () => {
-    if (applying || applied || !trainerId) return;
+    if (applying || applied || invalid || !trainerId) return;
 
     setApplying(true);
+    setError(null);
     try {
-      const res = await clinicalAgentService.executeAction(trainerId, action);
+      const res = await clinicalAgentService.executeAction(
+        trainerId,
+        action,
+        // Los ids temporales de mensajes recien llegados no existen en la BD
+        messageId && actionIndex !== undefined && actionIndex >= 0
+          ? { messageId, actionIndex }
+          : undefined,
+      );
 
       if (res?.data?.success) {
         setApplied(true);
-        const followUp =
-          res.data.followUpMessage ||
-          res.data.message ||
-          `¡Acción de rutina para ${action.clientName} aplicada con éxito!`;
-        toast.success(res.data.message || '¡Acción aplicada con éxito!', {
+        toast.success(res.data.message || '¡Acción aplicada!', {
           duration: 5000,
           icon: '🩺',
         });
-        onApplied?.(followUp);
+        onApplied?.(res.data.followUpMessage || res.data.message);
       } else {
-        toast.error('No se pudo aplicar la acción a la rutina.');
+        setError('No se pudo aplicar la acción.');
       }
     } catch (err: unknown) {
       const message =
         err instanceof Error
           ? err.message
-          : 'Error al conectar con la base de datos de rutinas.';
-      toast.error(message);
+          : 'No se pudo conectar con el servidor.';
+      // Si el backend dice que ya se aplico, la tarjeta lo refleja
+      if (/ya se aplic/i.test(message)) setApplied(true);
+      setError(message);
+      toast.error(message, { duration: 6000 });
     } finally {
       setApplying(false);
     }
@@ -175,6 +166,15 @@ export function ClinicalRoutineProposalCard({
           borderColor: 'border-amber-500/30',
           gradient: 'from-amber-950/40 via-amber-900/20 to-transparent',
         };
+      case 'actualizar_metas_nutricionales':
+        return {
+          title: 'Metas Nutricionales',
+          badge: 'Perfil del atleta',
+          color: 'emerald',
+          icon: <Utensils className="h-4 w-4 text-emerald-300" />,
+          borderColor: 'border-emerald-500/30',
+          gradient: 'from-emerald-950/40 via-emerald-900/20 to-transparent',
+        };
       default:
         return {
           title: 'Ajuste de Rutina',
@@ -232,9 +232,14 @@ export function ClinicalRoutineProposalCard({
           </div>
         </div>
 
-        {('dayFocus' in action && action.dayFocus) && (
+        {(('dayNumber' in action && action.dayNumber) ||
+          ('dayFocus' in action && action.dayFocus)) && (
           <span className="rounded-xl bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70 border border-white/10">
-            {action.dayFocus}
+            {'dayNumber' in action && action.dayNumber ? `Día ${action.dayNumber}` : ''}
+            {'dayNumber' in action && action.dayNumber && 'dayFocus' in action && action.dayFocus
+              ? ' · '
+              : ''}
+            {'dayFocus' in action ? action.dayFocus : ''}
           </span>
         )}
       </div>
@@ -280,7 +285,15 @@ export function ClinicalRoutineProposalCard({
                 {action.proposedExercise?.name}
               </p>
               <p className="text-xs font-semibold text-emerald-300/80 mt-1">
-                Series: {action.proposedExercise?.setsReps || 'Según mesociclo'}
+                Series:{' '}
+                {action.proposedExercise?.setsReps ||
+                  (action.proposedExercise?.sets
+                    ? `${action.proposedExercise.sets}x${action.proposedExercise.reps ?? ''}${
+                        action.proposedExercise.restSeconds
+                          ? ` · ${action.proposedExercise.restSeconds}s`
+                          : ''
+                      }`
+                    : 'Se mantienen las actuales')}
               </p>
             </div>
           </div>
@@ -549,14 +562,86 @@ export function ClinicalRoutineProposalCard({
             </p>
             {action.changes && (
               <div className="mt-2 text-[11px] text-amber-200/70 space-y-1">
-                {Object.entries(action.changes).map(([k, v]) => (
-                  <div key={k}>
-                    • <span className="font-bold text-white capitalize">{k}:</span>{' '}
-                    {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                {action.changes.name && (
+                  <div>
+                    • <span className="font-bold text-white">Nuevo nombre:</span>{' '}
+                    {action.changes.name}
+                  </div>
+                )}
+                {action.changes.description && (
+                  <div>
+                    • <span className="font-bold text-white">Descripción:</span>{' '}
+                    {action.changes.description}
+                  </div>
+                )}
+                {action.changes.weekCount && (
+                  <div>
+                    • <span className="font-bold text-white">Semanas:</span>{' '}
+                    {action.changes.weekCount}
+                  </div>
+                )}
+              </div>
+            )}
+            {action.changes?.days && action.changes.days.length > 0 && (
+              <div className="mt-3 space-y-2 max-h-64 overflow-y-auto pr-1">
+                {action.changes.days.map((day, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-xl border border-white/10 bg-black/40 p-2.5 text-xs"
+                  >
+                    <span className="font-black text-amber-300 text-[11px] uppercase tracking-wide">
+                      Día {day.dayNumber}: {day.focusArea}
+                    </span>
+                    {day.exercises && day.exercises.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1.5">
+                        {day.exercises.map((ex, eIdx) => (
+                          <div
+                            key={eIdx}
+                            className="flex items-center justify-between rounded-lg bg-white/5 px-2 py-1 text-[11px]"
+                          >
+                            <span className="text-slate-200 font-medium truncate">{ex.name}</span>
+                            <span className="text-[10px] text-amber-300 shrink-0 ml-1 font-mono">
+                              {ex.sets}x{ex.reps}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-white/40 italic mt-0.5">
+                        {day.restDayNote || 'Descanso'}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 8. METAS NUTRICIONALES */}
+        {action.action === 'actualizar_metas_nutricionales' && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {[
+              { label: 'Calorías', value: action.targetCalories, unit: 'kcal' },
+              { label: 'Proteína', value: action.targetProtein, unit: 'g' },
+              { label: 'Carbohidratos', value: action.targetCarbs, unit: 'g' },
+              { label: 'Grasas', value: action.targetFats, unit: 'g' },
+              { label: 'Fase', value: action.dietaryGoal, unit: '' },
+            ]
+              .filter((m) => m.value !== undefined && m.value !== null && m.value !== '')
+              .map((m) => (
+                <div
+                  key={m.label}
+                  className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2"
+                >
+                  <p className="text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                    {m.label}
+                  </p>
+                  <p className="text-sm font-black text-white capitalize">
+                    {m.value} {m.unit}
+                  </p>
+                </div>
+              ))}
           </div>
         )}
 
@@ -573,12 +658,24 @@ export function ClinicalRoutineProposalCard({
           </div>
         )}
 
+        {/* ── Error devuelto por el servidor, visible hasta reintentar ── */}
+        {error && !applied && (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 flex items-start gap-2 text-xs text-rose-200">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
+            <span>
+              <strong className="text-rose-300">No se aplicó:</strong> {error}
+            </span>
+          </div>
+        )}
+
         {/* ── Action Confirmation Bar ── */}
         <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-semibold text-white/70 text-center sm:text-left">
             {applied
-              ? '✓ Módulo actualizado y sincronizado en tiempo real con la base de datos.'
-              : '¿Deseas aplicar estos cambios a la rutina del atleta ahora?'}
+              ? '✓ Cambios guardados en la base de datos.'
+              : invalid
+                ? 'Esta propuesta no se puede aplicar tal cual. Pídele al Director Clínico que la corrija.'
+                : '¿Deseas aplicar estos cambios ahora?'}
           </p>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -586,6 +683,11 @@ export function ClinicalRoutineProposalCard({
               <div className="flex items-center gap-1.5 w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 Acción Aplicada
+              </div>
+            ) : invalid ? (
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-black uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4" />
+                No aplicable
               </div>
             ) : (
               <>

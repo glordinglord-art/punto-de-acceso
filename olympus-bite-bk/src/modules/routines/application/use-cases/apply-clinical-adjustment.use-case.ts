@@ -60,17 +60,32 @@ export class ApplyClinicalAdjustmentUseCase {
       .filter(Boolean)
       .join(' · ');
 
+    // La propuesta llega de la IA via frontend: "4" o 12 como numero
+    // rompian la escritura en Prisma (sets es Int y reps es String)
+    const r = dto.replacementExercise;
+    const sets = parseInt(String(r.sets ?? ''), 10);
+    const restSeconds = parseInt(String(r.restSeconds ?? ''), 10);
+    const reps =
+      r.reps !== undefined && r.reps !== null && String(r.reps).trim()
+        ? String(r.reps).trim()
+        : existing.reps;
+
     const updated = await this.prisma.exercise.update({
       where: { id: dto.targetExerciseId },
       data: {
-        name: dto.replacementExercise.name,
+        name: String(r.name ?? '').trim() || existing.name,
         muscleGroup: muscleGroupEnum,
-        sets: dto.replacementExercise.sets ?? existing.sets,
-        reps: dto.replacementExercise.reps ?? existing.reps,
+        sets:
+          Number.isFinite(sets) && sets > 0
+            ? Math.min(sets, 10)
+            : existing.sets,
+        reps,
         restSeconds:
-          dto.replacementExercise.restSeconds ?? existing.restSeconds,
+          Number.isFinite(restSeconds) && restSeconds >= 0
+            ? restSeconds
+            : existing.restSeconds,
         observations: observations || existing.observations,
-        intensity: dto.replacementExercise.intensity ?? existing.intensity,
+        intensity: r.intensity ?? existing.intensity,
       },
     });
 

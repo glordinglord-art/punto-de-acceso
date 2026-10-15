@@ -20,13 +20,13 @@ export class ClinicalAgentController {
     @Param('trainerId') trainerId: string,
     @Body() dto: { message: string },
   ) {
-    const reply = await this.agentService.processTrainerMessage(
+    const { reply, messageId } = await this.agentService.processTrainerMessage(
       trainerId,
       dto.message,
     );
     return {
       success: true,
-      data: { reply },
+      data: { reply, messageId },
     };
   }
 
@@ -57,9 +57,19 @@ export class ClinicalAgentController {
   @HttpCode(HttpStatus.OK)
   async executeAction(
     @Param('trainerId') trainerId: string,
-    @Body() dto: Record<string, any>,
+    @Body() dto: Record<string, unknown>,
   ) {
-    const result = await this.agentService.executeRoutineAction(trainerId, dto);
+    // messageId/actionIndex identifican el bloque del chat para marcarlo como
+    // aplicado y que no se pueda aplicar dos veces al recargar
+    const { messageId, actionIndex, ...action } = dto;
+    const result = await this.agentService.executeRoutineAction(
+      trainerId,
+      action,
+      {
+        messageId: typeof messageId === 'string' ? messageId : undefined,
+        actionIndex: typeof actionIndex === 'number' ? actionIndex : undefined,
+      },
+    );
     return {
       success: true,
       data: result,

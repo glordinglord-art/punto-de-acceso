@@ -32,9 +32,10 @@ export interface RoutineActionBase {
 
 export interface SustituirEjercicioAction extends RoutineActionBase {
   action: 'sustituir_ejercicio';
+  dayNumber?: number;
   dayFocus?: string;
   currentExercise: { name: string; setsReps?: string };
-  proposedExercise: { name: string; setsReps?: string };
+  proposedExercise: { name: string; setsReps?: string } & Partial<ExerciseSpec>;
 }
 
 export interface ReemplazarDiaAction extends RoutineActionBase {
@@ -78,7 +79,22 @@ export interface EliminarRutinaAction extends RoutineActionBase {
 
 export interface ModificarRutinaAction extends RoutineActionBase {
   action: 'modificar_rutina' | 'update_routine';
-  changes?: Record<string, unknown>;
+  changes?: {
+    name?: string;
+    description?: string;
+    weekCount?: number;
+    days?: CrearRutinaAction['days'];
+    [key: string]: unknown;
+  };
+}
+
+export interface ActualizarMetasAction extends RoutineActionBase {
+  action: 'actualizar_metas_nutricionales';
+  targetCalories?: number;
+  targetProtein?: number;
+  targetCarbs?: number;
+  targetFats?: number;
+  dietaryGoal?: string;
 }
 
 export type RoutineAction =
@@ -88,29 +104,25 @@ export type RoutineAction =
   | EliminarEjercicioAction
   | CrearRutinaAction
   | EliminarRutinaAction
-  | ModificarRutinaAction;
+  | ModificarRutinaAction
+  | ActualizarMetasAction;
 
-// Legacy type kept for backward compat
-export interface RoutineProposal {
-  clientName: string;
-  routineName?: string;
-  dayFocus?: string;
-  currentExercise: {
-    name: string;
-    setsReps?: string;
-  };
-  proposedExercise: {
-    name: string;
-    setsReps?: string;
-  };
-  rationale?: string;
+/** Estado de un bloque de accion dentro de un mensaje del Director Clinico. */
+export type ActionStatus = 'pending' | 'applied' | 'invalid';
+
+export interface ParsedAction {
+  /** Posicion del bloque en el mensaje; el backend la usa para marcarlo como aplicado. */
+  index: number;
+  status: ActionStatus;
+  data: RoutineAction;
 }
 
 export const clinicalAgentService = {
   sendMessage: (trainerId: string, message: string) =>
-    api.post<ApiResponse<{ reply: string }>>(`/clinical-agent/chat/${trainerId}`, {
-      message,
-    }),
+    api.post<ApiResponse<{ reply: string; messageId: string | null }>>(
+      `/clinical-agent/chat/${trainerId}`,
+      { message },
+    ),
 
   getHistory: (trainerId: string) =>
     api.get<ApiResponse<ChatMessage[]>>(`/clinical-agent/history/${trainerId}`),
@@ -118,30 +130,15 @@ export const clinicalAgentService = {
   clearHistory: (trainerId: string) =>
     api.delete<ApiResponse<null>>(`/clinical-agent/history/${trainerId}`),
 
-  // Legacy: single exercise swap
-  applyAdjustment: (
+  /**
+   * Aplica una accion. Con messageId/actionIndex el backend marca el bloque como
+   * aplicado en el historial, asi al recargar no se puede aplicar dos veces.
+   */
+  executeAction: (
     trainerId: string,
-    payload: {
-      clientName: string;
-      oldExercise: string;
-      newExercise: string;
-      rationale?: string;
-      routineName?: string;
-    },
+    action: RoutineAction,
+    source?: { messageId?: string; actionIndex?: number },
   ) =>
-    api.post<
-      ApiResponse<{
-        success: boolean;
-        message: string;
-        clientName: string;
-        oldExercise: string;
-        newExercise: string;
-        dayFocus: string;
-      }>
-    >(`/clinical-agent/apply-adjustment/${trainerId}`, payload),
-
-  // NEW: Full 6-action routine control
-  executeAction: (trainerId: string, action: RoutineAction) =>
     api.post<
       ApiResponse<{
         success: boolean;
@@ -149,127 +146,120 @@ export const clinicalAgentService = {
         message: string;
         clientName: string;
         routineName?: string;
-        previousRoutineName?: string;
         followUpMessage?: string;
         [key: string]: unknown;
       }>
-    >(`/clinical-agent/execute-action/${trainerId}`, action),
+    >(`/clinical-agent/execute-action/${trainerId}`, { ...action, ...source }),
 };
 
-/**
- * Robust balanced-bracket parser for clinical routine actions.
- * Safely handles nested arrays and objects within JSON (e.g. days, exercises).
- */
-export function parseRoutineAction(content: string): {
-  actionData: RoutineAction | null;
-  cleanText: string;
-} {
-  const markers = ['[ACCION_RUTINA:', '[PROPUESTA_RUTINA:', '[COMANDO_RUTINA:'];
-  let markerFound = '';
-  let markerIdx = -1;
+// ─── Parser de bloques de accion ──────────────────────────────────────────
+// Mismo formato que routine-action-markers.ts en el backend.
 
-  for (const m of markers) {
-    const idx = content.indexOf(m);
-    if (idx !== -1 && (markerIdx === -1 || idx < markerIdx)) {
-      markerIdx = idx;
-      markerFound = m;
+const MARKERS: Record<string, ActionStatus> = {
+  ACCION_RUTINA: 'pending',
+  ACCION_APLICADA: 'applied',
+  ACCION_INVALIDA: 'invalid',
+  PROPUESTA_RUTINA: 'pending',
+  COMANDO_RUTINA: 'pending',
+};
+
+const ACTION_ALIASES: Record<string, RoutineAction['action']> = {
+  delete_routine: 'eliminar_rutina',
+  update_routine: 'modificar_rutina',
+};
+
+function findJsonEnd(content: string, from: number): number {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = from; i < content.length; i++) {
+    const char = content[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === '{') depth++;
+    else if (char === '}') {
+      depth--;
+      if (depth === 0) return i;
     }
   }
-
-  // 1. Tag-based parsing with bracket/brace depth balancing
-  if (markerIdx !== -1) {
-    const jsonStart = content.indexOf('{', markerIdx + markerFound.length);
-    if (jsonStart !== -1) {
-      let depth = 0;
-      let inString = false;
-      let escape = false;
-      let jsonEnd = -1;
-
-      for (let i = jsonStart; i < content.length; i++) {
-        const char = content[i];
-        if (escape) {
-          escape = false;
-          continue;
-        }
-        if (char === '\\') {
-          escape = true;
-          continue;
-        }
-        if (char === '"') {
-          inString = !inString;
-          continue;
-        }
-        if (!inString) {
-          if (char === '{') depth++;
-          else if (char === '}') {
-            depth--;
-            if (depth === 0) {
-              jsonEnd = i;
-              break;
-            }
-          }
-        }
-      }
-
-      if (jsonEnd !== -1) {
-        const jsonStr = content.slice(jsonStart, jsonEnd + 1);
-        let actionData: RoutineAction | null = null;
-        try {
-          const parsed = JSON.parse(jsonStr);
-          if (markerFound === '[PROPUESTA_RUTINA:' && !parsed.action) {
-            parsed.action = 'sustituir_ejercicio';
-          }
-          if (parsed.action === 'delete_routine') {
-            parsed.action = 'eliminar_rutina';
-          }
-          if (parsed.action === 'update_routine') {
-            parsed.action = 'modificar_rutina';
-          }
-          actionData = parsed as RoutineAction;
-        } catch (err) {
-          console.error('Error al parsear JSON de acción de rutina:', err);
-        }
-
-        let tagEnd = content.indexOf(']', jsonEnd);
-        if (tagEnd === -1) tagEnd = jsonEnd;
-
-        const beforeTag = content.slice(0, markerIdx);
-        const afterTag = content.slice(tagEnd + 1);
-        const cleanText = (beforeTag + afterTag)
-          .replace(/\[COMANDO_RUTINA:[^\]]*\]/g, '')
-          .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
-          .trim();
-
-        return { actionData, cleanText };
-      }
-    }
-  }
-
-  // 2. Fallback: markdown code blocks ```json { ... } ```
-  const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-  if (codeBlockMatch) {
-    try {
-      const parsed = JSON.parse(codeBlockMatch[1]);
-      if (parsed.action && parsed.clientName) {
-        return {
-          actionData: parsed as RoutineAction,
-          cleanText: content.replace(codeBlockMatch[0], '').trim(),
-        };
-      }
-      if (parsed.clientName && parsed.currentExercise && parsed.proposedExercise) {
-        return {
-          actionData: { ...parsed, action: 'sustituir_ejercicio' } as RoutineAction,
-          cleanText: content.replace(codeBlockMatch[0], '').trim(),
-        };
-      }
-    } catch {}
-  }
-
-  const cleanText = content
-    .replace(/\[COMANDO_RUTINA:[^\]]*\]/g, '')
-    .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
-    .trim();
-
-  return { actionData: null, cleanText };
+  return -1;
 }
 
+/**
+ * Separa el texto para el coach de los bloques [ACCION_*: {...}]. Un mensaje
+ * puede traer varias acciones (por ejemplo, una rutina por atleta).
+ */
+export function parseRoutineActions(content: string): {
+  actions: ParsedAction[];
+  cleanText: string;
+} {
+  const actions: ParsedAction[] = [];
+  const regex = new RegExp(`\\[(${Object.keys(MARKERS).join('|')}):`, 'g');
+  let text = '';
+  let cursor = 0;
+  let index = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    const marker = match[1];
+    const jsonStart = content.indexOf('{', match.index + match[0].length);
+    const jsonEnd = jsonStart === -1 ? -1 : findJsonEnd(content, jsonStart);
+    text += content.slice(cursor, match.index);
+
+    if (jsonEnd === -1) {
+      // Bloque cortado: se oculta el resto para no ensenar JSON al coach
+      cursor = content.length;
+      break;
+    }
+    const closing = content.indexOf(']', jsonEnd);
+    cursor = closing === -1 ? jsonEnd + 1 : closing + 1;
+    regex.lastIndex = cursor;
+
+    try {
+      const parsed = JSON.parse(content.slice(jsonStart, jsonEnd + 1));
+      if (marker === 'PROPUESTA_RUTINA' && !parsed.action) {
+        parsed.action = 'sustituir_ejercicio';
+      }
+      parsed.action = ACTION_ALIASES[parsed.action] ?? parsed.action;
+      actions.push({ index, status: MARKERS[marker], data: parsed });
+    } catch (err) {
+      console.error('Bloque de accion con JSON invalido:', err);
+    }
+    index++;
+  }
+  text += content.slice(cursor);
+
+  // Mensajes antiguos con la accion en un bloque ```json```
+  if (actions.length === 0) {
+    const codeBlock = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if (codeBlock) {
+      try {
+        const parsed = JSON.parse(codeBlock[1]);
+        if (parsed.clientName && (parsed.action || parsed.currentExercise)) {
+          parsed.action ??= 'sustituir_ejercicio';
+          actions.push({ index: -1, status: 'pending', data: parsed });
+          text = text.replace(codeBlock[0], '');
+        }
+      } catch {
+        // no era una accion
+      }
+    }
+  }
+
+  const cleanText = text
+    .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { actions, cleanText };
+}
