@@ -50,6 +50,8 @@ export interface Routine {
   name: string;
   description: string;
   trainerId: string;
+  /** Coach que la asigno; viene del backend para mostrar rutinas de colegas. */
+  trainerName?: string | null;
   clientId: string;
   weekCount: number;
   isFavorable?: boolean | null;

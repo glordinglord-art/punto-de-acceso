@@ -27,6 +27,7 @@ export class RoutineResponseDto {
   name!: string;
   description!: string;
   trainerId!: string;
+  trainerName!: string | null;
   clientId!: string;
   weekCount!: number;
   isFavorable!: boolean | null;
@@ -40,6 +41,7 @@ export class RoutineResponseDto {
     dto.name = routine.name;
     dto.description = routine.description;
     dto.trainerId = routine.trainerId;
+    dto.trainerName = routine.trainerName ?? null;
     dto.clientId = routine.clientId;
     dto.weekCount = routine.weekCount;
     dto.isFavorable = routine.isFavorable;

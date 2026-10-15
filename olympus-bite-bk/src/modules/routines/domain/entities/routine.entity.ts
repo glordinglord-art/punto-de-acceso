@@ -30,6 +30,8 @@ export class Routine extends BaseEntity {
   isFavorable: boolean | null;
   days: RoutineDay[];
   isActive: boolean;
+  /** Nombre del coach que la asigno; solo lectura, lo rellena la persistencia. */
+  trainerName?: string;
 
   constructor(props: CreateRoutineProps, id?: string) {
     super(id);

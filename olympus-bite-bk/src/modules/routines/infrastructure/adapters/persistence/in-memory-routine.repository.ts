@@ -26,6 +26,16 @@ export class InMemoryRoutineRepository implements RoutineRepositoryPort {
     );
   }
 
+  async findVisibleToTrainer(
+    trainerId: string,
+    clientIds: string[],
+  ): Promise<Routine[]> {
+    const visible = new Set(clientIds);
+    return Array.from(this.routines.values()).filter(
+      (r) => r.trainerId === trainerId || visible.has(r.clientId),
+    );
+  }
+
   async save(entity: Routine): Promise<Routine> {
     this.routines.set(entity.id, entity);
     return entity;

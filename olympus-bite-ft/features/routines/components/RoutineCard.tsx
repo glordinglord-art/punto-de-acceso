@@ -1,13 +1,15 @@
 "use client";
 
 import type { Routine, RoutineDay } from "../types/routines.types";
-import { ChevronRight, Dumbbell, Calendar, Trash2 } from "lucide-react";
+import { ChevronRight, Dumbbell, Calendar, Trash2, UserCheck } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface RoutineCardProps {
   routine: Routine;
   onClick?: () => void;
   onDelete?: () => void;
+  /** Nombre del colega que la asigno; se omite cuando la rutina es propia. */
+  assignedBy?: string;
 }
 
 function DayPreview({ day }: { day: RoutineDay }) {
@@ -41,7 +43,7 @@ function DayPreview({ day }: { day: RoutineDay }) {
   );
 }
 
-export function RoutineCard({ routine, onClick, onDelete }: RoutineCardProps) {
+export function RoutineCard({ routine, onClick, onDelete, assignedBy }: RoutineCardProps) {
   const trainingDays = routine.days.filter((d) => !d.isRestDay);
 
   return (
@@ -67,6 +69,12 @@ export function RoutineCard({ routine, onClick, onDelete }: RoutineCardProps) {
                 {routine.weekCount} semanas
               </span>
             </div>
+            {assignedBy && (
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-sky-300">
+                <UserCheck className="w-3.5 h-3.5" />
+                Asignada por {assignedBy}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span

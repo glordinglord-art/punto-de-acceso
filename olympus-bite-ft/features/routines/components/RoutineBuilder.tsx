@@ -511,7 +511,7 @@ export function RoutineBuilder({
                 {trainerId && (
                   <option value={trainerId}>📌 Para mí (mi rutina)</option>
                 )}
-                {clients.map((c) => (
+                {clients.filter((c) => c.id !== trainerId).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} — {c.email}
                   </option>

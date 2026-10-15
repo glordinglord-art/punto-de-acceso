@@ -15,6 +15,7 @@ import type {
 
 type RoutineWithDays = PrismaRoutine & {
   routineDays: (PrismaRoutineDay & { exercises: PrismaExercise[] })[];
+  trainer?: { name: string } | null;
 };
 
 @Injectable()
@@ -28,6 +29,7 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
         exercises: { orderBy: { order: 'asc' as const } },
       },
     },
+    trainer: { select: { name: true } },
   };
 
   private toDomain(raw: RoutineWithDays): Routine {
@@ -79,6 +81,7 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
       raw.id,
     );
     routine.isActive = raw.isActive;
+    routine.trainerName = raw.trainer?.name?.trim() || undefined;
     (routine as any).createdAt = raw.createdAt;
     (routine as any).updatedAt = raw.updatedAt;
     return routine;
@@ -112,6 +115,20 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
     const rows = await this.prisma.routine.findMany({
       where: { trainerId },
       include: this.includeAll,
+    });
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  async findVisibleToTrainer(
+    trainerId: string,
+    clientIds: string[],
+  ): Promise<Routine[]> {
+    const rows = await this.prisma.routine.findMany({
+      where: {
+        OR: [{ trainerId }, { clientId: { in: clientIds } }],
+      },
+      include: this.includeAll,
+      orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
     });
     return rows.map((r) => this.toDomain(r));
   }

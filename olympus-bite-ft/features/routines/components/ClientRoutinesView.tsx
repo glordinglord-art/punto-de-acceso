@@ -3,12 +3,20 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
+import { Button } from "@/shared/components/ui/Button";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
 
-export function ClientRoutinesView() {
+interface ClientRoutinesViewProps {
+  /** Rutina a abrir de entrada en vez de la activa (coach entrenando su propia rutina). */
+  initialRoutineId?: string;
+  /** Si se pasa, el encabezado muestra un boton para volver. */
+  onBack?: () => void;
+}
+
+export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesViewProps = {}) {
   const { user } = useAuth();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
@@ -49,7 +57,10 @@ export function ClientRoutinesView() {
       const res = await routinesService.getByClient(user.id);
       const data = res.data ?? [];
       setRoutines(data);
-      const active = data.find((r) => r.isActive) ?? data[0];
+      const active =
+        data.find((r) => r.id === initialRoutineId) ??
+        data.find((r) => r.isActive) ??
+        data[0];
       if (active) {
         setSelectedRoutine(active);
         await refreshLogs(data);
@@ -57,7 +68,7 @@ export function ClientRoutinesView() {
     } finally {
       setLoading(false);
     }
-  }, [user, refreshLogs]);
+  }, [user, refreshLogs, initialRoutineId]);
 
   useEffect(() => {
     loadData();
@@ -160,7 +171,16 @@ export function ClientRoutinesView() {
 
   return (
     <>
-      <Header title="Rutinas" />
+      <Header
+        title="Rutinas"
+        action={
+          onBack && (
+            <Button variant="ghost" size="md" onClick={onBack}>
+              ← Volver
+            </Button>
+          )
+        }
+      />
       <RoutineListView
         routines={routines}
         selectedRoutine={selectedRoutine}

@@ -265,6 +265,12 @@ function TrainerRoutinesPage() {
     return map;
   }, [clients, user]);
 
+  // Las rutinas de colegas vinculados se muestran para consulta, pero solo
+  // quien la asigno puede editarla, borrarla o ajustarla con la IA.
+  const isMine = (routine: Routine) => !!user && routine.trainerId === user.id;
+  const assignedByLabel = (routine: Routine) =>
+    isMine(routine) ? undefined : routine.trainerName || "otro coach";
+
   /* ─── Create view ─────────────────────────── */
   if (view === "create") {
     return (
@@ -313,7 +319,9 @@ function TrainerRoutinesPage() {
         <Header
           title="Rutinas"
           subtitle={
-            loading ? "Cargando..." : `${routines.length} rutinas creadas`
+            loading
+              ? "Cargando..."
+              : `${routines.length} rutinas del equipo · ${routines.filter(isMine).length} asignadas por ti`
           }
           action={
             <div className="flex items-center gap-2">
@@ -433,8 +441,13 @@ function TrainerRoutinesPage() {
                 </div>
                 <RoutineCard
                   routine={routine}
+                  assignedBy={assignedByLabel(routine)}
                   onClick={() => handleRoutineClick(routine)}
-                  onDelete={() => setRoutineToDelete(routine)}
+                  onDelete={
+                    isMine(routine)
+                      ? () => setRoutineToDelete(routine)
+                      : undefined
+                  }
                 />
               </div>
             ))}
@@ -464,6 +477,7 @@ function TrainerRoutinesPage() {
   /* ─── Detail ──────────────────────────────── */
   if (view === "detail" && selectedRoutine) {
     const isOwnRoutine = user && selectedRoutine.clientId === user.id;
+    const canManage = isMine(selectedRoutine);
     const totalExercises = selectedRoutine.days.reduce(
       (s, d) => s + d.exercises.length,
       0,
@@ -499,6 +513,15 @@ function TrainerRoutinesPage() {
             </div>
           }
         />
+
+        {!canManage && (
+          <div className="-mt-2 mb-6 rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-200">
+            Rutina asignada por{" "}
+            <strong className="text-white">{assignedByLabel(selectedRoutine)}</strong>.
+            Puedes consultarla y ver el progreso del cliente; para cambiarla,
+            coordina con quien la asignó.
+          </div>
+        )}
 
         {selectedRoutine.description && (
           <p className="-mt-4 mb-6 text-sm text-slate-400">
@@ -565,6 +588,7 @@ function TrainerRoutinesPage() {
             </p>
             <select
               title="Evaluar rutina"
+              disabled={!canManage}
               value={
                 selectedRoutine.isFavorable === true
                   ? "yes"
@@ -588,6 +612,7 @@ function TrainerRoutinesPage() {
         </div>
 
         {/* ── Motor 3: Bitácora Clínica & Ajuste Biomecánico IA ── */}
+        {canManage && (
         <ClinicalLogBar
           routineId={selectedRoutine.id}
           exercises={selectedRoutine.days.flatMap((d) =>
@@ -609,7 +634,9 @@ function TrainerRoutinesPage() {
           }}
           className="mb-6"
         />
+        )}
 
+        {canManage && (
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <Button size="sm" variant="ghost" onClick={() => setView("edit")}>
             ✏️ Editar rutina
@@ -622,6 +649,7 @@ function TrainerRoutinesPage() {
             🗑️ Eliminar
           </Button>
         </div>
+        )}
 
         <div className="space-y-4">
           {selectedRoutine.days.map((day) => {
@@ -672,6 +700,16 @@ function TrainerRoutinesPage() {
           loading={deleting}
         />
       </>
+    );
+  }
+
+  /* ─── Mi rutina (el coach entrena su propia rutina) ─── */
+  if (view === "myRoutine" && selectedRoutine) {
+    return (
+      <ClientRoutinesView
+        initialRoutineId={selectedRoutine.id}
+        onBack={() => setView("detail")}
+      />
     );
   }
 
