@@ -51,16 +51,18 @@ export interface GeneratedReply {
 }
 
 /**
- * Modelos por orden de preferencia. Primero los de mayor calidad: el coach
+ * Modelos por orden de preferencia. Primero los "flash" estables: el coach
  * pide rutinas completas y ajustes finos, y los "lite" eran los que mas
- * errores de formato y de criterio cometian. Los lite quedan de respaldo.
+ * errores de formato y de criterio cometian. 3.7 y 3.8 van detras porque en
+ * horas pico Google los satura (503) y llegaron a tardar 35-70 s en fallar,
+ * dejando al coach sin respuesta. Los lite quedan de ultimo respaldo.
  */
 const GEMINI_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.7-flash',
   'gemini-3.6-flash',
   'gemini-3.5-flash',
   'gemini-2.5-flash',
+  'gemini-3.7-flash',
+  'gemini-3.8-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
   'gemini-2.5-flash-lite',
@@ -74,8 +76,9 @@ const MIMO_MODELS = ['mimo-v2.5-pro', 'mimo-v2.5'];
  * siguiente modelo (que tambien se cortaba) y el coach veia "sobrecarga" o
  * nada, y tenia que escribir "hola, vuelve".
  */
-const TOTAL_BUDGET_MS = 110_000;
-const MAX_ATTEMPT_MS = 75_000;
+const TOTAL_BUDGET_MS = 90_000;
+/** Una rutina completa tarda 20-30 s; un intento colgado no puede comerse todo. */
+const MAX_ATTEMPT_MS = 45_000;
 /** Si un intento falla rapido (cuota, modelo no disponible) se prueba el siguiente. */
 const MIN_ATTEMPT_MS = 8_000;
 const HISTORY_MESSAGES = 14;
@@ -606,8 +609,11 @@ ${summary}
       : all;
 
     // Si todo esta en pausa se intenta igualmente antes que no responder
-    const available = ordered.filter((a) => !this.isCoolingDown(a));
-    for (const attempt of available.length > 0 ? available : ordered) {
+    const allCooling = ordered.every((a) => this.isCoolingDown(a));
+    for (const attempt of ordered) {
+      // Se revisa en cada vuelta: si la clave #1 devuelve 503, el mismo modelo
+      // queda en pausa y no se pierde tiempo probandolo con la clave #2
+      if (!allCooling && this.isCoolingDown(attempt)) continue;
       const remaining = deadline - Date.now();
       if (remaining < MIN_ATTEMPT_MS) break;
       const timeout = Math.min(MAX_ATTEMPT_MS, remaining);
