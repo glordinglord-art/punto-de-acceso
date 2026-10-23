@@ -53,11 +53,24 @@ export default function ClientsPage() {
   const loadClients = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    const fallbackSelf: User = {
+      ...user,
+      avatarUrl: null,
+      phone: null,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
     try {
-      const res = await clientsService.getByTrainer(user.id);
-      setClients(res.data ?? []);
+      const [res, selfRes] = await Promise.all([
+        clientsService.getByTrainer(user.id).catch(() => ({ data: [] as User[] })),
+        clientsService.getById(user.id).catch(() => ({ data: fallbackSelf })),
+      ]);
+      const list = res.data ?? [];
+      const selfUser: User = selfRes.data ?? fallbackSelf;
+      const withoutSelf = list.filter((c) => c.id !== user.id);
+      setClients([selfUser, ...withoutSelf]);
     } catch {
-      setClients([]);
+      setClients([fallbackSelf]);
     } finally {
       setLoading(false);
     }
@@ -80,13 +93,15 @@ export default function ClientsPage() {
     }
 
     result.sort((a, b) => {
+      if (user && a.id === user.id) return -1;
+      if (user && b.id === user.id) return 1;
       if (sortBy === "name_asc") return a.name.localeCompare(b.name);
       if (sortBy === "name_desc") return b.name.localeCompare(a.name);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
     return result;
-  }, [clients, searchQuery, sortBy]);
+  }, [clients, searchQuery, sortBy, user]);
 
   const totalPages = Math.ceil(filteredAndSortedClients.length / ITEMS_PER_PAGE) || 1;
 
@@ -176,9 +191,9 @@ export default function ClientsPage() {
   return (
     <>
       <Header
-        title="Gestión de Clientes"
+        title="Mis Atletas"
         subtitle={
-          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE TOTAL' : 'CLIENTES TOTALES'}`
+          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'ATLETA ACTIVO' : 'ATLETAS EN SEGUIMIENTO'}`
         }
         action={
           <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
@@ -205,7 +220,7 @@ export default function ClientsPage() {
               variant="primary"
               className="col-span-2 sm:col-auto font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
             >
-              + Nuevo Cliente
+              + Nuevo Atleta
             </Button>
           </div>
         }
@@ -321,6 +336,11 @@ export default function ClientsPage() {
                           <h3 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
                             {client.name}
                           </h3>
+                          {user && client.id === user.id && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                              🏋️ Mi Propia Ficha (Entrenador)
+                            </span>
+                          )}
                           <Badge variant={client.isActive ? "success" : "danger"} className="text-[10px] px-2 py-0.5">
                             {client.isActive ? "ACTIVO" : "INACTIVO"}
                           </Badge>

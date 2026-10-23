@@ -180,10 +180,80 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
       });
     }
 
-    // Eliminar días y ejercicios anteriores (cascade)
+    // Sincronización no destructiva: preserva IDs de días y ejercicios para NO borrar WorkoutLogs
+    const incomingDayNumbers = entity.days.map((d) => d.dayNumber);
+
     await this.prisma.routineDay.deleteMany({
-      where: { routineId: entity.id },
+      where: {
+        routineId: entity.id,
+        dayNumber: { notIn: incomingDayNumbers },
+      },
     });
+
+    for (const day of entity.days) {
+      const upsertedDay = await this.prisma.routineDay.upsert({
+        where: {
+          routineId_dayNumber: {
+            routineId: entity.id,
+            dayNumber: day.dayNumber,
+          },
+        },
+        update: {
+          focusArea: day.focusArea,
+          isRestDay: day.isRestDay,
+          restDayNote: day.restDayNote ?? null,
+        },
+        create: {
+          id: day.id,
+          routineId: entity.id,
+          dayNumber: day.dayNumber,
+          focusArea: day.focusArea,
+          isRestDay: day.isRestDay,
+          restDayNote: day.restDayNote ?? null,
+        },
+      });
+
+      const incomingExerciseIds = day.exercises.map((e) => e.id);
+      await this.prisma.exercise.deleteMany({
+        where: {
+          routineDayId: upsertedDay.id,
+          id: { notIn: incomingExerciseIds },
+        },
+      });
+
+      for (const e of day.exercises) {
+        await this.prisma.exercise.upsert({
+          where: { id: e.id },
+          update: {
+            routineDayId: upsertedDay.id,
+            name: e.name,
+            muscleGroup: e.muscleGroup as string as any,
+            sets: e.sets,
+            reps: e.reps,
+            restSeconds: e.restSeconds,
+            observations: e.observations ?? null,
+            videoUrl: e.videoUrl ?? null,
+            order: e.order,
+            targetWeight: e.targetWeight ?? null,
+            intensity: e.intensity ?? 'medium',
+          },
+          create: {
+            id: e.id,
+            routineDayId: upsertedDay.id,
+            name: e.name,
+            muscleGroup: e.muscleGroup as string as any,
+            sets: e.sets,
+            reps: e.reps,
+            restSeconds: e.restSeconds,
+            observations: e.observations ?? null,
+            videoUrl: e.videoUrl ?? null,
+            order: e.order,
+            targetWeight: e.targetWeight ?? null,
+            intensity: e.intensity ?? 'medium',
+          },
+        });
+      }
+    }
 
     const raw = await this.prisma.routine.update({
       where: { id: entity.id },
@@ -193,30 +263,6 @@ export class PrismaRoutineRepository implements RoutineRepositoryPort {
         weekCount: entity.weekCount,
         isFavorable: entity.isFavorable,
         isActive: entity.isActive,
-        routineDays: {
-          create: entity.days.map((day) => ({
-            id: day.id,
-            dayNumber: day.dayNumber,
-            focusArea: day.focusArea,
-            isRestDay: day.isRestDay,
-            restDayNote: day.restDayNote,
-            exercises: {
-              create: day.exercises.map((e) => ({
-                id: e.id,
-                name: e.name,
-                muscleGroup: e.muscleGroup as string as any,
-                sets: e.sets,
-                reps: e.reps,
-                restSeconds: e.restSeconds,
-                observations: e.observations,
-                videoUrl: e.videoUrl,
-                order: e.order,
-                targetWeight: e.targetWeight,
-                intensity: e.intensity,
-              })),
-            },
-          })),
-        },
       },
       include: this.includeAll,
     });

@@ -19,4 +19,20 @@ export const clinicalAgentService = {
 
   clearHistory: (trainerId: string) =>
     api.delete<ApiResponse<null>>(`/clinical-agent/history/${trainerId}`),
+
+  sendAthleteCaseMessage: (
+    athleteId: string,
+    payload: { message: string; trainerPrivateNotes?: string },
+  ) =>
+    api.post<
+      ApiResponse<{ reply: string; trainerPrivateNotes: string }>
+    >(`/clinical-agent/athlete/${athleteId}/chat`, payload),
+
+  getAthleteCaseHistory: (athleteId: string) =>
+    api.get<
+      ApiResponse<{ trainerPrivateNotes: string; messages: ChatMessage[] }>
+    >(`/clinical-agent/athlete/${athleteId}/history`),
+
+  clearAthleteCaseHistory: (athleteId: string) =>
+    api.delete<ApiResponse<null>>(`/clinical-agent/athlete/${athleteId}/history`),
 };

@@ -16,17 +16,17 @@ interface Message {
 }
 
 const DIET_SUGGESTIONS = [
-  { label: "🍽️ Recomiéndame una cena", prompt: "Recomiéndame una cena saludable que se ajuste a mis objetivos." },
-  { label: "🔥 ¿Cómo voy con mis calorías?", prompt: "¿Cómo voy con mi meta calórica del día según mis comidas registradas hoy?" },
-  { label: "💪 ¿Cómo mejorar mi rendimiento?", prompt: "¿Qué consejos me das para rendir al máximo en mis entrenamientos?" },
-  { label: "🥗 Ideas de snacks saludables", prompt: "Dame 3 ideas de snacks saludables rápidos y ricos en proteína." },
+  { label: "🏋️ ¿Por qué está organizada así mi rutina?", prompt: "Explícame de forma sencilla el porqué de mi rutina actual y cómo van mis series semanales por músculo." },
+  { label: "💧 Registrar mis litros de agua de hoy", prompt: "Regístrame 2.5 litros de agua tomados hoy y dime cuánto me falta para mi meta." },
+  { label: "🌙 Registrar mi sueño de anoche (±1h)", prompt: "Regístrame que dormí 7.5 horas de 22:30 a 06:00 cumpliendo mi horario regular." },
+  { label: "🍽️ ¿Qué puedo cenar hoy para cumplir mi meta?", prompt: "Recomiéndame una cena fácil según mis comidas de hoy y explícame por qué me sirve." },
 ];
 
 const CLINICAL_SUGGESTIONS = [
-  { label: "🚨 ¿Quiénes son mis banderas rojas hoy?", prompt: "🚨 ¿Quiénes son mis banderas rojas hoy y por qué?" },
-  { label: "📊 Resumen clínico de cumplimiento", prompt: "📊 Dame un resumen clínico de cumplimiento de mis atletas hoy" },
-  { label: "🦴 Lesiones y sobrecargas articulares", prompt: "🦴 ¿Qué atletas tienen lesiones o sobrecargas articulares reportadas?" },
-  { label: "🥗 Déficit de proteína o calorías hoy", prompt: "🥗 ¿Quiénes tienen déficit de proteína o calorías hoy?" },
+  { label: "📐 Auditar Volumen Semanal (MEV-MAV-MRV)", prompt: "Audita las series efectivas semanales por grupo muscular (MEV-MAV-MRV) de mis atletas y dime quién tiene volumen basura o déficit de series." },
+  { label: "🚨 ¿Quiénes necesitan ajustes hoy en los 3 Pilares?", prompt: "Revisa entrenamiento, litros de agua, comidas y regularidad de sueño (±1h) de mis atletas hoy y dime quién requiere atención." },
+  { label: "⚖️ Revisar ritmo de peso (+0.25 o -0.50 kg/sem)", prompt: "Evalúa los pesajes en ayunas de mis atletas frente a su meta semanal (+0.25 kg en subida o -0.50 kg en definición)." },
+  { label: "🏋️ Auditar mi propia Ficha de Entrenador", prompt: `Revisa mi propia ficha de atleta (${"mi rutina, volumen semanal y 4 metas de 120 días"}) y dime qué optimizar.` },
 ];
 
 export function GlobalAiAssistant() {
@@ -73,7 +73,7 @@ export function GlobalAiAssistant() {
             setMessages([
               {
                 role: "ai",
-                content: `¡A tus órdenes, Coach ${user.name?.split(" ")[0] ?? ""}! 🩺 Soy tu **Director Clínico IA**.\n\nTengo en memoria la telemetría biológica, adherencia, sobrecargas y rutinas activas de todos tus atletas.\n\nPuedes consultarme por **banderas rojas**, análisis biomecánico o solicitar ajustes tácticos en tiempo real.`,
+                content: `¡A tus órdenes, Coach ${user.name?.split(" ")[0] ?? ""}! 🧠 Soy tu **Co-Piloto Científico y Escuela de Entrenadores IA**.\n\nTengo **permisos totales en el ecosistema** sobre tus atletas y tu propia ficha:\n* **Volumen de Entrenamiento (MEV-MAV-MRV):** Audito series semanales por músculo y modifico ejercicios o cargas (en kg o lbs) sin reiniciar el progreso.\n* **3 Pilares y 4 Metas (120 Días):** Puedo ajustar calorías, agua, registrar pesajes en ayunas o publicar el Reporte Semanal de cualquier atleta.`,
               },
             ]);
           }
@@ -86,7 +86,7 @@ export function GlobalAiAssistant() {
             setMessages([
               {
                 role: "ai",
-                content: `¡Hola ${user.name?.split(" ")[0] ?? "Atleta"}! 🥦 Soy tu **asistente nutricional 10X**.\n\nTengo acceso a tus metas, peso, calorías y a tus **últimas comidas registradas** para asesorarte al instante.\n\nPregúntame algo como:\n* *"¿Qué puedo almorzar hoy con buena proteína?"*\n* *"¿Cómo voy con mis calorías?"*\n\n¡Comencemos! ⚡`,
+                content: `¡Hola ${user.name?.split(" ")[0] ?? "Atleta"}! ⚡ Soy tu **Co-Piloto de 120 Días**.\n\nConozco tus **4 Metas**, tu rutina y tus **3 Pilares diarios**. Puedes pedirme que te explique el porqué de tu entrenamiento o decirme directamente:\n* *"Regístrame 2.5 litros de agua hoy"*\n* *"Dormí 7.5 horas de 22:30 a 06:00"*\n* *"Anota mi desayuno: 3 huevos y avena"*\n* *"Pesé 75.4 kg en ayunas hoy"*`,
               },
             ]);
           }
@@ -261,10 +261,10 @@ export function GlobalAiAssistant() {
             </div>
             <div>
               <h2 className="text-sm font-black uppercase tracking-wider leading-none text-neutral-900 dark:text-white">
-                {isClinical ? "Director Clínico IA" : "Asistente de Nutrición IA"}
+                {isClinical ? "Co-Piloto Científico IA" : "Tu Co-Piloto de 120 Días"}
               </h2>
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mt-1">
-                {isClinical ? "Supervisión Médica & Biomecánica" : "Macronutrientes, Calorías & Comidas"}
+                {isClinical ? "Volumen MEV-MAV-MRV · 3 Pilares · Escuela Coach" : "Entreno · Agua y Comidas · Sueño ±1h · 4 Metas"}
               </span>
             </div>
           </div>

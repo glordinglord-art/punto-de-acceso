@@ -343,11 +343,11 @@ function TrainerRoutinesPage() {
           }
         />
 
-        {/* Tab toggle: Calendario / Rutinas Clientes / Personalizadas */}
+        {/* Tab toggle: Calendario / Rutinas de Atletas / Personalizadas */}
         <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1 overflow-x-auto max-w-full">
           {[
             { key: "calendar" as OverviewTab, label: "📅 Calendario" },
-            { key: "cards" as OverviewTab, label: `🗂️ Rutinas Clientes (${routines.length})` },
+            { key: "cards" as OverviewTab, label: `🗂️ Rutinas de Atletas (${routines.length})` },
             { key: "templates" as OverviewTab, label: "⭐ Personalizadas (Plantillas)" },
           ].map((tab) => (
             <button

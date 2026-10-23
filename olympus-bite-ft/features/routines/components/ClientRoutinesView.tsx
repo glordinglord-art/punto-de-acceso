@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Header } from "@/shared/components/layout/Header";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
+import { Dumbbell, Flame, TrendingUp, CalendarCheck } from "lucide-react";
 
 export function ClientRoutinesView() {
   const { user } = useAuth();
@@ -19,6 +20,9 @@ export function ClientRoutinesView() {
   const [savingLog, setSavingLog] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "session">("list");
   const [sessionDay, setSessionDay] = useState<RoutineDay | null>(null);
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">(
+    (user?.weightUnitPreference as "kg" | "lbs") || "kg",
+  );
 
   const lastRoutineId = useRef<string | null>(null);
 
@@ -135,6 +139,74 @@ export function ClientRoutinesView() {
     [user],
   );
 
+  // Métricas limpias de Avance (Hoy, Esta Semana, Este Mes) y El Porqué del Ciclo
+  const trainingSummary = useMemo(() => {
+    const heroPact = user?.anamnesisData?.heroPact;
+    const strengthGoal = heroPact?.objectives?.strength;
+    const masteryGoal = heroPact?.objectives?.bodyMastery;
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    let setsToday = 0;
+    let setsThisWeek = 0;
+    let totalSetsMonth = 0;
+    let totalVolumeKgMonth = 0;
+
+    logs.forEach((log) => {
+      const dateStr = (log.completedAt || log.createdAt || "").slice(0, 10);
+      const completedSets =
+        log.setsData?.filter((s) => s.completed || s.weight || s.reps) ?? [];
+      const count = completedSets.length || 1;
+
+      if (dateStr === todayIso) {
+        setsToday += count;
+      }
+      if (log.weekNumber === currentWeek) {
+        setsThisWeek += count;
+      }
+      totalSetsMonth += count;
+      completedSets.forEach((s) => {
+        if (s.weight && s.reps) {
+          totalVolumeKgMonth += Number(s.weight) * Number(s.reps);
+        }
+      });
+    });
+
+    // Total de series programadas en la semana de la rutina activa
+    const plannedSetsWeek = selectedRoutine
+      ? selectedRoutine.days
+          .filter((d) => !d.isRestDay)
+          .reduce(
+            (acc, d) =>
+              acc + d.exercises.reduce((sum, ex) => sum + (ex.sets || 0), 0),
+            0,
+          )
+      : 0;
+
+    const weekPct =
+      plannedSetsWeek > 0
+        ? Math.min(100, Math.round((setsThisWeek / plannedSetsWeek) * 100))
+        : 0;
+
+    const displayVolume =
+      weightUnit === "lbs"
+        ? Math.round(totalVolumeKgMonth * 2.20462)
+        : Math.round(totalVolumeKgMonth);
+
+    return {
+      strengthTitle: strengthGoal?.exerciseName || "Fuerza Máxima",
+      strengthTarget: strengthGoal?.targetWeight
+        ? `${strengthGoal.targetWeight} ${strengthGoal.unit || weightUnit}`
+        : "",
+      masteryTitle: masteryGoal?.skillName || "Dominio Corporal",
+      setsToday,
+      setsThisWeek,
+      plannedSetsWeek,
+      weekPct,
+      totalSetsMonth,
+      displayVolume,
+    };
+  }, [user, logs, currentWeek, selectedRoutine, weightUnit]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -160,7 +232,104 @@ export function ClientRoutinesView() {
 
   return (
     <>
-      <Header title="Rutinas" />
+      <Header
+        title="Mi Rutina"
+        subtitle="Cada sesión tiene un propósito conectado a tus metas de 4 meses"
+        action={
+          <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
+            {(["kg", "lbs"] as const).map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => setWeightUnit(u)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
+                  weightUnit === u
+                    ? "bg-red-600 text-white shadow"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        }
+      />
+
+      {/* RESUMEN DE AVANCE (DIARIO • SEMANAL • MENSUAL) Y EL PORQUÉ DEL CICLO */}
+      <div className="mb-5 rounded-3xl bg-gradient-to-br from-[#141720] via-[#0e1017] to-[#1a0b0e] border border-white/10 p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+              💡 ¿Por qué entrenas este ciclo?
+            </span>
+            <p className="text-xs sm:text-sm text-neutral-200 mt-0.5 leading-relaxed">
+              Esta rutina está diseñada para llevarte a{" "}
+              <strong className="text-amber-300">
+                {trainingSummary.strengthTitle}{" "}
+                {trainingSummary.strengthTarget
+                  ? `(${trainingSummary.strengthTarget})`
+                  : ""}
+              </strong>{" "}
+              y lograr{" "}
+              <strong className="text-sky-300">
+                {trainingSummary.masteryTitle}
+              </strong>
+              .
+            </p>
+          </div>
+        </div>
+
+        {/* 3 Tarjetas de Avance: Hoy | Semana | Acumulado del Mes */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400">
+              <CalendarCheck className="w-3.5 h-3.5" />
+              <span>Hoy</span>
+            </div>
+            <p className="text-lg sm:text-xl font-black text-white mt-1">
+              {trainingSummary.setsToday}{" "}
+              <span className="text-xs font-normal text-neutral-400">
+                series
+              </span>
+            </p>
+            <span className="text-[10px] text-neutral-400 block">
+              Completadas hoy
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Semana {currentWeek}</span>
+            </div>
+            <p className="text-lg sm:text-xl font-black text-white mt-1">
+              {trainingSummary.weekPct}%
+            </p>
+            <span className="text-[10px] text-neutral-400 block">
+              {trainingSummary.setsThisWeek}/{trainingSummary.plannedSetsWeek || "—"}{" "}
+              series hechas
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-sky-400">
+              <Flame className="w-3.5 h-3.5" />
+              <span>Este Mes</span>
+            </div>
+            <p className="text-lg sm:text-xl font-black text-white mt-1">
+              {trainingSummary.totalSetsMonth}{" "}
+              <span className="text-xs font-normal text-neutral-400">
+                series
+              </span>
+            </p>
+            <span className="text-[10px] text-neutral-400 block truncate">
+              {trainingSummary.displayVolume.toLocaleString("es")} {weightUnit}{" "}
+              movidos
+            </span>
+          </div>
+        </div>
+      </div>
+
       <RoutineListView
         routines={routines}
         selectedRoutine={selectedRoutine}
@@ -169,6 +338,7 @@ export function ClientRoutinesView() {
         currentWeek={currentWeek}
         savingLog={savingLog}
         userId={user?.id ?? ""}
+        weightUnit={weightUnit}
         onSelectRoutine={setSelectedRoutine}
         onActivateRoutine={handleActivateRoutine}
         onStartSession={(day) => {

@@ -1,542 +1,1243 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback, useId, type ReactNode } from 'react';
-import Link from 'next/link';
-import { motion, animate } from 'framer-motion';
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import {
-  Flame, Droplets, Beef, Dumbbell, Calendar, ChevronRight, Trophy, Award, Plus, Activity
-} from 'lucide-react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { dashboardService } from '@/features/dashboard/services/dashboard.service';
-import { MEAL_TYPE_COLORS } from '@/features/dashboard/types/dashboard.types';
-import type { ClientDashboard } from '@/features/dashboard/types/dashboard.types';
-import { Header } from '@/shared/components/layout/Header';
-import { cn, formatCalories, getLocalDateString } from '@/shared/lib/utils';
-import { calculateNutritionTargets } from '@/features/meals/utils/nutrition-calculator';
-import { FitiaDayTracker } from '@/features/dashboard/components/FitiaDayTracker';
-import { UserComplianceModule } from './UserComplianceModule';
-import { VitalBioPillarsWidget } from './VitalBioPillarsWidget';
+  Flame,
+  Droplets,
+  Dumbbell,
+  Target,
+  Moon,
+  Scale,
+  TrendingUp,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
+  Ruler,
+  FileText,
+  Activity,
+  Plus,
+  Minus,
+} from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { dashboardService } from "@/features/dashboard/services/dashboard.service";
+import { clientsService } from "@/features/clients/services/clients.service";
+import type { ClientDashboard } from "@/features/dashboard/types/dashboard.types";
+import { cn, getLocalDateString } from "@/shared/lib/utils";
+import { calculateNutritionTargets } from "@/features/meals/utils/nutrition-calculator";
+import { toast } from "react-hot-toast";
 
-const MEAL_LABELS: Record<string, string> = {
-  breakfast: 'Desayuno',
-  lunch: 'Almuerzo',
-  dinner: 'Cena',
-  snack: 'Snack',
-};
+type HorizonTab = "today" | "week" | "month";
+type QuickModal = "objectives" | "progress" | null;
 
-const WATER_GOAL = 8;
-const PROTEIN_GOAL = 120;
-
-// ─────────────────────────────────────────────────────────
-// Empty state panel (Fitia Dark Style)
-// ─────────────────────────────────────────────────────────
-function EmptyPanel({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
-  return (
-    <div className="mt-4 flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-white/10 bg-white/5 px-6 text-center">
-      <div className="text-white/40">{icon}</div>
-      <div>
-        <p className="text-sm font-semibold text-white">{title}</p>
-        <p className="mt-1 max-w-xs text-xs leading-5 text-white/50">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// Custom Dashboard Hero Widget (Fixed Overlap)
-// ─────────────────────────────────────────────────────────
-function DashboardHeroWidget({
-  calories,
-  calorieGoal,
-  protein,
-  proteinGoal,
-  carbs,
-  carbsGoal,
-  fat,
-  fatGoal,
-  waterGlasses,
-  waterGoal,
-  onWaterClick,
-}: {
-  calories: number;
-  calorieGoal: number;
-  protein: number;
-  proteinGoal: number;
-  carbs: number;
-  carbsGoal: number;
-  fat: number;
-  fatGoal: number;
-  waterGlasses: number;
-  waterGoal: number;
-  onWaterClick: (idx: number) => void;
-}) {
-  const caloriesLeft = Math.max(calorieGoal - calories, 0);
-  const pct = Math.min((calories / Math.max(calorieGoal, 1)) * 100, 100);
-  
-  // SVG Arc calculations
-  const size = 280;
-  const strokeWidth = 16;
-  const radius = (size - strokeWidth) / 2 - 10;
-  const circumference = radius * Math.PI; // Semi-circle
-  const strokeDashoffset = circumference - (pct / 100) * circumference;
-
-  return (
-    <div className="bg-[#1C1C1E] rounded-[32px] p-6 shadow-2xl border border-white/5 relative overflow-hidden flex flex-col items-center">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-primary-500/10 rounded-full blur-[60px] pointer-events-none" />
-      
-      {/* Arc Section */}
-      <div className="relative flex flex-col items-center justify-center pt-8 w-full h-[180px]">
-        <svg width={size} height={size / 2 + 20} className="absolute top-4 overflow-visible pointer-events-none">
-          <defs>
-            <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f97316" />
-              <stop offset="100%" stopColor="#ec4899" />
-            </linearGradient>
-          </defs>
-          <path
-            d={`M ${strokeWidth/2 + 10} ${size/2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth/2 - 10} ${size/2}`}
-            fill="none"
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          <motion.path
-            d={`M ${strokeWidth/2 + 10} ${size/2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth/2 - 10} ${size/2}`}
-            fill="none"
-            stroke="url(#arcGradient)"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset }}
-            transition={{ duration: 1.5, ease: 'easeOut', delay: 0.2 }}
-            style={{ filter: 'drop-shadow(0px 0px 8px rgba(249,115,22,0.4))' }}
-          />
-        </svg>
-
-        {/* Center Numbers (Shifted UP so they don't touch the line) */}
-        <div className="absolute top-[50px] flex flex-col items-center">
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-            className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1"
-          >
-            Kcal Restantes
-          </motion.p>
-          <motion.h2 
-            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring' }}
-            className="text-[54px] font-black text-white tracking-tighter leading-none"
-          >
-            {caloriesLeft.toLocaleString('es')}
-          </motion.h2>
-        </div>
-
-        {/* Consumed / Target labels (Shifted DOWN below the line) */}
-        <div className="absolute bottom-0 w-full flex items-center justify-between px-10 text-[10px] font-bold text-white/40">
-          <div className="text-center">
-            <span className="block text-white/80 text-sm font-black">{calories.toLocaleString('es')}</span>
-            <span className="uppercase tracking-wider">Consumidas</span>
-          </div>
-          <div className="text-center">
-            <span className="block text-white/80 text-sm font-black">{calorieGoal.toLocaleString('es')}</span>
-            <span className="uppercase tracking-wider">Objetivo</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Macros Section */}
-      <div className="mt-8 grid w-full grid-cols-3 gap-4 border-t border-white/5 pt-6 px-1">
-        {[
-          { label: 'Proteínas', val: protein, max: proteinGoal, c: 'bg-sky-400' },
-          { label: 'Carbs', val: carbs, max: carbsGoal, c: 'bg-amber-400' },
-          { label: 'Grasas', val: fat, max: fatGoal, c: 'bg-orange-400' },
-        ].map((m, i) => {
-          const mLeft = Math.max(m.max - m.val, 0);
-          const mPct = Math.min((m.val / Math.max(m.max, 1)) * 100, 100);
-          return (
-            <div key={m.label} className="flex flex-col items-center text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{m.label}</p>
-              <p className="text-sm font-black text-white mb-2">{mLeft}g <span className="text-[9px] font-bold text-white/30">restan</span></p>
-              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  className={`h-full rounded-full ${m.c}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${mPct}%` }}
-                  transition={{ delay: 0.7 + i * 0.1, duration: 1 }}
-                  style={{ boxShadow: '0 0 10px currentColor' }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Water Section */}
-      <div className="mt-6 w-full rounded-[24px] bg-white/5 border border-white/5 p-4 shadow-inner">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Droplets className="h-4 w-4 text-cyan-400" />
-            <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Hidratación (Vasos)</p>
-          </div>
-          <span className="text-xs font-black text-cyan-400">{waterGlasses} / {waterGoal}</span>
-        </div>
-        <div className="flex gap-1.5 h-10">
-          {Array.from({ length: waterGoal }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => onWaterClick(i)}
-              className={cn(
-                'flex-1 rounded-[6px] cursor-pointer transition-all hover:brightness-110 active:scale-95',
-                i < waterGlasses
-                  ? 'bg-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'bg-white/5 hover:bg-white/10',
-              )}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// Main component
-// ─────────────────────────────────────────────────────────
-export function ClientDashboardView({
-  trainerSwitchAction,
-}: {
-  trainerSwitchAction?: ReactNode;
-}) {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<ClientDashboard | null>(null);
+export function ClientDashboardView() {
+  const { user, updateUser } = useAuth();
+  const [data, setData] = useState<ClientDashboard | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
+  const [horizon, setHorizon] = useState<HorizonTab>("today");
+  const [quickModal, setQuickModal] = useState<QuickModal>(null);
 
-  const loadData = useCallback(async () => {
+  const [unit, setUnit] = useState<"kg" | "lbs">(
+    (user?.weightUnitPreference as "kg" | "lbs") || "kg",
+  );
+
+  // Estado de Hidratación (en vasos de 250ml sincronizados con backend)
+  const [waterGlasses, setWaterGlasses] = useState(0);
+  const [updatingWater, setUpdatingWater] = useState(false);
+
+  // Estado de Check-in de Sueño (±1h)
+  const anamnesis = useMemo(
+    () =>
+      user?.anamnesisData && typeof user.anamnesisData === "object"
+        ? user.anamnesisData
+        : {},
+    [user?.anamnesisData],
+  );
+  const heroPact = useMemo(() => anamnesis.heroPact || {}, [anamnesis]);
+
+  const defaultBedtime =
+    heroPact?.pillars?.recovery?.targetBedtime || "22:30";
+  const defaultWakeTime =
+    heroPact?.pillars?.recovery?.targetWakeTime || "06:00";
+
+  const [bedtimeInput, setBedtimeInput] = useState<string>(defaultBedtime);
+  const [wakeTimeInput, setWakeTimeInput] = useState<string>(defaultWakeTime);
+  const [savingSleep, setSavingSleep] = useState(false);
+
+  // Estado de Pesaje Semanal en Ayunas (+0.25 / -0.50)
+  const [fastedWeightInput, setFastedWeightInput] = useState<string>(
+    user?.weight ? String(user.weight) : "",
+  );
+  const [savingWeight, setSavingWeight] = useState(false);
+
+  // Estado de Medición Mensual % Grasa (US Navy)
+  const [neckInput, setNeckInput] = useState<string>("38");
+  const [waistInput, setWaistInput] = useState<string>("82");
+  const [hipInput, setHipInput] = useState<string>("96");
+  const [savingNavy, setSavingNavy] = useState(false);
+
+  const loadDashboard = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
       const res = await dashboardService.getClientDashboard(user.id);
-      if (res?.data) setStats(res.data);
+      if (res?.data) {
+        setData(res.data);
+        setWaterGlasses(res.data.waterGlasses || 0);
+      }
     } catch {
-      /* ignore */
+      // Silencioso en carga inicial
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
-  if (loading) {
+  // Cálculos del Reloj de Cuenta Regresiva (120 Días)
+  const clockStats = useMemo(() => {
+    const totalDays = Number(heroPact?.cycleDays) || 120;
+    const startStr =
+      heroPact?.startDate ||
+      anamnesis?.discoveryCompletedAt?.slice(0, 10) ||
+      (user as any)?.createdAt?.slice(0, 10);
+    if (!startStr) {
+      return {
+        dayNumber: 1,
+        daysRemaining: 119,
+        totalDays: 120,
+        weekNumber: 1,
+        totalWeeks: 16,
+        pct: 1,
+        phaseName: "Bloque 1: Acumulación y Base Adaptativa",
+      };
+    }
+    const start = new Date(startStr);
+    const now = new Date();
+    const diffDays = Math.max(
+      1,
+      Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+    );
+    const clampedDay = Math.min(totalDays, diffDays);
+    const daysRemaining = Math.max(0, totalDays - clampedDay);
+    const weekNumber = Math.min(16, Math.ceil(clampedDay / 7));
+    const pct = Math.min(100, Math.round((clampedDay / totalDays) * 100));
+
+    let phaseName = "Mes 1: Creando la Base";
+    if (weekNumber >= 5 && weekNumber <= 8)
+      phaseName = "Mes 2: Subiendo tu Fuerza";
+    else if (weekNumber >= 9 && weekNumber <= 12)
+      phaseName = "Mes 3: Dominando tu Cuerpo";
+    else if (weekNumber >= 13)
+      phaseName = "Mes 4: Logrando tus Récords";
+
+    return {
+      dayNumber: clampedDay,
+      daysRemaining,
+      totalDays,
+      weekNumber,
+      totalWeeks: 16,
+      pct,
+      phaseName,
+    };
+  }, [heroPact, anamnesis?.discoveryCompletedAt, user]);
+
+  // Conversión limpia kg <-> lbs
+  const formatWeight = useCallback(
+    (kgVal: number | null | undefined) => {
+      if (kgVal === null || kgVal === undefined || isNaN(Number(kgVal)))
+        return "—";
+      const n = Number(kgVal);
+      if (unit === "lbs") {
+        return `${(Math.round(n * 2.20462 * 2) / 2).toFixed(1)} lbs`;
+      }
+      return `${n.toFixed(1)} kg`;
+    },
+    [unit],
+  );
+
+  // Metas Nutricionales e Hidratación Dinámica
+  const targets = useMemo(() => calculateNutritionTargets(user), [user]);
+  const weightKg = user?.weight || 72;
+  const targetWaterLiters =
+    Number(heroPact?.pillars?.nutrition?.waterLitersTarget) ||
+    Number(((weightKg * 35 + 500) / 1000).toFixed(1));
+  const currentWaterLiters = Number(((waterGlasses * 250) / 1000).toFixed(2));
+  const waterPct = Math.min(
+    100,
+    Math.round((currentWaterLiters / Math.max(targetWaterLiters, 1)) * 100),
+  );
+
+  const handleWaterDelta = async (deltaGlasses: number) => {
+    if (!user || updatingWater) return;
+    const next = Math.max(0, Math.min(24, waterGlasses + deltaGlasses));
+    setWaterGlasses(next);
+    setUpdatingWater(true);
+    try {
+      await dashboardService.updateWater(user.id, getLocalDateString(), next);
+    } catch {
+      toast.error("No se pudo actualizar el agua");
+    } finally {
+      setUpdatingWater(false);
+    }
+  };
+
+  // Registro de Sueño y Regularidad Circadiana (±1h)
+  const sleepLogs: any[] = useMemo(
+    () => (Array.isArray(anamnesis.sleepLogs) ? anamnesis.sleepLogs : []),
+    [anamnesis.sleepLogs],
+  );
+  const todayStr = getLocalDateString();
+  const todaySleepLog = useMemo(
+    () => sleepLogs.find((s) => s.date === todayStr),
+    [sleepLogs, todayStr],
+  );
+
+  const handleSaveSleep = async () => {
+    if (!user || savingSleep) return;
+    setSavingSleep(true);
+    try {
+      const res = await clientsService.logSleepRegularity(user.id, {
+        date: todayStr,
+        bedtime: bedtimeInput,
+        wakeTime: wakeTimeInput,
+      });
+      if (res?.data?.user) {
+        updateUser(res.data.user);
+      }
+      const log = res?.data?.log;
+      if (log?.withinOneHourWindow) {
+        toast.success(
+          `🟢 Regularidad ±1h cumplida (${log.hoursSlept}h dormidas)`,
+        );
+      } else {
+        toast(
+          `⚠️ Registrado (${log?.hoursSlept}h), pero te alejaste más de 1h de tu horario ancla`,
+          { icon: "🕒" },
+        );
+      }
+    } catch {
+      toast.error("Error al registrar tu descanso");
+    } finally {
+      setSavingSleep(false);
+    }
+  };
+
+  // Registro de Pesaje Semanal en Ayunas
+  const fastedWeighIns: any[] = useMemo(
+    () =>
+      Array.isArray(anamnesis.fastedWeighIns) ? anamnesis.fastedWeighIns : [],
+    [anamnesis.fastedWeighIns],
+  );
+  const lastWeighIn =
+    fastedWeighIns.length > 0
+      ? fastedWeighIns[fastedWeighIns.length - 1]
+      : null;
+
+  const handleSaveWeeklyWeight = async () => {
+    if (!user || !fastedWeightInput || savingWeight) return;
+    const val = parseFloat(fastedWeightInput);
+    if (isNaN(val) || val <= 20) {
+      toast.error("Ingresa un peso válido");
+      return;
+    }
+    setSavingWeight(true);
+    try {
+      const res = await clientsService.logWeeklyWeighIn(user.id, {
+        weight: val,
+        unit,
+        date: todayStr,
+      });
+      if (res?.data?.user) {
+        updateUser(res.data.user);
+      }
+      toast.success("⚖️ Peso en ayunas registrado y tendencia actualizada");
+    } catch {
+      toast.error("No se pudo guardar el pesaje");
+    } finally {
+      setSavingWeight(false);
+    }
+  };
+
+  // Registro Mensual de % Grasa Corporal (US Navy)
+  const handleSaveMonthlyNavy = async () => {
+    if (!user || savingNavy) return;
+    const neck = parseFloat(neckInput);
+    const waist = parseFloat(waistInput);
+    const hip = parseFloat(hipInput);
+    if (isNaN(neck) || isNaN(waist) || waist <= neck) {
+      toast.error("Verifica las medidas de cuello y cintura (en cm)");
+      return;
+    }
+    setSavingNavy(true);
+    try {
+      const res = await clientsService.logWeeklyWeighIn(user.id, {
+        weight: user.weight || 72,
+        unit: "kg",
+        date: todayStr,
+        neckCm: neck,
+        waistCm: waist,
+        hipCm: hip,
+        notes: "Control mensual de % grasa (US Navy)",
+      });
+      if (res?.data?.user) {
+        updateUser(res.data.user);
+      }
+      const bf = res?.data?.entry?.bodyFatPct;
+      toast.success(
+        bf
+          ? `📐 % Grasa Mensual calculado: ${bf}%`
+          : "Medidas mensuales guardadas",
+      );
+    } catch {
+      toast.error("Error al calcular el % de grasa");
+    } finally {
+      setSavingNavy(false);
+    }
+  };
+
+  // Los 4 Objetivos del Atleta
+  const objectives = useMemo(() => {
+    const bio = heroPact?.objectives?.biometric || {};
+    const str = heroPact?.objectives?.strength || {};
+    const mas = heroPact?.objectives?.bodyMastery || {};
+    const aer = heroPact?.objectives?.aerobic || {};
+
+    const weeklyRateKg =
+      bio.weeklyDeltaTargetKg !== undefined
+        ? Number(bio.weeklyDeltaTargetKg)
+        : user?.dietaryGoal === "weight_loss"
+          ? -0.5
+          : 0.25;
+
+    return {
+      biometric: {
+        title:
+          bio.title ||
+          (weeklyRateKg >= 0 ? "Subir Músculo Limpio" : "Bajar Grasa"),
+        startKg: Number(bio.startWeightKg) || user?.weight || 70,
+        currentKg: Number(bio.currentWeightKg) || user?.weight || 70,
+        targetKg:
+          Number(bio.targetWeightKg) ||
+          Number(((user?.weight || 70) + weeklyRateKg * 16).toFixed(1)),
+        weeklyRateKg,
+        bodyFatPct:
+          bio.currentBodyFatPct ||
+          lastWeighIn?.bodyFatPct ||
+          bio.startBodyFatPct ||
+          null,
+        targetBodyFatPct: bio.targetBodyFatPct || null,
+        why:
+          bio.why ||
+          (weeklyRateKg >= 0
+            ? "Tu meta es subir 0.25 kg por semana en ayunas para ganar músculo limpio sin acumular grasa."
+            : "Tu meta es bajar 0.50 kg por semana en ayunas para quemar grasa cuidando tu músculo y tu fuerza."),
+      },
+      strength: {
+        exerciseName: str.exerciseName || "Press Banca con Mancuernas",
+        startWeight: Number(str.startWeight) || 25,
+        currentWeight: Number(str.currentWeight) || 25,
+        targetWeight: Number(str.targetWeight) || 40,
+        unit: str.unit || unit,
+        weeklyProgression: Number(str.weeklyProgression) || 1.25,
+        why:
+          str.why ||
+          "Avanzar un poco cada semana te llevará directo a tu meta en estos 4 meses.",
+      },
+      bodyMastery: {
+        skillName: mas.skillName || "Parada de Manos (Handstand)",
+        startMark: mas.startMark || "Pino asistido en pared",
+        currentMark: mas.currentMark || "En práctica semanal",
+        targetMark: mas.targetMark || "15s libre controlado",
+        weeklyPracticeTarget:
+          mas.weeklyPracticeTarget || "3 prácticas cortas por semana",
+        why:
+          mas.why ||
+          "La práctica constante enseña a tu cuerpo a dominar su propio peso sin lesionarte.",
+      },
+      aerobic: {
+        enabled: aer.enabled !== undefined ? Boolean(aer.enabled) : true,
+        metricName: aer.metricName || "Resistencia 5K",
+        currentMark: aer.currentMark || "Marca actual",
+        targetMark: aer.targetMark || "Menos de 24 min",
+        why:
+          aer.why ||
+          "Tener mejor aire te ayuda a cansarte menos y recuperarte más rápido entre series.",
+      },
+    };
+  }, [heroPact, user?.weight, user?.dietaryGoal, lastWeighIn, unit]);
+
+  // Reportes Semanales del Entrenador
+  const weeklyReports: any[] = useMemo(
+    () =>
+      Array.isArray(anamnesis.weeklyReports) ? anamnesis.weeklyReports : [],
+    [anamnesis.weeklyReports],
+  );
+  const latestReport = weeklyReports.length > 0 ? weeklyReports[0] : null;
+
+  const caloriesToday = data?.caloriesToday || 0;
+  const proteinToday = data?.proteinToday || 0;
+  const carbsToday = data?.carbsToday || 0;
+  const fatToday = data?.fatToday || 0;
+
+  // Score Adictivo del Día (Los 3 Pilares Diarios) + Racha de Días Cumpliendo
+  const dailyVictory = useMemo(() => {
+    const waterDone = currentWaterLiters >= targetWaterLiters * 0.8;
+    const nutritionDone = caloriesToday > 0;
+    const sleepDone = Boolean(todaySleepLog?.withinOneHourWindow);
+    const completedCount =
+      (waterDone ? 1 : 0) + (nutritionDone ? 1 : 0) + (sleepDone ? 1 : 0);
+    const scorePct = Math.round((completedCount / 3) * 100);
+
+    // Racha basada en registros consistentes de sueño/agua/pesaje
+    const streakDays = Math.max(
+      1,
+      sleepLogs.filter((s: any) => s.withinOneHourWindow).length +
+        (waterDone ? 1 : 0),
+    );
+
+    return {
+      waterDone,
+      nutritionDone,
+      sleepDone,
+      completedCount,
+      scorePct,
+      streakDays,
+    };
+  }, [
+    currentWaterLiters,
+    targetWaterLiters,
+    caloriesToday,
+    todaySleepLog,
+    sleepLogs,
+  ]);
+
+  if (loading && !data) {
     return (
-      <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr] pt-4">
-        {[1, 2].map((i) => (
-          <div key={i} className="h-80 animate-pulse rounded-[28px] bg-white/5" />
-        ))}
+      <div className="max-w-lg lg:max-w-6xl mx-auto space-y-3 py-2">
+        <div className="h-32 rounded-3xl bg-white/5 animate-pulse" />
+        <div className="h-12 rounded-2xl bg-white/5 animate-pulse" />
+        <div className="h-64 rounded-3xl bg-white/5 animate-pulse" />
       </div>
     );
   }
 
-  if (!stats) return null;
-
-  const targets = calculateNutritionTargets(user);
-  const now = new Date();
-  const today = getLocalDateString();
-  const isSelectedToday = selectedDate === today;
-
-  // Selected day data lookup
-  const selectedDayTrend = stats.weeklyTrend?.find((d) => d.date === selectedDate);
-  const displayCalories = isSelectedToday
-    ? stats.caloriesToday
-    : selectedDayTrend
-      ? selectedDayTrend.calories
-      : 0;
-
-  const calorieGoal = targets.calories;
-  const proteinGoal = targets.protein;
-  const waterGoal = targets.waterGlasses;
-
-  const routineProgress =
-    stats.activeRoutine && stats.activeRoutine.totalLogs > 0
-      ? Math.round((stats.activeRoutine.completedLogs / stats.activeRoutine.totalLogs) * 100)
-      : 0;
-
-  const aiCoachTip = (() => {
-    if (stats.waterGlasses < 4) {
-      return '¡La hidratación es clave! Bebe más agua hoy para evitar la fatiga.';
-    }
-    if (stats.proteinToday < proteinGoal * 0.6) {
-      return `Tu ingesta de proteína está baja. Necesitas llegar a ${proteinGoal}g para maximizar tus resultados.`;
-    }
-    if (stats.activeRoutine && stats.activeRoutine.completedLogs === 0) {
-      return '¡Aún no has registrado entrenamientos de esta rutina! Da tu primer paso hoy.';
-    }
-    return `¡Rendimiento impecable! Tu plan está optimizado para ${targets.goalLabel}.`;
-  })();
-
-  const todayNum = now.getDay() === 0 ? 7 : now.getDay();
-  const todayDay = stats.activeRoutine?.days.find((d) => d.dayNumber === todayNum);
-  const waterGlasses = stats.waterGlasses ?? 0;
-
-  const handleWaterClick = async (index: number) => {
-    if (!user) return;
-    const newAmount = index + 1 === waterGlasses ? index : index + 1;
-    setStats((prev) => prev ? { ...prev, waterGlasses: newAmount } : prev);
-    try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      await dashboardService.updateWater(user.id, todayStr, newAmount);
-    } catch {
-      setStats((prev) => prev ? { ...prev, waterGlasses: waterGlasses } : prev);
-    }
-  };
-
-  const displayProtein = isSelectedToday ? stats.proteinToday : 0;
-  const displayCarbs = isSelectedToday ? stats.carbsToday : 0;
-  const displayFat = isSelectedToday ? stats.fatToday : 0;
-
-  // Completion map for week circular rings (rueditas)
-  const weekCompletionMap: Record<string, number> = {};
-  const goal = targets.calories || 2000;
-
-  stats.weeklyTrend?.forEach((d) => {
-    if (d.calories && goal > 0) {
-      weekCompletionMap[d.date] = Math.min(Math.round((d.calories / goal) * 100), 100);
-    } else if (d.meals > 0) {
-      weekCompletionMap[d.date] = 50;
-    }
-  });
-
-  if (today && goal > 0) {
-    const liveTodayCalories = stats.caloriesToday || 0;
-    weekCompletionMap[today] = Math.min(Math.round((liveTodayCalories / goal) * 100), 100);
-  }
-
-  const isTodayCompleted = (weekCompletionMap[today] ?? 0) >= 80;
-  const streakDays = stats.activeRoutine?.completedLogs ? Math.max(stats.activeRoutine.completedLogs, 4) : 4;
-
   return (
-    <>
-      {trainerSwitchAction && (
-        <div className="absolute top-0 right-0 z-50 p-4 opacity-0 pointer-events-none">
-          {/* We keep it in the DOM just in case the parent expects it to be mounted, but hide it completely since user asked to move it to MÁS */}
-        </div>
-      )}
-    <div className="space-y-6 pb-12 touch-pan-y">
-      {/* ── Fitia Minimalist Day Tracker Header with Circular Rueditas & Duolingo Streak ── */}
-      <FitiaDayTracker
-        selectedDate={selectedDate}
-        onSelectDate={(newDate) => setSelectedDate(newDate)}
-        streakDays={streakDays}
-        completionMap={weekCompletionMap}
-        isTodayCompleted={isTodayCompleted}
-      />
-
-      {/* ── Hero Row: Calorie Speedometer Arc & Routine (ARRIBA) ── */}
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        {/* Premium Dashboard Hero */}
-        <div className="flex flex-col gap-4">
-          <DashboardHeroWidget
-            calories={displayCalories}
-            protein={displayProtein}
-            carbs={displayCarbs}
-            fat={displayFat}
-            calorieGoal={targets.calories}
-            proteinGoal={targets.protein}
-            carbsGoal={targets.carbs}
-            fatGoal={targets.fat}
-            waterGlasses={waterGlasses}
-            waterGoal={WATER_GOAL}
-            onWaterClick={handleWaterClick}
-          />
-        </div>
-
-        {/* Routine & Quick Stats */}
-        <div className="flex h-full flex-col gap-4">
-          <div className="flex flex-1 flex-col bg-[#18181A] rounded-[32px] p-6 relative overflow-hidden shadow-sm border border-white/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[40px] pointer-events-none" />
-            
-            <div className="flex items-start justify-between gap-4 relative z-10 mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-white">Rutina de hoy</h3>
-                <p className="text-xs font-bold uppercase tracking-wider text-white/40 mt-1">
-                  {stats.activeRoutine
-                    ? `${stats.activeRoutine.trainingDays} DÍAS · ${stats.activeRoutine.weekCount} SEMANAS`
-                    : 'SIN RUTINA ASIGNADA'}
-                </p>
-              </div>
-              {stats.activeRoutine && (
-                <Link href="/routines" className="flex shrink-0 items-center gap-0.5 text-xs font-bold uppercase tracking-wider text-primary-400 hover:text-primary-300 bg-primary-500/10 px-3 py-1.5 rounded-full">
-                  Ver <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              )}
-            </div>
-
-            {!stats.activeRoutine ? (
-              <EmptyPanel icon={<Dumbbell className="h-8 w-8" />} title="Sin rutina asignada" description="Tu entrenador aún no te ha asignado una rutina." />
-            ) : todayDay?.isRestDay ? (
-              <EmptyPanel icon={<span className="text-3xl">🛌</span>} title="Hoy toca descanso" description="Recuperar bien también es parte de progresar." />
-            ) : todayDay ? (
-              <div className="flex flex-1 flex-col gap-4 relative z-10">
-                <div className="flex items-center justify-between rounded-[20px] bg-white/5 border border-white/5 px-4 py-3">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-white/40 font-bold mb-0.5">Enfoque</p>
-                    <p className="text-base font-bold text-white">{todayDay.focusArea}</p>
-                  </div>
-                  <div className="bg-white/10 text-white/90 text-xs font-bold px-3 py-1 rounded-lg">{todayDay.exercises.length} ejercicios</div>
-                </div>
-
-                <div className="sm:max-h-56 flex-1 space-y-2 sm:overflow-y-auto pr-1">
-                  {todayDay.exercises.map((ex, i) => (
-                    <div key={ex.id} className="flex items-center gap-3 rounded-[16px] bg-white/5 px-4 py-3 border border-white/5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white/90">
-                        {i + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-white">{ex.name}</p>
-                        <p className="text-xs text-white/50 font-medium">{ex.sets} × {ex.reps}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <EmptyPanel icon={<Calendar className="h-8 w-8" />} title={stats.activeRoutine.name} description="Rutina activa sin día asignado para hoy." />
-            )}
-          </div>
-
-          {/* Micro AI Tip Card */}
-          <div className="relative overflow-hidden rounded-[24px] border border-primary-500/20 bg-primary-500/5 p-4 flex items-center gap-3">
-            <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary-500/20 rounded-full blur-[20px] pointer-events-none" />
-            <span className="text-xl shrink-0">🧠</span>
-            <p className="text-xs text-white/70 font-medium leading-relaxed">
-              <span className="text-primary-400 font-bold mr-1">Coach:</span> 
-              {aiCoachTip}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Vital Fit 4 Pilares de Adaptación Diaria (Estilo Pulso) ── */}
-      {user && (
-        <VitalBioPillarsWidget
-          userId={user.id}
-          selectedDate={selectedDate}
-          calories={displayCalories}
-          calorieGoal={targets.calories}
-          protein={displayProtein}
-          proteinGoal={targets.protein}
-          waterGlasses={waterGlasses}
-          waterGoal={WATER_GOAL}
-          activeRoutine={stats.activeRoutine}
-          onMealLogged={loadData}
-        />
-      )}
-
-        {/* ── Módulo Inteligente de Rendimiento y Porcentajes ── */}
-        {user && (
-          <UserComplianceModule userId={user.id} userName={user.name} />
-        )}
-
-        {/* ── Fast Meal Logging replacing charts ── */}
-        <section className="bg-[#18181A] rounded-[32px] p-6 shadow-sm border border-white/5">
-          <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
+      {/* ═════════════════════════════════════════════════════════
+          COLUMNA IZQUIERDA (EN PC) / CABECERA (EN CELULAR):
+          RELOJ DE 120 DÍAS + RESUMEN RÁPIDO EN PC
+         ═════════════════════════════════════════════════════════ */}
+      <div className="lg:col-span-5 space-y-4">
+        {/* 1. EL RELOJ DE 120 DÍAS (UN DÍA MENOS) */}
+        <section className="rounded-3xl bg-gradient-to-br from-[#141720] via-[#0e1017] to-[#1a0b0e] border border-white/10 p-4 sm:p-5 shadow-xl relative overflow-hidden">
+          <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-lg font-bold text-white">Diario de Comidas</h3>
-              <p className="text-sm text-white/50 mt-1">Registra lo que has comido hoy para alcanzar tu meta.</p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                <Clock className="w-3 h-3" />
+                <span>No es un día más • Es un día menos</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-condensed font-black uppercase tracking-tight text-white leading-none">
+                DÍA {clockStats.dayNumber} DE {clockStats.totalDays}{" "}
+                <span className="text-red-500">
+                  • QUEDAN {clockStats.daysRemaining} DÍAS
+                </span>
+              </h1>
+              <p className="text-xs text-neutral-400 mt-1">
+                Semana {clockStats.weekNumber} de {clockStats.totalWeeks} —{" "}
+                <span className="text-neutral-200 font-medium">
+                  {clockStats.phaseName}
+                </span>
+              </p>
+            </div>
+
+            {/* Selector Rápido kg | lbs */}
+            <div className="flex rounded-xl bg-white/5 p-0.5 border border-white/10 shrink-0">
+              {(["kg", "lbs"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setUnit(u)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition",
+                    unit === u
+                      ? "bg-red-600 text-white shadow"
+                      : "text-neutral-400 hover:text-white",
+                  )}
+                >
+                  {u}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {['Desayuno', 'Almuerzo', 'Cena', 'Snack'].map((type) => {
-              // Encuentra cuántas veces se registró hoy (mock up for UI)
-              const hasRecorded = (stats.mealTypeDistribution?.find(m => m.type === type)?.count ?? 0) > 0;
-              const mealColor = MEAL_TYPE_COLORS[type];
+          {/* Barra de Progreso de los 4 Meses */}
+          <div className="mt-3.5 space-y-1">
+            <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-red-600 via-amber-500 to-emerald-400 transition-all duration-500"
+                style={{ width: `${Math.max(4, clockStats.pct)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+              <span>Día 1</span>
+              <span>{clockStats.pct}% avanzado</span>
+              <span>Meta: Día {clockStats.totalDays}</span>
+            </div>
+          </div>
 
-              return (
-                <Link href="/meals" key={type}>
-                  <div className="group flex h-full flex-col justify-between rounded-[24px] bg-white/5 border border-white/5 p-5 transition-all hover:bg-white/10 hover:border-white/10 cursor-pointer">
-                    <div className="flex justify-between items-start mb-4">
-                      <span className={cn(
-                        'inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
-                        mealColor?.bg ?? 'bg-white/5',
-                        mealColor?.text ?? 'text-white',
-                      )}>
-                        {type}
-                      </span>
-                      {hasRecorded ? (
-                        <div className="h-6 w-6 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center">
-                          <Activity className="h-3 w-3" />
-                        </div>
-                      ) : (
-                        <div className="h-6 w-6 rounded-full bg-white/5 text-white/40 flex items-center justify-center group-hover:bg-white/20 group-hover:text-white transition-colors">
-                          <Plus className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      {hasRecorded ? (
-                        <p className="text-sm font-bold text-white">Registrado</p>
-                      ) : (
-                        <p className="text-sm font-bold text-white/40">Sin registrar</p>
-                      )}
-                      <p className="text-[10px] uppercase tracking-wider text-white/30 font-bold mt-1">Toca para añadir</p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          {/* ── LOOP ADICTIVO DIARIO: TU VICTORIA DE HOY + RACHA ACTIVA ── */}
+          <div className="mt-4 pt-3.5 border-t border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[11px] font-black text-amber-300">
+                  🔥 Racha: {dailyVictory.streakDays} día{dailyVictory.streakDays === 1 ? "" : "s"}
+                </span>
+                <span className="text-xs font-bold text-white">
+                  Tu Día Hoy: {dailyVictory.scorePct}% completado
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-400">
+                {dailyVictory.completedCount}/3 Pilares
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+              <div
+                className={cn(
+                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  dailyVictory.waterDone
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-black/40 border-white/10 text-neutral-400",
+                )}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Agua (≥80%)</span>
+              </div>
+
+              <div
+                className={cn(
+                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  dailyVictory.nutritionDone
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-black/40 border-white/10 text-neutral-400",
+                )}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Comidas Hoy</span>
+              </div>
+
+              <div
+                className={cn(
+                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  dailyVictory.sleepDone
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-black/40 border-white/10 text-neutral-400",
+                )}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Sueño ±1h</span>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── Training Stats / Progression ── */}
-        <section className="bg-[#18181A] rounded-[32px] p-6 shadow-sm border border-white/5">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">Progreso y Mejora <Trophy className="w-5 h-5 text-amber-400" /></h3>
-              <p className="text-sm text-white/50 mt-1">Tu desempeño físico general de la semana.</p>
-            </div>
+        {/* TARJETA EXCLUSIVA PARA PC: VISTA RÁPIDA DE TUS 4 METAS SIEMPRE VISIBLE */}
+        <section className="hidden lg:block rounded-3xl bg-white/[0.03] border border-white/10 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-red-400" />
+              Tus 4 Metas de estos 4 Meses
+            </span>
+            <button
+              type="button"
+              onClick={() => setHorizon("month")}
+              className="text-[11px] font-bold text-red-400 hover:text-red-300"
+            >
+              Ver detalle →
+            </button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            {/* Metric 1 */}
-            <div className="rounded-[24px] border border-white/5 bg-white/5 p-5 relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 w-20 h-20 bg-sky-500/10 rounded-full blur-[20px]" />
-              <Dumbbell className="h-5 w-5 text-sky-400 mb-4 relative z-10" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-1 relative z-10">Ejercicios Hechos</p>
-              <div className="flex items-end gap-2 relative z-10">
-                <span className="text-3xl font-black text-white">{stats.activeRoutine?.completedLogs ? stats.activeRoutine.completedLogs * 6 : 0}</span>
-                <span className="text-xs font-bold text-sky-400 mb-1.5">+12%</span>
-              </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+              <span className="text-[10px] font-bold uppercase text-emerald-400 block">
+                1. Peso y Físico
+              </span>
+              <p className="text-sm font-bold text-white mt-0.5">
+                {formatWeight(objectives.biometric.currentKg)} →{" "}
+                {formatWeight(objectives.biometric.targetKg)}
+              </p>
             </div>
 
-            {/* Metric 2 */}
-            <div className="rounded-[24px] border border-white/5 bg-white/5 p-5 relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 w-20 h-20 bg-amber-500/10 rounded-full blur-[20px]" />
-              <Flame className="h-5 w-5 text-amber-400 mb-4 relative z-10" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-1 relative z-10">Consistencia</p>
-              <div className="flex items-end gap-2 relative z-10">
-                <span className="text-3xl font-black text-white">{routineProgress}%</span>
-                <span className="text-xs font-bold text-amber-400 mb-1.5">¡Fuego!</span>
-              </div>
-              <div className="w-full h-1 bg-white/10 rounded-full mt-4 overflow-hidden relative z-10">
-                <div className="h-full bg-amber-400 rounded-full" style={{ width: `${routineProgress}%` }} />
-              </div>
+            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+              <span className="text-[10px] font-bold uppercase text-amber-400 block">
+                2. Fuerza
+              </span>
+              <p className="text-sm font-bold text-white truncate mt-0.5">
+                {objectives.strength.exerciseName}
+              </p>
+              <span className="text-[11px] text-neutral-400">
+                Meta: {objectives.strength.targetWeight} {objectives.strength.unit}
+              </span>
             </div>
 
-            {/* Metric 3 */}
-            <div className="rounded-[24px] border border-white/5 bg-white/5 p-5 relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-[20px]" />
-              <Activity className="h-5 w-5 text-emerald-400 mb-4 relative z-10" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-white/40 mb-1 relative z-10">Mejora Estimada</p>
-              <div className="flex items-end gap-2 relative z-10">
-                <span className="text-3xl font-black text-white">+2.4</span>
-                <span className="text-xs font-bold text-emerald-400 mb-1.5">kg</span>
-              </div>
-              <p className="text-[10px] text-white/30 font-bold mt-2 relative z-10">En volumen de carga</p>
+            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+              <span className="text-[10px] font-bold uppercase text-sky-400 block">
+                3. Dominio Corporal
+              </span>
+              <p className="text-sm font-bold text-white truncate mt-0.5">
+                {objectives.bodyMastery.skillName}
+              </p>
+              <span className="text-[11px] text-neutral-400">
+                {objectives.bodyMastery.targetMark}
+              </span>
             </div>
+
+            {objectives.aerobic.enabled && (
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+                <span className="text-[10px] font-bold uppercase text-purple-400 block">
+                  4. Cardio / Aire
+                </span>
+                <p className="text-sm font-bold text-white truncate mt-0.5">
+                  {objectives.aerobic.metricName}
+                </p>
+                <span className="text-[11px] text-neutral-400">
+                  {objectives.aerobic.targetMark}
+                </span>
+              </div>
+            )}
           </div>
         </section>
       </div>
-    </>
+
+      {/* ═════════════════════════════════════════════════════════
+          COLUMNA DERECHA (EN PC) / CUERPO PRINCIPAL (EN CELULAR)
+         ═════════════════════════════════════════════════════════ */}
+      <div className="lg:col-span-7 space-y-4">
+        {/* BARRA ÚNICA DE NAVEGACIÓN (SIN BOTONES REPETIDOS) */}
+        <div className="grid grid-cols-3 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10">
+          {[
+            { id: "today", label: "📍 Hoy" },
+            { id: "week", label: "📊 Mi Semana" },
+            { id: "month", label: "🎯 Mis 4 Metas" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setHorizon(tab.id as HorizonTab)}
+              className={cn(
+                "py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition",
+                horizon === tab.id
+                  ? "bg-white text-black shadow"
+                  : "text-neutral-400 hover:text-white",
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ═════════════════════════════════════════════════════════
+            VISTA 1: HOY (LOS 3 HÁBITOS DEL DÍA EXPLICADOS FÁCIL)
+           ═════════════════════════════════════════════════════════ */}
+        {horizon === "today" && (
+          <div className="space-y-3.5 animate-in fade-in duration-200">
+            {/* 1. TU ENTRENAMIENTO DE HOY */}
+            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                    <Dumbbell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+                      1. Tu Entrenamiento de Hoy
+                    </span>
+                    <h2 className="text-base font-bold text-white">
+                      {data?.activeRoutine?.name || "Mi Rutina Activa"}
+                    </h2>
+                  </div>
+                </div>
+                <Link
+                  href="/routines"
+                  className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-md shadow-red-600/20 active:scale-95 transition shrink-0"
+                >
+                  <span>Ir a Entrenar</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {/* El Porqué en 1 frase clara */}
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-xs text-neutral-300 leading-relaxed">
+                <span className="font-bold text-white">💡 ¿Para qué sirve hoy? </span>
+                Cada serie de hoy te acerca a levantar{" "}
+                <strong className="text-amber-300">
+                  {objectives.strength.targetWeight} {objectives.strength.unit} en{" "}
+                  {objectives.strength.exerciseName}
+                </strong>{" "}
+                y dominar{" "}
+                <strong className="text-sky-300">
+                  {objectives.bodyMastery.skillName}
+                </strong>
+                .
+              </div>
+            </div>
+
+            {/* 2. AGUA Y ALIMENTACIÓN */}
+            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-4">
+              {/* Bloque Prioritario: Agua */}
+              <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-sky-400 shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-sky-300 block">
+                        2. Tu Agua de Hoy (Prioridad)
+                      </span>
+                      <p className="text-base font-black text-white">
+                        {currentWaterLiters} L{" "}
+                        <span className="text-xs font-normal text-neutral-300">
+                          de {targetWaterLiters} Litros
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleWaterDelta(-1)}
+                      className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95"
+                      aria-label="Restar vaso"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleWaterDelta(1)}
+                      className="px-3 h-9 rounded-xl bg-sky-500 text-black font-bold text-xs flex items-center gap-1 active:scale-95 shadow"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>1 Vaso (250ml)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleWaterDelta(2)}
+                      className="px-2.5 h-9 rounded-xl bg-sky-400/20 border border-sky-400/40 text-sky-200 font-bold text-xs active:scale-95"
+                    >
+                      +500ml
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-sky-400 transition-all duration-300"
+                    style={{ width: `${waterPct}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-sky-100/90">
+                  💧 <strong>¿Por qué importa?</strong> Si te falta agua, pierdes hasta 15% de fuerza y te cansas mucho más rápido.
+                </p>
+              </div>
+
+              {/* Bloque: Comidas del Día */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
+                      Tus Comidas de Hoy
+                    </span>
+                    <h3 className="text-lg font-black text-white">
+                      {caloriesToday.toLocaleString("es")}{" "}
+                      <span className="text-xs font-normal text-neutral-400">
+                        de {targets.calories.toLocaleString("es")} kcal
+                      </span>
+                    </h3>
+                  </div>
+                  <Link
+                    href="/meals"
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 active:scale-95 transition"
+                  >
+                    <span>+ Anotar Comida</span>
+                  </Link>
+                </div>
+
+                {/* Barras de Macros con explicación simple */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    {
+                      label: "Proteína",
+                      val: proteinToday,
+                      goal: targets.protein,
+                      role: "Construye músculo",
+                      color: "bg-sky-400",
+                    },
+                    {
+                      label: "Carbos",
+                      val: carbsToday,
+                      goal: targets.carbs,
+                      role: "Da energía hoy",
+                      color: "bg-amber-400",
+                    },
+                    {
+                      label: "Grasas",
+                      val: fatToday,
+                      goal: targets.fat,
+                      role: "Cuida hormonas",
+                      color: "bg-rose-400",
+                    },
+                  ].map((m) => {
+                    const pct = Math.min(
+                      100,
+                      Math.round((m.val / Math.max(m.goal, 1)) * 100),
+                    );
+                    return (
+                      <div
+                        key={m.label}
+                        className="p-2.5 rounded-2xl bg-black/40 border border-white/5 space-y-1"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-neutral-200">
+                            {m.label}
+                          </span>
+                          <span className="font-mono text-[11px] text-neutral-400">
+                            {Math.round(m.val)}/{m.goal}g
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full", m.color)}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="block text-[10px] text-neutral-400 truncate">
+                          {m.role}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-xs text-neutral-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+                  <strong className="text-white">🍽️ ¿Por qué comes esto?</strong>{" "}
+                  {heroPact?.pillars?.nutrition?.nutritionWhy ||
+                    objectives.biometric.why}
+                </p>
+              </div>
+            </div>
+
+            {/* 3. TU DESCANSO (DORMIR A LA MISMA HORA) */}
+            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Moon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 block">
+                      3. Tu Descanso (7 a 8 horas)
+                    </span>
+                    <h2 className="text-sm font-bold text-white">
+                      Meta: Dormir {defaultBedtime} → Despertar {defaultWakeTime}
+                    </h2>
+                  </div>
+                </div>
+
+                {todaySleepLog && (
+                  <span
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase shrink-0",
+                      todaySleepLog.withinOneHourWindow
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+                    )}
+                  >
+                    {todaySleepLog.withinOneHourWindow
+                      ? `🟢 A tiempo (${todaySleepLog.hoursSlept}h)`
+                      : `🟡 Varió >1h (${todaySleepLog.hoursSlept}h)`}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                🌙 <strong>Lo más importante:</strong> Acuéstate y levántate todos los días a la misma hora (máximo 1 hora de diferencia).
+              </p>
+
+              <div className="grid grid-cols-3 gap-2 items-end">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
+                    Me dormí
+                  </label>
+                  <input
+                    type="time"
+                    value={bedtimeInput}
+                    onChange={(e) => setBedtimeInput(e.target.value)}
+                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                  />
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
+                    Me levanté
+                  </label>
+                  <input
+                    type="time"
+                    value={wakeTimeInput}
+                    onChange={(e) => setWakeTimeInput(e.target.value)}
+                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={savingSleep}
+                  onClick={handleSaveSleep}
+                  className="h-[52px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider active:scale-95 transition disabled:opacity-50"
+                >
+                  {savingSleep ? "..." : "Guardar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════
+            VISTA 2: MI SEMANA (PESO EN AYUNAS + MENSAJE DEL ENTRENADOR)
+           ═════════════════════════════════════════════════════════ */}
+        {horizon === "week" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* 1. PESAJE SEMANAL EN AYUNAS */}
+            <div className="rounded-3xl bg-white/[0.03] border border-emerald-500/30 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">
+                      1 Vez por Semana • Recién Despierto en Ayunas
+                    </span>
+                    <h2 className="text-base font-bold text-white">
+                      Anotar Mi Peso de la Semana
+                    </h2>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/15 px-2.5 py-1 rounded-full shrink-0">
+                  Meta:{" "}
+                  {objectives.biometric.weeklyRateKg >= 0
+                    ? `Subir +${objectives.biometric.weeklyRateKg} kg/sem`
+                    : `Bajar ${objectives.biometric.weeklyRateKg} kg/sem`}
+                </span>
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                {objectives.biometric.why}
+              </p>
+
+              <div className="flex gap-2">
+                <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/10">
+                  <span className="block text-[10px] font-bold uppercase text-neutral-400">
+                    Tu peso hoy en ayunas ({unit})
+                  </span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={fastedWeightInput}
+                    onChange={(e) => setFastedWeightInput(e.target.value)}
+                    placeholder={`Ej: ${unit === "lbs" ? "160.5" : "73.2"}`}
+                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none mt-0.5"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={savingWeight}
+                  onClick={handleSaveWeeklyWeight}
+                  className="px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-condensed font-bold uppercase tracking-wider text-xs active:scale-95 transition"
+                >
+                  {savingWeight ? "Guardando..." : "Guardar Peso"}
+                </button>
+              </div>
+
+              {/* Historial reciente de pesajes */}
+              {fastedWeighIns.length > 0 && (
+                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                    Tus últimos registros (y tu promedio real sin el engaño de los líquidos):
+                  </span>
+                  <div className="space-y-1">
+                    {fastedWeighIns
+                      .slice(-4)
+                      .reverse()
+                      .map((w: any) => (
+                        <div
+                          key={w.id}
+                          className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-black/30"
+                        >
+                          <span className="text-neutral-400 font-mono">
+                            {w.date}
+                          </span>
+                          <span className="font-bold text-white">
+                            {formatWeight(w.weightKg)}
+                          </span>
+                          <span className="text-[11px] text-sky-300">
+                            Promedio real: {formatWeight(w.trendWeightKg)}
+                          </span>
+                          <span
+                            className={cn(
+                              "font-mono text-[11px] font-bold",
+                              w.deltaKg > 0
+                                ? "text-emerald-400"
+                                : w.deltaKg < 0
+                                  ? "text-amber-400"
+                                  : "text-neutral-400",
+                            )}
+                          >
+                            {w.deltaKg > 0 ? `+${w.deltaKg}kg` : `${w.deltaKg}kg`}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. MENSAJE Y REPORTE SEMANAL DE TU ENTRENADOR */}
+            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-red-400" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+                      Seguimiento Semanal con tu Entrenador
+                    </span>
+                    <h2 className="text-base font-bold text-white">
+                      {latestReport
+                        ? `Resumen de tu Semana ${latestReport.weekNumber}`
+                        : "Resumen de tu Entrenador"}
+                    </h2>
+                  </div>
+                </div>
+                {latestReport?.isDeloadWeek && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-bold uppercase">
+                    Semana Suave (Descarga)
+                  </span>
+                )}
+              </div>
+
+              {latestReport ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block">
+                        Entreno
+                      </span>
+                      <span className="text-lg font-black text-emerald-400">
+                        {latestReport.trainingScore}%
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block">
+                        Comida y Agua
+                      </span>
+                      <span className="text-lg font-black text-sky-400">
+                        {latestReport.nutritionScore}%
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block">
+                        Sueño
+                      </span>
+                      <span className="text-lg font-black text-indigo-400">
+                        {latestReport.recoveryScore}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase text-red-400 block">
+                      Notas de tu Entrenador:
+                    </span>
+                    <p className="text-xs text-neutral-200 leading-relaxed whitespace-pre-line">
+                      {latestReport.trainerNotes}
+                    </p>
+                  </div>
+
+                  {latestReport.nextWeekFocus && (
+                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-amber-300 block">
+                        🎯 En qué enfocarte esta semana:
+                      </span>
+                      <p className="text-xs font-semibold text-white">
+                        {latestReport.nextWeekFocus}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  Después de tu llamada semanal, tu entrenador dejará aquí sus notas y el foco principal para tu próxima semana.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════
+            VISTA 3: MIS 4 METAS (Y MEDIDA MENSUAL DE % DE GRASA)
+           ═════════════════════════════════════════════════════════ */}
+        {horizon === "month" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* LAS 4 METAS EXPLICADAS FÁCIL */}
+            <div className="space-y-2.5">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 px-1">
+                Tus 4 Metas de estos 4 Meses (120 Días)
+              </h2>
+
+              {/* 1. Peso y Físico */}
+              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-emerald-400">
+                    1. Peso y Físico • {objectives.biometric.title}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-white">
+                    {formatWeight(objectives.biometric.currentKg)} →{" "}
+                    {formatWeight(objectives.biometric.targetKg)}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-300">
+                  {objectives.biometric.why}
+                </p>
+                {objectives.biometric.bodyFatPct && (
+                  <div className="text-[11px] text-emerald-300 font-medium">
+                    % de Grasa Actual: {objectives.biometric.bodyFatPct}%{" "}
+                    {objectives.biometric.targetBodyFatPct
+                      ? `→ Meta: ${objectives.biometric.targetBodyFatPct}%`
+                      : ""}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Fuerza */}
+              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-amber-400">
+                    2. Meta de Fuerza
+                  </span>
+                  <span className="text-xs font-mono font-bold text-white">
+                    {objectives.strength.currentWeight} →{" "}
+                    {objectives.strength.targetWeight} {objectives.strength.unit}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  {objectives.strength.exerciseName}
+                </p>
+                <p className="text-xs text-neutral-300">
+                  Cómo llegar: subir un poco de peso (+{objectives.strength.weeklyProgression}{" "}
+                  {objectives.strength.unit}) o repeticiones cada semana.
+                </p>
+              </div>
+
+              {/* 3. Dominio de tu Cuerpo */}
+              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-sky-400">
+                    3. Dominio de tu Cuerpo
+                  </span>
+                  <span className="text-xs font-bold text-sky-200">
+                    Meta: {objectives.bodyMastery.targetMark}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  {objectives.bodyMastery.skillName}
+                </p>
+                <p className="text-xs text-neutral-300">
+                  Nivel hoy: {objectives.bodyMastery.currentMark} •{" "}
+                  {objectives.bodyMastery.weeklyPracticeTarget}
+                </p>
+              </div>
+
+              {/* 4. Resistencia / Cardio */}
+              {objectives.aerobic.enabled && (
+                <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase text-purple-400">
+                      4. Resistencia / Cardio
+                    </span>
+                    <span className="text-xs font-bold text-purple-200">
+                      Meta: {objectives.aerobic.targetMark}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-white">
+                    {objectives.aerobic.metricName}
+                  </p>
+                  <p className="text-xs text-neutral-300">
+                    {objectives.aerobic.why}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* MEDICIÓN MENSUAL DE % DE GRASA CON CINTA MÉTRICA */}
+            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Ruler className="w-5 h-5 text-amber-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
+                    1 Vez al Mes • Con Cinta Métrica
+                  </span>
+                  <h3 className="text-base font-bold text-white">
+                    Calcular mi % de Grasa Corporal
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                Una vez al mes, mide con una cinta métrica tu <strong>cuello</strong> y tu{" "}
+                <strong>cintura</strong> (a la altura del ombligo) en centímetros:
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <label className="block text-[9px] font-bold uppercase text-neutral-400">
+                    Cuello (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    inputMode="decimal"
+                    value={neckInput}
+                    onChange={(e) => setNeckInput(e.target.value)}
+                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                  />
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <label className="block text-[9px] font-bold uppercase text-neutral-400">
+                    Cintura (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    inputMode="decimal"
+                    value={waistInput}
+                    onChange={(e) => setWaistInput(e.target.value)}
+                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={savingNavy}
+                  onClick={handleSaveMonthlyNavy}
+                  className="rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider active:scale-95 transition"
+                >
+                  {savingNavy ? "..." : "Calcular %"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

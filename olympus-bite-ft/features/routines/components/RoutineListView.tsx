@@ -81,6 +81,7 @@ function ExerciseTrackingCard({
   weekNumber,
   log,
   isSaving,
+  weightUnit = "kg",
   onSave,
   onRemove,
 }: {
@@ -88,6 +89,7 @@ function ExerciseTrackingCard({
   weekNumber: number;
   log: WorkoutLog | undefined;
   isSaving: boolean;
+  weightUnit?: "kg" | "lbs";
   onSave: (setsData: SetLogData[], observations: string) => void;
   onRemove: () => void;
 }) {
@@ -194,7 +196,13 @@ function ExerciseTrackingCard({
                       key={s.set}
                       className="inline-flex items-center gap-1 rounded-md bg-primary-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-300 border border-primary-500/10"
                     >
-                      S{s.set}: {s.weight ?? "—"}kg × {s.reps ?? "—"}
+                      S{s.set}:{" "}
+                      {s.weight != null
+                        ? weightUnit === "lbs"
+                          ? `${Math.round(s.weight * 2.20462 * 2) / 2}lbs`
+                          : `${s.weight}kg`
+                        : "—"}{" "}
+                      × {s.reps ?? "—"}
                       {s.rest != null && (
                         <span className="text-primary-500"> · {formatRest(s.rest)}</span>
                       )}
@@ -372,14 +380,30 @@ function ExerciseTrackingCard({
                           inputMode="decimal"
                           step="0.5"
                           placeholder="—"
-                          value={s.weight ?? ""}
-                          onChange={(e) =>
-                            updateSet(i, "weight", e.target.value)
+                          value={
+                            s.weight == null
+                              ? ""
+                              : weightUnit === "lbs"
+                                ? Math.round(s.weight * 2.20462 * 2) / 2
+                                : s.weight
                           }
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") {
+                              updateSet(i, "weight", "");
+                            } else {
+                              const num = parseFloat(raw);
+                              const kgVal =
+                                weightUnit === "lbs"
+                                  ? Math.round((num / 2.20462) * 2) / 2
+                                  : num;
+                              updateSet(i, "weight", String(kgVal));
+                            }
+                          }}
                           className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-center font-medium dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         />
                         <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-neutral-400 pointer-events-none">
-                          kg
+                          {weightUnit}
                         </span>
                       </div>
                     </div>
@@ -513,6 +537,7 @@ interface RoutineListViewProps {
   currentWeek: number;
   savingLog: string | null;
   userId: string;
+  weightUnit?: "kg" | "lbs";
   onSelectRoutine: (routine: Routine) => void;
   onActivateRoutine: (routineId: string) => Promise<void>;
   onStartSession: (day: RoutineDay) => void;
@@ -532,6 +557,7 @@ export function RoutineListView({
   logs,
   currentWeek,
   savingLog,
+  weightUnit = "kg",
   onSelectRoutine,
   onActivateRoutine,
   onStartSession,
@@ -833,6 +859,7 @@ export function RoutineListView({
                     weekNumber={currentWeek}
                     log={getExerciseLog(ex.id, currentWeek)}
                     isSaving={savingLog === ex.id}
+                    weightUnit={weightUnit}
                     onSave={(setsData) => handleTrackingSave(ex, setsData)}
                     onRemove={() => onRemoveLog(ex.id)}
                   />
@@ -1720,7 +1747,12 @@ export function RoutineListView({
                                       </span>
                                       <span>·</span>
                                       <span className="font-bold text-amber-400/90 flex items-center gap-0.5">
-                                        🔒 {ex.targetWeight && ex.targetWeight > 0 ? `${ex.targetWeight} kg` : "Corporal"}
+                                        🔒{" "}
+                                        {ex.targetWeight && ex.targetWeight > 0
+                                          ? weightUnit === "lbs"
+                                            ? `${Math.round(ex.targetWeight * 2.20462 * 2) / 2} lbs`
+                                            : `${ex.targetWeight} kg`
+                                          : "Corporal"}
                                       </span>
                                       <span>·</span>
                                       <span>⏱️ {formatRest(ex.restSeconds)}</span>

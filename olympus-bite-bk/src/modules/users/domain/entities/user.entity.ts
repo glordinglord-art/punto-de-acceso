@@ -130,6 +130,14 @@ export class User extends BaseEntity {
       weight: number | null;
       height: number | null;
       targetCalories: number | null;
+      targetProtein: number | null;
+      targetCarbs: number | null;
+      targetFats: number | null;
+      weightUnitPreference: string;
+      gender: string | null;
+      age: number | null;
+      anamnesisData: any;
+      onboardingCompleted: boolean;
       experienceLevel: string | null;
       equipmentAccess: string | null;
       medicalConditions: string | null;
@@ -144,6 +152,18 @@ export class User extends BaseEntity {
     if (data.height !== undefined) this.height = data.height;
     if (data.targetCalories !== undefined)
       this.targetCalories = data.targetCalories;
+    if (data.targetProtein !== undefined)
+      this.targetProtein = data.targetProtein;
+    if (data.targetCarbs !== undefined) this.targetCarbs = data.targetCarbs;
+    if (data.targetFats !== undefined) this.targetFats = data.targetFats;
+    if (data.weightUnitPreference !== undefined)
+      this.weightUnitPreference = data.weightUnitPreference;
+    if (data.gender !== undefined) this.gender = data.gender;
+    if (data.age !== undefined) this.age = data.age;
+    if (data.anamnesisData !== undefined)
+      this.anamnesisData = data.anamnesisData;
+    if (data.onboardingCompleted !== undefined)
+      this.onboardingCompleted = data.onboardingCompleted;
     if (data.experienceLevel !== undefined)
       this.experienceLevel = data.experienceLevel;
     if (data.equipmentAccess !== undefined)

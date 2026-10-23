@@ -23,11 +23,11 @@ interface ClinicalAgentTerminalProps {
 }
 
 const QUICK_PROMPTS = [
-  '🚨 ¿Quiénes son mis banderas rojas hoy y por qué?',
-  '📊 Dame un resumen clínico de cumplimiento de mis atletas',
-  '🦴 ¿Qué atletas tienen lesiones o sobrecarga articular reportada?',
-  '🥗 ¿Quiénes tienen déficit de proteína o calorías hoy?',
-  '💡 Sugiere una mejora de estímulo para mis atletas con baja adherencia',
+  '📐 Audita el volumen semanal por músculo (MEV-MAV-MRV) de mis atletas',
+  '🚨 ¿Quiénes necesitan ajustes hoy en Entreno, Agua o Sueño (±1h)?',
+  '⚖️ Evalúa el ritmo de pesaje en ayunas (+0.25 o -0.50 kg/sem) de mis atletas',
+  '🏋️ Revisa mi propia Ficha de Entrenador y sugiere cómo optimizar mi volumen',
+  '📝 Redacta y publica el Reporte Semanal para mis atletas activos',
 ];
 
 export function ClinicalAgentTerminal({

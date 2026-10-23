@@ -7,6 +7,7 @@ export interface DietRecommenderContext {
   medicalConditions?: string;
   dietaryPreferences?: string;
   targetCalories?: number;
+  ecosystemSummary?: string;
   recentMeals?: {
     name: string;
     type: string;
@@ -18,14 +19,17 @@ export interface DietRecommenderContext {
   activeRoutine?: {
     name: string;
     description?: string;
+    volumeSummary?: string;
     days: {
       dayNumber: number;
       focusArea: string;
       isRestDay: boolean;
       exercises: {
         name: string;
+        muscleGroup?: string;
         sets: number;
         reps: string;
+        targetWeight?: number | null;
         observations?: string;
       }[];
     }[];

@@ -48,4 +48,45 @@ export class ClinicalAgentController {
       data: null,
     };
   }
+
+  @Post('athlete/:athleteId/chat')
+  @HttpCode(HttpStatus.OK)
+  async chatAthleteCase(
+    @Param('athleteId') athleteId: string,
+    @Body()
+    dto: {
+      trainerId?: string;
+      message: string;
+      trainerPrivateNotes?: string;
+    },
+  ) {
+    const res = await this.agentService.processAthleteCaseMessage(
+      athleteId,
+      dto.message,
+      dto.trainerPrivateNotes,
+    );
+    return {
+      success: true,
+      data: res,
+    };
+  }
+
+  @Get('athlete/:athleteId/history')
+  async getAthleteCaseHistory(@Param('athleteId') athleteId: string) {
+    const res = await this.agentService.getAthleteCaseHistory(athleteId);
+    return {
+      success: true,
+      data: res,
+    };
+  }
+
+  @Delete('athlete/:athleteId/history')
+  @HttpCode(HttpStatus.OK)
+  async clearAthleteCaseHistory(@Param('athleteId') athleteId: string) {
+    await this.agentService.clearAthleteCaseHistory(athleteId);
+    return {
+      success: true,
+      data: null,
+    };
+  }
 }

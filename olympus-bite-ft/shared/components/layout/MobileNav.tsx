@@ -57,7 +57,7 @@ function getNavConfig(activeMode: string) {
 
     // Only modules NOT visible in the bottom bar
     const moreModules: NavItem[] = [
-      { href: "/clinical-agent", label: "Director Clínico IA", icon: Icons.clinicalAgent, description: "Terminal médica, metabólica y biomecánica omnisciente" },
+      { href: "/clinical-agent", label: "Asistente IA", icon: Icons.clinicalAgent, description: "Asistente deportivo y planificación inteligente" },
       { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Seguridad y cuenta de administrador" },
     ];
 
@@ -67,36 +67,31 @@ function getNavConfig(activeMode: string) {
   if (activeMode === "trainer") {
     const bar: NavItem[] = [
       { href: "/dashboard", label: "Inicio", icon: Icons.home },
-      { href: "/clients", label: "Clientes", icon: Icons.clients },
+      { href: "/clients", label: "Atletas", icon: Icons.clients },
       { href: "/routines", label: "Rutinas", icon: Icons.routines },
-      { href: "/meals", label: "Dietas", icon: Icons.meals },
+      { href: "/meals", label: "Agua/Comida", icon: Icons.meals },
     ];
 
-    // Only modules NOT visible in the bottom bar
+    // Only modules NOT visible in the bottom bar with a clear purpose in the 120-day program
     const moreModules: NavItem[] = [
-      { href: "/clinical-agent", label: "Director Clínico IA", icon: Icons.clinicalAgent, description: "Terminal médica, metabólica y biomecánica omnisciente" },
-      { href: "/tasks", label: "Tareas Diarias", icon: Icons.tasks, description: "Hábitos y control de estrés de atletas" },
-      { href: "/exercises", label: "Banco de Ejercicios", icon: Icons.exercises, description: "Catálogo de técnica y biblioteca" },
-      { href: "/summary", label: "Resumen Global", icon: Icons.summary, description: "Métricas y cumplimiento general" },
-      { href: "/finances", label: "Mis Cuentas", icon: Icons.finances, description: "Pagos de alumnos y balances" },
+      { href: "/clinical-agent", label: "Co-Piloto IA", icon: Icons.clinicalAgent, description: "Gestión de volumen MEV-MAV-MRV, 3 pilares y cambios en vivo" },
+      { href: "/exercises", label: "Banco de Ejercicios", icon: Icons.exercises, description: "Catálogo de ejercicios y videos técnicos" },
+      { href: "/finances", label: "Mis Cuentas", icon: Icons.finances, description: "Pagos de atletas y balances" },
       { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Datos y configuración de entrenador" },
     ];
 
     return { bar, moreModules };
   }
 
-  // Client / Athlete Mode
+  // Client / Athlete Mode — 100% focused on the 120-Day Plan (Zero Bloat)
   const bar: NavItem[] = [
-    { href: "/dashboard", label: "Inicio", icon: Icons.home },
-    { href: "/routines", label: "Rutinas", icon: Icons.routines },
-    { href: "/meals", label: "Comidas", icon: Icons.meals },
-    { href: "/tasks", label: "Tareas", icon: Icons.tasks },
+    { href: "/dashboard", label: "Hoy", icon: Icons.home },
+    { href: "/routines", label: "Mi Rutina", icon: Icons.routines },
+    { href: "/meals", label: "Agua/Comida", icon: Icons.meals },
+    { href: "/profile", label: "Mi Perfil", icon: Icons.profile },
   ];
 
-  // Only modules NOT visible in the bottom bar
-  const moreModules: NavItem[] = [
-    { href: "/profile", label: "Mi Perfil", icon: Icons.profile, description: "Mis datos personales y medidas corporales" },
-  ];
+  const moreModules: NavItem[] = [];
 
   return { bar, moreModules };
 }

@@ -47,38 +47,43 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
       <div
         className={cn(
-          'w-full max-h-[90vh] flex flex-col rounded-3xl bg-white/95 backdrop-blur-2xl shadow-[0_32px_96px_rgba(15,23,42,0.2)] dark:bg-[#101118]/95 dark:shadow-[0_32px_96px_rgba(0,0,0,0.6)] border border-slate-200/60 dark:border-white/8 animate-in fade-in zoom-in-95 duration-200 relative',
+          'w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col rounded-t-[28px] sm:rounded-3xl bg-white/98 backdrop-blur-2xl shadow-[0_-16px_64px_rgba(0,0,0,0.45)] sm:shadow-[0_32px_96px_rgba(15,23,42,0.2)] dark:bg-[#0e1015]/98 dark:shadow-[0_32px_96px_rgba(0,0,0,0.75)] border-t sm:border border-slate-200/60 dark:border-white/10 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 relative pb-[env(safe-area-inset-bottom)]',
           sizeStyles[size],
           className
         )}
       >
+        {/* Mobile Bottom-Sheet Pull Indicator */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-white/20" />
+        </div>
+
         {/* Close Button always available even if no title */}
         {!title && (
           <button
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="absolute top-4 right-4 z-50 rounded-full p-2 bg-black/20 text-white hover:bg-black/40 backdrop-blur-md transition-all shadow-sm"
+            className="absolute top-3.5 right-3.5 z-50 rounded-full p-2 bg-black/30 text-white hover:bg-black/50 backdrop-blur-md transition-all shadow-sm"
           >
             <X className="w-5 h-5" />
           </button>
         )}
 
         {title && (
-          <div className="shrink-0 px-6 sm:px-8 pt-6 pb-4 flex items-center justify-between border-b border-slate-200/60 dark:border-white/6">
-            <h2 className="text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white">
+          <div className="shrink-0 px-4 sm:px-7 pt-3 sm:pt-6 pb-3.5 flex items-center justify-between border-b border-slate-200/60 dark:border-white/8">
+            <h2 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate pr-2">
               {title}
             </h2>
             <button
               onClick={onClose}
               aria-label="Cerrar modal"
-              className="rounded-full p-2 text-neutral-400 hover:bg-slate-100 hover:text-neutral-600 dark:hover:bg-white/8 dark:hover:text-white transition-colors"
+              className="rounded-full p-2 text-neutral-400 hover:bg-slate-100 hover:text-neutral-600 dark:hover:bg-white/10 dark:hover:text-white transition-colors shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -87,13 +92,13 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
         
         <div className={cn(
           "flex-1 overflow-y-auto overscroll-contain custom-scrollbar",
-          !noPadding && "px-6 sm:px-8 pb-6 sm:pb-8 pt-4"
+          !noPadding && "px-4 sm:px-7 pb-6 sm:pb-8 pt-4"
         )}>
           {children}
         </div>
         
         {footer && (
-          <div className="shrink-0 border-t border-slate-200/60 bg-slate-50/50 px-6 sm:px-8 py-4 dark:border-white/6 dark:bg-white/[0.02] rounded-b-3xl">
+          <div className="shrink-0 border-t border-slate-200/60 bg-slate-50/50 px-4 sm:px-7 py-3.5 dark:border-white/8 dark:bg-white/[0.02] sm:rounded-b-3xl">
             {footer}
           </div>
         )}
