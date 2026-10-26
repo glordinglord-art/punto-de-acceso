@@ -259,21 +259,15 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
   return (
     <>
       <Header
-<<<<<<< HEAD
-        title="Rutinas"
-        action={
-          onBack && (
-            <Button variant="ghost" size="md" onClick={onBack}>
-              ← Volver
-            </Button>
-          )
-        }
-      />
-=======
-        title="Mi Rutina"
+        title={onBack ? "Rutina" : "Mi Rutina"}
         subtitle="Cada sesión tiene un propósito conectado a tus metas de 4 meses"
         action={
           <div className="flex flex-wrap items-center gap-2">
+            {onBack && (
+              <Button variant="ghost" size="md" onClick={onBack}>
+                ← Volver
+              </Button>
+            )}
             <button
               type="button"
               onClick={() => setView("evolution")}
@@ -376,8 +370,6 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
           </div>
         </div>
       </div>
-
->>>>>>> feature/dani-mejoras
       <RoutineListView
         routines={routines}
         selectedRoutine={selectedRoutine}

@@ -25,7 +25,7 @@ export interface User {
   weightUnitPreference?: string | null;
   gender?: string | null;
   age?: number | null;
-  anamnesisData?: Record<string, unknown> | null;
+  anamnesisData?: Record<string, any> | null;
   onboardingCompleted?: boolean;
 
   experienceLevel?: string | null;

@@ -47,7 +47,7 @@ export default function MealsPage() {
   const [waterGlasses, setWaterGlasses] = useState<number>(0);
   const [updatingWater, setUpdatingWater] = useState(false);
 
-  const heroPact = user?.anamnesisData?.heroPact;
+  const heroPact = (user?.anamnesisData as Record<string, any> | undefined)?.heroPact;
   const weightKg = user?.weight || 72;
   const targetWaterLiters =
     Number(heroPact?.pillars?.nutrition?.waterLitersTarget) ||

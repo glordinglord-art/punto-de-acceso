@@ -25,6 +25,7 @@ export function ExerciseCard({
   onRestFinish,
   onRestSkip,
   dictEntry,
+  insight,
 }: {
   exercise: Exercise;
   activeSetIndex: number;

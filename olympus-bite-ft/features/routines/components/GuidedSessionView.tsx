@@ -9,7 +9,7 @@ import {
   type ExerciseDict,
 } from "../services/exercise-dictionary.service";
 import { findPreciseDictEntry } from "../utils/exercise-matching";
-<<<<<<< HEAD
+import { analyzeExerciseProgression } from "../utils/vital-fit-labs-engine";
 import type {
   Exercise,
   Routine,
@@ -18,11 +18,6 @@ import type {
   WorkoutLog,
 } from "../types/routines.types";
 import { ArrowLeft, RefreshCw, Trophy } from "lucide-react";
-=======
-import { analyzeExerciseProgression } from "../utils/vital-fit-labs-engine";
-import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { ArrowLeft, Trophy } from "lucide-react";
->>>>>>> feature/dani-mejoras
 
 export function GuidedSessionView({
   day,
@@ -54,13 +49,10 @@ export function GuidedSessionView({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
-<<<<<<< HEAD
   // Aviso flotante: confirma correcciones y avisa de series pendientes
   const [flash, setFlash] = useState<string | null>(null);
-=======
   const [prCount, setPrCount] = useState(0);
   const [achievementBanner, setAchievementBanner] = useState<string | null>(null);
->>>>>>> feature/dani-mejoras
 
   // Live session elapsed timer
   useEffect(() => {
@@ -232,13 +224,12 @@ export function GuidedSessionView({
   ) => {
     if (!exercise) return;
 
-<<<<<<< HEAD
     const wasAlreadyLogged = getSetsData(exercise.id).some(
       (s) => s.set === sIdx + 1 && s.completed,
     );
-=======
+
     // Check if PR or Smart Shield achieved
-    if (currentInsight) {
+    if (!wasAlreadyLogged && currentInsight) {
       const w = weight ?? 0;
       const r = reps ?? 0;
       const e1Rm = w > 0 ? w * (1 + r / 30) : r;
@@ -259,7 +250,6 @@ export function GuidedSessionView({
         setTimeout(() => setAchievementBanner(null), 4000);
       }
     }
->>>>>>> feature/dani-mejoras
 
     await onSaveSet(exercise, sIdx + 1, weight, reps);
 

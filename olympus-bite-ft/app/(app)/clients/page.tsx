@@ -634,23 +634,16 @@ export default function ClientsPage() {
                           <h3 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
                             {client.name}
                           </h3>
-<<<<<<< HEAD
-                          {client.id === user?.id && (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-condensed font-bold uppercase tracking-wider">
-                              Tú (Entrenador)
+                          {user && client.id === user.id && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                              🏋️ Tú (Entrenador)
                             </span>
                           )}
                           <Badge variant={client.isActive ? "success" : "danger"} className="text-[10px] px-2 py-0.5">
                             {client.isActive ? "ACTIVO" : "INACTIVO"}
-=======
-                          {user && client.id === user.id && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                              🏋️ Mi Propia Ficha (Entrenador)
-                            </span>
-                          )}
+                          </Badge>
                           <Badge variant={anamnesis.cycleStatus === "ACTIVE_CYCLE" ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
                             {anamnesis.cycleStatus === "ACTIVE_CYCLE" ? "CICLO 120D ACTIVO" : "POR CALIBRAR PACTO"}
->>>>>>> feature/dani-mejoras
                           </Badge>
                           <span
                             className={cn(
@@ -1018,17 +1011,13 @@ export default function ClientsPage() {
         initialTab={selectedClientTab}
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
-<<<<<<< HEAD
-        onDelete={selectedClient?.id === user?.id ? undefined : async (clientId) => {
-=======
         onUpdated={(updatedUser: User) => {
           setSelectedClient(updatedUser);
           setClients((prev) =>
             prev.map((c) => (c.id === updatedUser.id ? updatedUser : c)),
           );
         }}
-        onDelete={async (clientId) => {
->>>>>>> feature/dani-mejoras
+        onDelete={selectedClient?.id === user?.id ? undefined : async (clientId) => {
           const ok = await confirm({
             title: '¿Eliminar cliente?',
             description: 'Se borrarán sus rutinas, comidas y datos permanentemente. Esta acción no se puede deshacer.',
