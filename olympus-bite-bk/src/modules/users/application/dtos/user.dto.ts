@@ -109,8 +109,42 @@ export class UpdateUserDto {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? null : Number(value)))
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
   height?: number | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
+  targetProtein?: number | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
+  targetCarbs?: number | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
+  targetFats?: number | null;
+
+  @IsString()
+  @IsOptional()
+  weightUnitPreference?: string;
+
+  @IsString()
+  @IsOptional()
+  gender?: string | null;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
+  age?: number | null;
+
+  @IsOptional()
+  anamnesisData?: any;
+
+  @IsOptional()
+  onboardingCompleted?: boolean;
 
   @IsString()
   @IsOptional()

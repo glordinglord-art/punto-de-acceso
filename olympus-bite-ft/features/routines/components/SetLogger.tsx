@@ -16,7 +16,9 @@ import {
   Pencil,
   RefreshCw,
   SkipForward,
+  Trophy,
 } from "lucide-react";
+import type { ExerciseAutoregulationInsight } from "../utils/vital-fit-labs-engine";
 import { cn } from "@/shared/lib/utils";
 
 interface SetLoggerProps {
@@ -32,6 +34,9 @@ interface SetLoggerProps {
   /** True si la serie ya quedo registrada: el boton pasa a modo correccion */
   isLogged?: boolean;
   defaultUnit?: "kg" | "lbs";
+  previousWeight?: number | null;
+  previousReps?: number | null;
+  insight?: ExerciseAutoregulationInsight | null;
   disabled: boolean;
   onComplete: (weight: number | null, reps: number | null) => void;
   /** Avanza sin registrar nada (saltar serie) */
@@ -50,6 +55,9 @@ export function SetLogger({
   loggedReps = null,
   isLogged = false,
   defaultUnit = "kg",
+  previousWeight,
+  previousReps,
+  insight,
   disabled,
   onComplete,
   onSkip,
@@ -93,6 +101,18 @@ export function SetLogger({
 
   // Reason selector for yellow deviation
   const [adjustmentReason, setAdjustmentReason] = useState<string | null>(null);
+
+  // Detect live PR (Personal Record) or Smart Shield completion from Vital Fit Labs
+  const currentKg = toKg(actualWeight) ?? 0;
+  const currentE1Rm = currentKg > 0 ? currentKg * (1 + reps / 30) : reps;
+  const isShieldMode = insight?.state === "fatigue_shield_2w";
+  const isNewPR =
+    !isLogged &&
+    !!insight &&
+    insight.state !== "first_week" &&
+    insight.state !== "fatigue_shield_2w" &&
+    currentE1Rm > insight.bestE1RmKg + 0.05;
+
 
   // Joint pain reporter
   const [showJointPicker, setShowJointPicker] = useState<boolean>(false);
@@ -584,17 +604,46 @@ export function SetLogger({
         type="button"
         onClick={handleComplete}
         disabled={disabled}
-        className="w-full py-4 px-4 rounded-2xl font-black uppercase tracking-wider text-sm text-white bg-gradient-to-r from-red-600 to-primary-500 shadow-lg shadow-red-950/50 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+        className={cn(
+          "w-full py-4 px-4 rounded-2xl text-white font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer",
+          isLogged
+            ? "bg-gradient-to-r from-amber-600 to-red-600 shadow-lg shadow-amber-950/40 hover:brightness-110"
+            : isNewPR
+              ? "bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_40px_rgba(245,158,11,0.7)]"
+              : isShieldMode
+                ? "bg-gradient-to-r from-cyan-600 via-sky-500 to-indigo-600 shadow-[0_0_25px_rgba(6,182,212,0.45)]"
+                : "bg-gradient-to-r from-red-600 to-primary-500 shadow-lg shadow-red-950/50 hover:brightness-110"
+        )}
       >
         {isLogged ? (
-          <RefreshCw className="w-5 h-5 stroke-[3]" />
+          <>
+            <RefreshCw className="w-5 h-5 stroke-[3]" />
+            <span>
+              Actualizar Serie {setNumber} ({actualWeight ?? 0} {unit} · {reps} Reps)
+            </span>
+          </>
+        ) : isNewPR ? (
+          <>
+            <Trophy className="w-5 h-5 stroke-[2.5]" />
+            <span>
+              ¡Completar Serie {setNumber} con Récord Personal ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)!
+            </span>
+          </>
+        ) : isShieldMode ? (
+          <>
+            <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+            <span>
+              Completar Serie {setNumber} · Recuperación Inteligente ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)
+            </span>
+          </>
         ) : (
-          <Check className="w-5 h-5 stroke-[3]" />
+          <>
+            <Check className="w-5 h-5 stroke-[3]" />
+            <span>
+              Completar Serie {setNumber} ({actualWeight ?? 0} {unit} · {reps} Reps)
+            </span>
+          </>
         )}
-        <span>
-          {isLogged ? "Actualizar" : "Completar"} Serie {setNumber} (
-          {actualWeight ?? 0} {unit} · {reps} Reps)
-        </span>
       </button>
 
       {/* Saltar sin registrar: se puede volver luego desde las pildoras de serie */}

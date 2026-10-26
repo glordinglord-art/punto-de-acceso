@@ -21,12 +21,50 @@ export class UpdateRoutineUseCase {
       throw new NotFoundException('Rutina no encontrada');
     }
 
-    const hasLogs = await this.routineRepository.hasLogs(routineId);
-
     const days = dto.days.map((dayDto) => {
-      const exercises = (dayDto.exercises ?? []).map(
-        (e, index) =>
-          new Exercise({
+      const existingDay = existing.days.find(
+        (d) => d.dayNumber === dayDto.dayNumber,
+      );
+      const usedExerciseIds = new Set<string>();
+
+      const exercises = (dayDto.exercises ?? []).map((e, index) => {
+        let matchedId: string | undefined;
+
+        if (existingDay) {
+          // 1. Coincidencia exacta por ID enviado desde el frontend
+          if (e.id) {
+            const byId = existingDay.exercises.find(
+              (ex) => ex.id === e.id && !usedExerciseIds.has(ex.id),
+            );
+            if (byId) matchedId = byId.id;
+          }
+
+          // 2. Coincidencia por nombre normalizado dentro del mismo día
+          if (!matchedId) {
+            const normName = e.name.trim().toLowerCase();
+            const byName = existingDay.exercises.find(
+              (ex) =>
+                !usedExerciseIds.has(ex.id) &&
+                ex.name.trim().toLowerCase() === normName,
+            );
+            if (byName) matchedId = byName.id;
+          }
+
+          // 3. Coincidencia por posición (orden) si el entrenador renombró el ejercicio en el mismo slot
+          if (!matchedId) {
+            const atIndex = existingDay.exercises[index];
+            if (atIndex && !usedExerciseIds.has(atIndex.id)) {
+              matchedId = atIndex.id;
+            }
+          }
+        }
+
+        if (matchedId) {
+          usedExerciseIds.add(matchedId);
+        }
+
+        return new Exercise(
+          {
             name: e.name,
             muscleGroup:
               (e.muscleGroup as MuscleGroup) || MuscleGroup.FULL_BODY,
@@ -38,40 +76,29 @@ export class UpdateRoutineUseCase {
             order: index + 1,
             targetWeight: e.targetWeight,
             intensity: e.intensity,
-          }),
-      );
-
-      return new RoutineDay({
-        dayNumber: dayDto.dayNumber,
-        focusArea: dayDto.focusArea,
-        isRestDay: dayDto.isRestDay,
-        restDayNote: dayDto.restDayNote,
-        exercises,
+          },
+          matchedId,
+        );
       });
+
+      return new RoutineDay(
+        {
+          dayNumber: dayDto.dayNumber,
+          focusArea: dayDto.focusArea,
+          isRestDay: dayDto.isRestDay,
+          restDayNote: dayDto.restDayNote,
+          exercises,
+        },
+        existingDay?.id,
+      );
     });
 
-    if (hasLogs) {
-      existing.isActive = false;
-      await this.routineRepository.update(existing);
+    // Actualización in-place no destructiva: NUNCA resetea los WorkoutLogs del atleta
+    existing.name = dto.name;
+    existing.description = dto.description ?? '';
+    existing.weekCount = dto.weekCount ?? existing.weekCount;
+    (existing as any).days = days;
 
-      const newRoutine = new Routine({
-        name: dto.name,
-        description: dto.description ?? '',
-        trainerId: existing.trainerId,
-        clientId: existing.clientId,
-        weekCount: dto.weekCount ?? existing.weekCount,
-        isFavorable: existing.isFavorable ?? undefined,
-        days,
-      });
-
-      return this.routineRepository.save(newRoutine);
-    } else {
-      existing.name = dto.name;
-      existing.description = dto.description ?? '';
-      existing.weekCount = dto.weekCount ?? existing.weekCount;
-      (existing as any).days = days;
-
-      return this.routineRepository.update(existing);
-    }
+    return this.routineRepository.update(existing);
   }
 }

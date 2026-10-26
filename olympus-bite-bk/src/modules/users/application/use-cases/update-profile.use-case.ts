@@ -32,6 +32,17 @@ export class UpdateProfileUseCase {
       weight: dto.weight,
       height: dto.height,
       targetCalories: dto.targetCalories,
+      targetProtein: dto.targetProtein,
+      targetCarbs: dto.targetCarbs,
+      targetFats: dto.targetFats,
+      weightUnitPreference: dto.weightUnitPreference,
+      gender: dto.gender,
+      age: dto.age,
+      anamnesisData:
+        dto.anamnesisData !== undefined
+          ? { ...(user.anamnesisData || {}), ...dto.anamnesisData }
+          : undefined,
+      onboardingCompleted: dto.onboardingCompleted,
     });
 
     if (dto.password) {

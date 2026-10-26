@@ -10,6 +10,10 @@ import { Type } from 'class-transformer';
 
 export class ExerciseDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   name!: string;
 
   @IsString()

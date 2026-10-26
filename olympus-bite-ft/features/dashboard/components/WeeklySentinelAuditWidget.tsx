@@ -1,257 +1,377 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, useState } from 'react';
 import {
   ShieldAlert,
-  Snowflake,
-  RefreshCw,
   CheckCircle2,
   AlertTriangle,
   MessageSquare,
   Users,
-  Utensils,
-  CheckSquare,
+  Droplets,
+  Moon,
   Dumbbell,
-  Clock,
+  Scale,
+  FileText,
+  Lock,
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { tasksService } from '@/features/tasks/services/tasks.service';
-import type { WeeklyAuditData, FlaggedAthlete } from '@/features/tasks/types/tasks.types';
-import { cn } from '@/shared/lib/utils';
+import type { User } from '@/shared/types/common.types';
+import type { ClientOverview } from '../types/dashboard.types';
+import { cn, getLocalDateString } from '@/shared/lib/utils';
 
 interface WeeklySentinelAuditWidgetProps {
+  athletes: User[];
+  overviews: ClientOverview[];
   trainerId?: string;
+  onOpenFicha: (
+    athlete: User,
+    tab: 'profile' | 'compliance' | 'assessments' | 'progress' | 'ai',
+  ) => void;
 }
 
-export function WeeklySentinelAuditWidget({ trainerId }: WeeklySentinelAuditWidgetProps) {
-  const [auditData, setAuditData] = useState<WeeklyAuditData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [auditing, setAuditing] = useState(false);
+interface SentinelAlertItem {
+  athlete: User;
+  score: number;
+  status: 'critical' | 'warning' | 'optimal';
+  missingPillars: string[];
+  waterTodayLiters: number;
+  waterTargetLiters: number;
+  mealsToday: number;
+  lastSleepText: string;
+  sleepOk: boolean;
+  lastWeighInText: string;
+  hasActiveRoutine: boolean;
+}
 
-  const fetchAudit = useCallback(async () => {
-    try {
-      const res = await tasksService.getWeeklyAudit(trainerId);
-      if (res?.data) {
-        setAuditData(res.data);
+export function WeeklySentinelAuditWidget({
+  athletes,
+  overviews,
+  trainerId,
+  onOpenFicha,
+}: WeeklySentinelAuditWidgetProps) {
+  const [filter, setFilter] = useState<'issues' | 'all'>('issues');
+  const todayStr = getLocalDateString();
+
+  const auditItems = useMemo<SentinelAlertItem[]>(() => {
+    const nowMs = Date.now();
+    return athletes.map((athlete) => {
+      const ov = overviews.find((o) => o.id === athlete.id);
+      const anamnesis =
+        athlete.anamnesisData && typeof athlete.anamnesisData === 'object'
+          ? (athlete.anamnesisData as any)
+          : {};
+      const pact = anamnesis.heroPact || {};
+      const missing: string[] = [];
+      let points = 100;
+
+      // 1. Pacto de 120 Días y Rutina Activa
+      const hasPact = Boolean(pact?.objectives?.biometric);
+      if (!hasPact) {
+        missing.push('Sin Pacto de 4 Metas configurado');
+        points -= 25;
       }
-    } catch {
-      // Background load fallback
-    } finally {
-      setLoading(false);
-    }
-  }, [trainerId]);
 
-  useEffect(() => {
-    fetchAudit();
-  }, [fetchAudit]);
+      const hasRoutine = ov ? ov.hasActiveRoutine : true;
+      if (!hasRoutine && athlete.id !== trainerId) {
+        missing.push('Sin rutina activa asignada');
+        points -= 30;
+      }
 
-  const handleTriggerAudit = async () => {
-    setAuditing(true);
-    try {
-      const res = await tasksService.triggerWeeklyAudit(trainerId);
-      if (res?.data) {
-        setAuditData(res.data);
-        toast.success(
-          `Auditoría completada: ${res.data.flaggedCount} atletas en semáforo rojo`,
-          { icon: '🛡️' }
+      // 2. Pilar Agua y Comidas de Hoy
+      const waterTargetLiters =
+        Number(pact?.pillars?.nutrition?.waterLitersTarget) || 3.0;
+      const waterLogs = Array.isArray(anamnesis.waterLogs)
+        ? anamnesis.waterLogs
+        : [];
+      const todayWater = waterLogs.find((w: any) => w.date === todayStr);
+      const waterTodayLiters = todayWater ? Number(todayWater.liters) : 0;
+      const mealsToday = ov?.mealsToday ?? 0;
+
+      if (waterTodayLiters === 0 && mealsToday === 0) {
+        missing.push('Sin registro de agua ni comidas hoy');
+        points -= 20;
+      } else if (waterTodayLiters < waterTargetLiters * 0.5) {
+        missing.push(
+          `Agua baja hoy (${waterTodayLiters}L de ${waterTargetLiters}L)`,
         );
+        points -= 10;
       }
-    } catch {
-      toast.error('Error ejecutando auditoría del Centinela');
-    } finally {
-      setAuditing(false);
-    }
-  };
 
-  const createWhatsAppLink = (athlete: FlaggedAthlete) => {
-    const rawPhone = athlete.phone || '';
+      // 3. Pilar Sueño y Regularidad (±1h)
+      const sleepLogs = Array.isArray(anamnesis.sleepLogs)
+        ? anamnesis.sleepLogs
+        : [];
+      const lastSleep =
+        sleepLogs.length > 0 ? sleepLogs[sleepLogs.length - 1] : null;
+      let lastSleepText = 'Sin registro';
+      let sleepOk = false;
+
+      if (!lastSleep) {
+        missing.push('Sin registro de horario de sueño (±1h)');
+        points -= 15;
+      } else {
+        lastSleepText = `${lastSleep.hoursSlept}h (${lastSleep.bedtime}-${lastSleep.wakeTime})`;
+        sleepOk = Boolean(lastSleep.withinOneHourWindow);
+        if (!lastSleep.withinOneHourWindow) {
+          missing.push(
+            `Desfase circadiano >1h en sueño (${lastSleep.bedtime}-${lastSleep.wakeTime})`,
+          );
+          points -= 15;
+        }
+      }
+
+      // 4. Pesaje Semanal en Ayunas (+0.25 / -0.50 kg/sem)
+      const weighIns = Array.isArray(anamnesis.fastedWeighIns)
+        ? anamnesis.fastedWeighIns
+        : [];
+      const lastWeighIn =
+        weighIns.length > 0 ? weighIns[weighIns.length - 1] : null;
+      let lastWeighInText = athlete.weight ? `${athlete.weight} kg` : '—';
+
+      if (!lastWeighIn) {
+        missing.push('Falta pesaje semanal en ayunas');
+        points -= 15;
+      } else {
+        lastWeighInText = `${lastWeighIn.weightKg} kg (${lastWeighIn.date})`;
+        const daysSinceWeighIn = Math.floor(
+          (nowMs - new Date(lastWeighIn.date).getTime()) / (1000 * 60 * 60 * 24),
+        );
+        if (daysSinceWeighIn > 7) {
+          missing.push(`Hace ${daysSinceWeighIn} días no registra peso en ayunas`);
+          points -= 15;
+        }
+      }
+
+      const finalScore = Math.max(0, points);
+      const status: 'critical' | 'warning' | 'optimal' =
+        finalScore < 65 ? 'critical' : finalScore < 85 ? 'warning' : 'optimal';
+
+      return {
+        athlete,
+        score: finalScore,
+        status,
+        missingPillars: missing,
+        waterTodayLiters,
+        waterTargetLiters,
+        mealsToday,
+        lastSleepText,
+        sleepOk,
+        lastWeighInText,
+        hasActiveRoutine: hasRoutine,
+      };
+    });
+  }, [athletes, overviews, todayStr, trainerId]);
+
+  const flaggedItems = useMemo(
+    () => auditItems.filter((i) => i.status !== 'optimal'),
+    [auditItems],
+  );
+  const optimalCount = auditItems.length - flaggedItems.length;
+  const visibleItems = filter === 'issues' ? flaggedItems : auditItems;
+
+  const createWhatsAppLink = (item: SentinelAlertItem) => {
+    const rawPhone = item.athlete.phone || '';
     const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
-    const msg = `¡Hola ${athlete.athleteName}! Te escribe tu coach desde Vital Fit 🩺. Nuestro sistema detectó que tu adherencia esta semana estuvo en ${athlete.complianceScore}%. Por seguridad biomecánica y para evitar sobreentrenamiento, pausamos el aumento de cargas esta semana. ¿Cómo te sientes con tus comidas y recuperación? Conversemos para ajustar el plan.`;
+    const alertSummary =
+      item.missingPillars.slice(0, 2).join(' y ') || 'revisar tus 3 pilares';
+    const msg = `¡Hola ${item.athlete.name.split(' ')[0]}! Te escribo desde Punto de Inflexión ⚡. Vi en nuestro Centinela de hoy que tenemos pendiente: ${alertSummary}. Recuerda que cada día cuenta en tus 120 días. ¿Cómo vas hoy con tu agua, entreno y hora de sueño?`;
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/95 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/5 dark:bg-[#12141c]/90 dark:shadow-none">
-      {/* Glow highlight */}
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-red-500/10 blur-[80px]" />
-
+    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#11131a] p-5 sm:p-6 shadow-xl">
       {/* Header */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-5 dark:border-white/5">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-500 shadow-sm shadow-red-500/20">
-            <ShieldAlert className="h-6 w-6" />
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/15 text-red-400">
+            <ShieldAlert className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
-                Motor 1 · Regla del 80%
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-neutral-400">
-                <Clock className="h-3.5 w-3.5" /> Auditoría Dominical 00:00h
+              <span className="rounded-md border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-red-400">
+                Centinela en Vivo · 3 Pilares y 120 Días
               </span>
             </div>
-            <h3 className="mt-0.5 text-lg font-bold uppercase tracking-wide text-slate-900 dark:text-white">
-              Centinela de Sobrecarga & Recuperación
+            <h3 className="mt-0.5 text-base sm:text-lg font-condensed font-black uppercase tracking-wide text-white">
+              Detector de Huecos en Entreno, Agua, Sueño (±1h) y Pesaje
             </h3>
           </div>
         </div>
 
-        <button
-          onClick={handleTriggerAudit}
-          disabled={auditing}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100/80 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 transition-all hover:bg-slate-200 active:scale-95 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:bg-white/10"
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5', auditing && 'animate-spin text-red-500')} />
-          <span>{auditing ? 'Auditan...' : 'Re-auditar Ahora'}</span>
-        </button>
+        {/* Selector de filtro */}
+        <div className="flex rounded-xl bg-white/5 p-1 border border-white/10">
+          <button
+            type="button"
+            onClick={() => setFilter('issues')}
+            className={cn(
+              'px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer',
+              filter === 'issues'
+                ? 'bg-red-600 text-white'
+                : 'text-neutral-400 hover:text-white',
+            )}
+          >
+            Requieren Atención ({flaggedItems.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={cn(
+              'px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer',
+              filter === 'all'
+                ? 'bg-white/15 text-white'
+                : 'text-neutral-400 hover:text-white',
+            )}
+          >
+            Todos ({auditItems.length})
+          </button>
+        </div>
       </div>
 
-      {/* Summary Stat Pills */}
-      {auditData && (
-        <div className="relative z-10 mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3.5 dark:border-white/5 dark:bg-white/[0.02]">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
-                Atletas Auditados
-              </p>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {auditData.totalAthletes}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200/60 text-slate-700 dark:bg-white/5 dark:text-neutral-300">
-              <Users className="h-4 w-4" />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Sobrecarga Activa (≥80%)
-              </p>
-              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {auditData.approvedCount}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-2xl border border-red-500/30 bg-red-500/[0.06] p-3.5">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                Sobrecarga Congelada (&lt;80%)
-              </p>
-              <p className="text-2xl font-black text-red-600 dark:text-red-400">
-                {auditData.flaggedCount}
-              </p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/15 text-red-600 dark:text-red-400">
-              <Snowflake className="h-4 w-4 animate-pulse" />
-            </div>
-          </div>
+      {/* Resumen Rápido en 3 Cajas */}
+      <div className="mt-4 grid grid-cols-3 gap-2.5">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-3">
+          <span className="text-[10px] font-bold uppercase text-neutral-400 block">
+            Fichas Auditadas
+          </span>
+          <span className="text-xl font-black text-white">
+            {auditItems.length}
+          </span>
         </div>
-      )}
+        <div className="rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 p-3">
+          <span className="text-[10px] font-bold uppercase text-emerald-400 block">
+            3 Pilares al Día (≥85%)
+          </span>
+          <span className="text-xl font-black text-emerald-400">
+            {optimalCount}
+          </span>
+        </div>
+        <div className="rounded-2xl bg-red-500/[0.06] border border-red-500/25 p-3">
+          <span className="text-[10px] font-bold uppercase text-red-400 block">
+            Con Huecos Hoy
+          </span>
+          <span className="text-xl font-black text-red-400">
+            {flaggedItems.length}
+          </span>
+        </div>
+      </div>
 
-      {/* Main Content: Flagged Athletes */}
-      <div className="relative z-10 mt-6">
-        {loading ? (
-          <div className="py-10 text-center text-sm font-semibold text-slate-500">
-            Cargando telemetría del Centinela...
-          </div>
-        ) : !auditData || auditData.flaggedAthletes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <h4 className="mt-3 text-base font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              Cero Banderas Rojas Esta Semana
+      {/* Lista de Alertas Accionables */}
+      <div className="mt-4 space-y-2.5">
+        {visibleItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] py-8 text-center">
+            <CheckCircle2 className="h-8 w-8 text-emerald-400 mb-2" />
+            <h4 className="text-sm font-bold uppercase text-white">
+              ¡Todos tus atletas están al día con sus 3 Pilares!
             </h4>
-            <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-neutral-400">
-              Todos tus atletas auditados mantienen una adherencia biológica igual o superior al 80%. Sus sobrecargas progresivas continúan autorizadas.
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Agua, comidas, regularidad de sueño (±1h) y pesaje en ayunas en orden.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-neutral-400">
-                Atletas en Riesgo Biomecánico ({auditData.flaggedAthletes.length})
-              </p>
-              <span className="text-[11px] font-semibold text-red-500">
-                Triage del Lunes 6:00 AM Activo
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              <AnimatePresence>
-                {auditData.flaggedAthletes.map((athlete) => (
-                  <motion.div
-                    key={athlete.athleteId}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="flex flex-col gap-3 rounded-2xl border border-red-500/25 bg-red-500/[0.03] p-4 transition-all hover:border-red-500/40 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-sm font-bold uppercase tracking-wide text-slate-900 dark:text-white">
-                          {athlete.athleteName}
-                        </h4>
-                        <span className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[10px] font-black uppercase text-red-600 dark:text-red-400">
-                          <Snowflake className="h-3 w-3" /> Sobrecarga Congelada ({athlete.complianceScore}%)
-                        </span>
-                      </div>
-
-                      {/* Reasons */}
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {athlete.reasons.map((r, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center gap-1 rounded-md bg-slate-200/70 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-white/5 dark:text-neutral-300"
-                          >
-                            <AlertTriangle className="h-3 w-3 text-amber-500" /> {r}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Mini breakdown chips */}
-                      <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-500 dark:text-neutral-400">
-                        <span className="flex items-center gap-1">
-                          <Utensils className="h-3.5 w-3.5 text-amber-500" /> Dieta: {athlete.nutritionScore}%
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <CheckSquare className="h-3.5 w-3.5 text-blue-500" /> Hábitos: {athlete.habitsScore}%
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Dumbbell className="h-3.5 w-3.5 text-primary-500" /> Entrenos: {athlete.workoutsCount}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* WhatsApp Action */}
-                    <div className="flex shrink-0 items-center gap-2">
-                      {athlete.phone ? (
-                        <a
-                          href={createWhatsAppLink(athlete)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-emerald-600 transition-all hover:bg-emerald-500/25 active:scale-95 sm:w-auto dark:text-emerald-400"
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span>WhatsApp Táctico</span>
-                        </a>
-                      ) : (
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-500 dark:bg-white/5">
-                          Sin teléfono
-                        </span>
+          visibleItems.map((item) => {
+            const isSelf = item.athlete.id === trainerId;
+            return (
+              <div
+                key={item.athlete.id}
+                className={cn(
+                  'flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all',
+                  item.status === 'critical'
+                    ? 'border-red-500/30 bg-red-500/[0.04]'
+                    : item.status === 'warning'
+                      ? 'border-amber-500/25 bg-amber-500/[0.04]'
+                      : 'border-emerald-500/20 bg-emerald-500/[0.03]',
+                )}
+              >
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold text-white">
+                      {item.athlete.name}
+                    </span>
+                    {isSelf && (
+                      <span className="rounded-md bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-bold text-red-300">
+                        🏋️ Tu Ficha
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-[10px] font-black uppercase',
+                        item.status === 'critical'
+                          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                          : item.status === 'warning'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-300',
                       )}
+                    >
+                      Cumplimiento: {item.score}%
+                    </span>
+                  </div>
+
+                  {/* Huecos detectados */}
+                  {item.missingPillars.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.missingPillars.map((reason, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 rounded-lg bg-black/40 border border-white/10 px-2 py-0.5 text-[11px] text-amber-200"
+                        >
+                          <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />
+                          {reason}
+                        </span>
+                      ))}
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
+                  )}
+
+                  {/* Mini telemetría de los 3 pilares */}
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-400 pt-0.5">
+                    <span className="flex items-center gap-1">
+                      <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                      Agua hoy: {item.waterTodayLiters}L / {item.waterTargetLiters}L
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                      Sueño: {item.lastSleepText}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                      Ayunas: {item.lastWeighInText}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Acciones Directas a 1 Clic */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onOpenFicha(item.athlete, 'profile')}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 px-3 py-2 text-xs font-bold text-white transition cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-red-400" />
+                    <span>Ficha Técnica</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenFicha(item.athlete, 'ai')}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-3 py-2 text-xs font-bold text-cyan-200 transition cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Memoria IA</span>
+                  </button>
+
+                  {item.athlete.phone && !isSelf && (
+                    <a
+                      href={createWhatsAppLink(item)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-3 py-2 text-xs font-bold text-emerald-300 transition"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

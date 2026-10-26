@@ -11,10 +11,11 @@ import { FoodScanner } from "@/features/meals/components/FoodScanner";
 import { ClientMealsView } from "@/features/meals/components/ClientMealsView";
 import { Modal } from "@/shared/components/ui/Modal";
 import { mealsService } from "@/features/meals/services/meals.service";
+import { dashboardService } from "@/features/dashboard/services/dashboard.service";
 import type { Meal } from "@/features/meals/types/meals.types";
 import type { User } from "@/shared/types/common.types";
 import { cn, getLocalDateString, localDateToRange } from "@/shared/lib/utils";
-import { Calendar, ChevronLeft, ChevronRight, Activity, Plus } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Activity, Plus, Droplets, Minus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useBackgroundAnalysis } from "@/features/meals/contexts/BackgroundAnalysisContext";
 import { useConfirm } from "@/shared/contexts/ConfirmContext";
@@ -43,14 +44,47 @@ export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
+  const [waterGlasses, setWaterGlasses] = useState<number>(0);
+  const [updatingWater, setUpdatingWater] = useState(false);
+
+  const heroPact = user?.anamnesisData?.heroPact;
+  const weightKg = user?.weight || 72;
+  const targetWaterLiters =
+    Number(heroPact?.pillars?.nutrition?.waterLitersTarget) ||
+    Number(((weightKg * 35 + 500) / 1000).toFixed(1));
+  const currentWaterLiters = Number(((waterGlasses * 250) / 1000).toFixed(2));
+  const waterPct = Math.min(
+    100,
+    Math.round((currentWaterLiters / Math.max(targetWaterLiters, 1)) * 100),
+  );
+
+  const handleWaterDelta = async (delta: number) => {
+    if (!user || updatingWater) return;
+    const next = Math.max(0, Math.min(24, waterGlasses + delta));
+    setWaterGlasses(next);
+    setUpdatingWater(true);
+    try {
+      await dashboardService.updateWater(user.id, getLocalDateString(), next);
+    } catch {
+      toast.error("No se pudo actualizar el agua");
+    } finally {
+      setUpdatingWater(false);
+    }
+  };
 
   const loadMeals = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
       const { start, end } = localDateToRange(selectedDate);
-      const res = await mealsService.getByDateRange(user.id, start, end);
+      const [res, dashRes] = await Promise.all([
+        mealsService.getByDateRange(user.id, start, end),
+        dashboardService.getClientDashboard(user.id).catch(() => null),
+      ]);
       setMeals(res.data ?? []);
+      if (dashRes?.data) {
+        setWaterGlasses(dashRes.data.waterGlasses || 0);
+      }
     } catch {
       // Fallback
       try {
@@ -67,9 +101,7 @@ export default function MealsPage() {
   }, [user, selectedDate]);
 
   useEffect(() => {
-    if (activeMode === 'client') {
-      loadMeals();
-    }
+    loadMeals();
   }, [loadMeals, activeMode]);
 
   const { confirm } = useConfirm();
@@ -174,35 +206,138 @@ export default function MealsPage() {
   return (
     <>
       <Header
-        title={tab === "clients" ? "Comidas de Clientes" : "Mis Comidas"}
+        title="Agua y Comidas · Vital Fit Labs"
         subtitle={
-          tab === "clients"
-            ? "Monitorea la alimentación de tus clientes"
-            : "Registra y controla tu alimentación"
+          activeMode === "trainer" && tab === "clients"
+            ? "Supervisa la hidratación prioritaria y adherencia nutricional de tus Atletas"
+            : "Cada litro de agua y cada comida sostienen tus 4 Metas de 120 Días"
         }
         action={
-          tab === "mine" ? (
+          activeMode !== "trainer" || tab === "mine" ? (
             <div className="flex gap-2">
               <Button
                 variant="secondary"
                 onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
                 size="md"
               >
-                ✨ Consultar IA
+                ✨ Pedir a Vital Fit Labs
               </Button>
               <Button onClick={() => setShowScanner(true)} size="md">
-                + Registrar comida
+                + Anotar comida
               </Button>
             </div>
           ) : undefined
         }
       />
 
+      {activeMode === "trainer" && (
+        <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6">
+          <button
+            type="button"
+            onClick={() => setTab("clients")}
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
+              tab === "clients"
+                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
+            )}
+          >
+            👥 Supervisión de Atletas
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("mine")}
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
+              tab === "mine"
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
+            )}
+          >
+            💧 Mi Agua y Comidas (Entrenador)
+          </button>
+        </div>
+      )}
+
       {/* Clients view (Trainer Mode) */}
-      {activeMode === 'trainer' && user ? (
+      {activeMode === 'trainer' && tab === 'clients' && user ? (
         <ClientMealsView trainerId={user.id} />
       ) : (
         <div className="space-y-6">
+          {/* PRIORIDAD 1: CONTROL DE AGUA EN LITROS + PORQUÉ DE TU ALIMENTACIÓN */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-6 p-4 sm:p-5 rounded-3xl bg-sky-500/10 border border-sky-500/30 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <Droplets className="w-5 h-5 text-sky-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-sky-300 block">
+                      Prioridad Diaria • Tu Agua de Hoy
+                    </span>
+                    <p className="text-lg font-black text-white">
+                      {currentWaterLiters} L{" "}
+                      <span className="text-xs font-normal text-neutral-300">
+                        de {targetWaterLiters} Litros
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(-1)}
+                    className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95"
+                    aria-label="Restar vaso"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(1)}
+                    className="px-3 h-9 rounded-xl bg-sky-500 text-black font-bold text-xs flex items-center gap-1 active:scale-95 shadow"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>1 Vaso (250ml)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(2)}
+                    className="px-2.5 h-9 rounded-xl bg-sky-400/20 border border-sky-400/40 text-sky-200 font-bold text-xs active:scale-95"
+                  >
+                    +500ml
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-sky-400 transition-all duration-300"
+                  style={{ width: `${waterPct}%` }}
+                />
+              </div>
+              <p className="text-xs text-sky-100/90">
+                💧 Sin suficiente agua tu músculo pierde fuerza y te cansas antes.
+              </p>
+            </div>
+
+            <div className="lg:col-span-6 p-4 sm:p-5 rounded-3xl bg-white/[0.03] border border-white/10 flex flex-col justify-between space-y-2">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
+                  💡 ¿Por qué comes lo que comes hoy?
+                </span>
+                <p className="text-xs sm:text-sm text-neutral-200 mt-1 leading-relaxed">
+                  {heroPact?.pillars?.nutrition?.nutritionWhy ||
+                    (user?.dietaryGoal === "weight_loss"
+                      ? "Tus calorías y proteínas están calculadas para bajar 0.50 kg de grasa por semana sin perder tu músculo ni tu fuerza."
+                      : "Tus calorías y proteínas están calculadas para subir 0.25 kg de músculo limpio por semana y tener energía en cada entreno.")}
+                </p>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                🤖 <strong>Tip:</strong> Puedes tocar <em>&quot;✨ Pedir a la IA&quot;</em> y decirle por voz o texto qué comiste para que lo registre o edite por ti.
+              </p>
+            </div>
+          </div>
           {/* Date Navigation */}
           <div className="flex items-center justify-center gap-1.5 p-1.5 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/5 w-fit mx-auto shadow-sm">
             <button

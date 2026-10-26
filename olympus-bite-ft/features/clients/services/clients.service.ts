@@ -73,8 +73,86 @@ export const clientsService = {
 
   updateProfile: (
     id: string,
-    data: { dietaryGoal?: string; targetCalories?: number | null; password?: string },
+    data: {
+      name?: string;
+      phone?: string | null;
+      dietaryGoal?: string | null;
+      weight?: number | null;
+      height?: number | null;
+      targetCalories?: number | null;
+      targetProtein?: number | null;
+      targetCarbs?: number | null;
+      targetFats?: number | null;
+      weightUnitPreference?: string;
+      experienceLevel?: string | null;
+      equipmentAccess?: string | null;
+      medicalConditions?: string | null;
+      dietaryPreferences?: string | null;
+      anamnesisData?: any;
+      onboardingCompleted?: boolean;
+      password?: string;
+    },
   ) => api.put<ApiResponse<User>>(`/users/${id}/profile`, data),
+
+  resetDiscovery: (id: string) =>
+    api.post<ApiResponse<User>>(`/users/${id}/reset-discovery`, {}),
+
+  submitDiscovery: (id: string, data: any) =>
+    api.post<ApiResponse<User>>(`/users/${id}/discovery`, data),
+
+  updateHeroPact: (id: string, data: any) =>
+    api.put<ApiResponse<User>>(`/users/${id}/hero-pact`, data),
+
+  logWeeklyWeighIn: (
+    id: string,
+    data: {
+      weight: number;
+      unit: 'kg' | 'lbs';
+      date?: string;
+      neckCm?: number;
+      waistCm?: number;
+      hipCm?: number;
+      bodyFatPct?: number;
+      notes?: string;
+    },
+  ) =>
+    api.post<ApiResponse<{ user: User; entry: any }>>(
+      `/users/${id}/weekly-weighin`,
+      data,
+    ),
+
+  logSleepRegularity: (
+    id: string,
+    data: {
+      date?: string;
+      bedtime: string;
+      wakeTime: string;
+      hoursSlept?: number;
+      quality?: string;
+    },
+  ) =>
+    api.post<ApiResponse<{ user: User; log: any }>>(
+      `/users/${id}/sleep-log`,
+      data,
+    ),
+
+  publishWeeklyReport: (
+    id: string,
+    data: {
+      weekNumber: number;
+      trainingScore: number;
+      nutritionScore: number;
+      recoveryScore: number;
+      trainerNotes: string;
+      nextWeekFocus: string;
+      isDeloadWeek?: boolean;
+      trainerName?: string;
+    },
+  ) =>
+    api.post<ApiResponse<{ user: User; report: any }>>(
+      `/users/${id}/weekly-report`,
+      data,
+    ),
 
   completeOnboarding: (
     id: string,

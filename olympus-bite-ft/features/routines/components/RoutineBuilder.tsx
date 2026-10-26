@@ -23,6 +23,7 @@ import { Dumbbell, Eye, Search, Sparkles, Bookmark } from "lucide-react";
 /* ─── Types ───────────────────────────────────── */
 
 export interface ExerciseForm {
+  id?: string;
   name: string;
   muscleGroup: string;
   sets: number | string;
@@ -236,7 +237,7 @@ export function RoutineBuilder({
       return {
         name: initialPreset.name,
         description: initialPreset.description,
-        clientId: "",
+        clientId: trainerId || "",
         weekCount: initialPreset.weekCount,
         days: initialPreset.days,
       };
@@ -245,7 +246,7 @@ export function RoutineBuilder({
       return {
         name: "",
         description: "",
-        clientId: "",
+        clientId: trainerId || "",
         weekCount: 4,
         days: [emptyDay(1)],
       };
@@ -267,6 +268,7 @@ export function RoutineBuilder({
               ? d.exercises
                   .sort((a, b) => a.order - b.order)
                   .map((e) => ({
+                    id: e.id,
                     name: e.name,
                     muscleGroup: e.muscleGroup,
                     sets: e.sets,
@@ -284,6 +286,7 @@ export function RoutineBuilder({
   const [form, setForm] = useState<RoutineForm>(buildInitialForm);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
   const [saving, setSaving] = useState(false);
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
   const [step, setStep] = useState<"info" | "days">(
     isEditing ? "days" : "info",
   );
@@ -423,20 +426,26 @@ export function RoutineBuilder({
         ...form,
         days: form.days.map((d) => ({
           ...d,
-          exercises: d.exercises.map((e) => ({
-            ...e,
-            sets:
-              typeof e.sets === "string" && e.sets === "" ? 1 : Number(e.sets),
-            restSeconds:
-              typeof e.restSeconds === "string" && e.restSeconds === ""
-                ? 0
-                : Number(e.restSeconds),
-            targetWeight:
-              typeof e.targetWeight === "string" && e.targetWeight === ""
-                ? null
-                : Number(e.targetWeight),
-            intensity: e.intensity || "medium",
-          })),
+          exercises: d.exercises.map((e) => {
+            const parsedWeight =
+              e.targetWeight === "" ||
+              e.targetWeight === null ||
+              e.targetWeight === undefined ||
+              Number.isNaN(Number(e.targetWeight))
+                ? undefined
+                : Number(e.targetWeight);
+            return {
+              ...e,
+              sets:
+                typeof e.sets === "string" && e.sets === "" ? 1 : Number(e.sets) || 3,
+              restSeconds:
+                typeof e.restSeconds === "string" && e.restSeconds === ""
+                  ? 60
+                  : Number(e.restSeconds) || 60,
+              targetWeight: parsedWeight,
+              intensity: e.intensity || "medium",
+            };
+          }),
         })),
       };
       await onSubmit(cleanedForm);
@@ -488,11 +497,11 @@ export function RoutineBuilder({
             />
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
-                Descripción
+                Propósito del Ciclo (Lo verá el Atleta arriba de su rutina)
               </label>
               <textarea
                 rows={3}
-                placeholder="Descripción de la rutina (opcional)"
+                placeholder="Ej: Fase de acumulación enfocada en subir fuerza en Press Banca y control escapular para Parada de Manos..."
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 className="w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-white placeholder:text-slate-400 transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
@@ -500,16 +509,16 @@ export function RoutineBuilder({
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold uppercase tracking-wider text-slate-300">
-                Cliente
+                Atleta
               </label>
               <select
                 value={form.clientId}
                 onChange={(e) => updateField("clientId", e.target.value)}
                 className="w-full rounded-2xl border border-white/12 bg-[#1a1c23] px-4 py-3 text-sm text-white transition-all duration-200 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 appearance-none"
               >
-                <option value="">Selecciona un cliente</option>
+                <option value="">Selecciona un atleta</option>
                 {trainerId && (
-                  <option value={trainerId}>📌 Para mí (mi rutina)</option>
+                  <option value={trainerId}>📌 Para mí (mi propia rutina)</option>
                 )}
                 {clients.filter((c) => c.id !== trainerId).map((c) => (
                   <option key={c.id} value={c.id}>
@@ -519,7 +528,7 @@ export function RoutineBuilder({
               </select>
               {clients.length === 0 && (
                 <p className="text-xs text-amber-500 mt-2 font-medium">
-                  No hay clientes registrados. Genera un código de invitación primero.
+                  No hay atletas registrados. Genera un código de invitación primero.
                 </p>
               )}
             </div>
@@ -570,8 +579,81 @@ export function RoutineBuilder({
 
   const day = form.days[activeDayIdx];
 
+  // Cálculo en vivo del Volumen Semanal (Series efectivas por grupo muscular)
+  const weeklyVolumeByMuscle = form.days
+    .filter((d) => !d.isRestDay)
+    .reduce<Record<string, number>>((acc, d) => {
+      d.exercises.forEach((ex) => {
+        if (!ex.name.trim()) return;
+        const setsNum = Number(ex.sets) || 0;
+        acc[ex.muscleGroup] = (acc[ex.muscleGroup] || 0) + setsNum;
+      });
+      return acc;
+    }, {});
+
+  const totalWeeklySets = Object.values(weeklyVolumeByMuscle).reduce(
+    (a, b) => a + b,
+    0,
+  );
+
   return (
     <div className="space-y-6">
+      {/* ─── PANEL DE CONTROL DE VOLUMEN SEMANAL (SERIES EFECTIVAS / SEMANA) ─── */}
+      <div className="p-4 rounded-3xl bg-[#0e1118] border border-white/10 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+              📊 Control de Carga Semanal (En Vivo)
+            </span>
+            <h4 className="text-sm font-bold text-white">
+              Volumen Total: {totalWeeklySets} series efectivas / semana
+            </h4>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-neutral-400">
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              🟡 4-9: Mantenimiento
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              🟢 10-20: Óptimo (MAV)
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30">
+              🔴 &gt;20: Riesgo Fatiga (MRV)
+            </span>
+          </div>
+        </div>
+
+        {Object.keys(weeklyVolumeByMuscle).length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(weeklyVolumeByMuscle).map(([mgKey, setsCount]) => {
+              const mg = MUSCLE_GROUPS[mgKey as keyof typeof MUSCLE_GROUPS];
+              const isOptimal = setsCount >= 10 && setsCount <= 20;
+              const isHigh = setsCount > 20;
+              return (
+                <div
+                  key={mgKey}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5",
+                    isHigh
+                      ? "bg-red-500/15 border-red-500/40 text-red-200"
+                      : isOptimal
+                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-200"
+                        : "bg-amber-500/10 border-amber-500/30 text-amber-200",
+                  )}
+                >
+                  <span>{mg?.icon || "💪"}</span>
+                  <span>{mg?.label || mgKey}:</span>
+                  <span className="font-mono font-black">{setsCount} series</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-neutral-400">
+            Agrega ejercicios para ver aquí cuántas series semanales acumula cada grupo muscular.
+          </p>
+        )}
+      </div>
+
       {/* Template Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl">
         <div className="flex items-center gap-2">
@@ -905,31 +987,87 @@ export function RoutineBuilder({
 
                       {/* Peso Asignado y Semáforo de Intensidad */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/8">
-                        {/* Peso Asignado por el Coach */}
+                        {/* Peso Asignado por el Coach (con soporte kg y lbs) */}
                         <div className="space-y-1.5">
-                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                            🔒 Peso Fijo Asignado (kg)
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                              🔒 Peso Fijo Asignado ({weightUnit})
+                            </label>
+                            <div className="inline-flex rounded-lg bg-black/50 p-0.5 border border-white/10">
+                              <button
+                                type="button"
+                                onClick={() => setWeightUnit("kg")}
+                                className={cn(
+                                  "px-2 py-0.5 rounded-md text-[10px] font-black uppercase transition",
+                                  weightUnit === "kg"
+                                    ? "bg-primary-500 text-slate-950"
+                                    : "text-slate-400 hover:text-white",
+                                )}
+                              >
+                                KG
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setWeightUnit("lbs")}
+                                className={cn(
+                                  "px-2 py-0.5 rounded-md text-[10px] font-black uppercase transition",
+                                  weightUnit === "lbs"
+                                    ? "bg-primary-500 text-slate-950"
+                                    : "text-slate-400 hover:text-white",
+                                )}
+                              >
+                                LBS
+                              </button>
+                            </div>
+                          </div>
                           <div className="relative">
                             <input
                               type="number"
                               step="0.5"
                               min="0"
-                              placeholder="Ej. 40 (0 = corporal)"
-                              value={ex.targetWeight ?? ""}
-                              onChange={(e) =>
-                                updateExercise(activeDayIdx, exIdx, {
-                                  targetWeight: e.target.value,
-                                })
+                              placeholder={
+                                weightUnit === "lbs"
+                                  ? "Ej. 90 (0 = corporal)"
+                                  : "Ej. 40 (0 = corporal)"
                               }
+                              value={
+                                ex.targetWeight === "" ||
+                                ex.targetWeight === null ||
+                                ex.targetWeight === undefined
+                                  ? ""
+                                  : weightUnit === "lbs"
+                                    ? Math.round(Number(ex.targetWeight) * 2.20462 * 2) / 2
+                                    : ex.targetWeight
+                              }
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw === "") {
+                                  updateExercise(activeDayIdx, exIdx, {
+                                    targetWeight: "",
+                                  });
+                                } else {
+                                  const num = Number(raw);
+                                  const kgVal =
+                                    weightUnit === "lbs"
+                                      ? Math.round((num / 2.20462) * 2) / 2
+                                      : num;
+                                  updateExercise(activeDayIdx, exIdx, {
+                                    targetWeight: kgVal,
+                                  });
+                                }
+                              }}
                               className="w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 font-bold"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">
-                              kg
+                              {weightUnit}
                             </span>
                           </div>
                           <p className="text-[10px] text-slate-400">
-                            El alumno no podrá modificar este peso en su rutina.
+                            {ex.targetWeight !== "" &&
+                            ex.targetWeight !== null &&
+                            ex.targetWeight !== undefined
+                              ? `Equivale a ${Number(ex.targetWeight).toFixed(1)} kg / ${(Math.round(Number(ex.targetWeight) * 2.20462 * 2) / 2).toFixed(1)} lbs • Modificación sin resetear progreso.`
+                              : "El atleta verá este peso objetivo sin perder su historial al editar."}
                           </p>
                         </div>
 

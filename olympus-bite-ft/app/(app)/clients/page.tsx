@@ -13,7 +13,7 @@ import { ClientProfileModal } from "@/features/clients/components/ClientProfileM
 import type { User } from "@/shared/types/common.types";
 import { formatDate, cn } from "@/shared/lib/utils";
 import { FITNESS_GOALS } from "@/features/meals/types/meals.types";
-import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight, UserCircle, Ruler } from "lucide-react";
+import { Activity, Dumbbell, ShieldAlert, HeartPulse, Link2, Key, Users, Search, ArrowUpDown, ChevronLeft, ChevronRight, UserCircle, Ruler, Moon, Scale, TrendingUp, Sparkles } from "lucide-react";
 import { useConfirm } from "@/shared/contexts/ConfirmContext";
 import { toast } from "react-hot-toast";
 
@@ -23,6 +23,148 @@ interface InvCode {
   isUsed: boolean;
   expiresAt: string;
   createdAt: string;
+}
+
+interface AthleteTriageInfo {
+  sleepScoreStr: string;
+  sleepCompliedCount: number;
+  sleepStatus: "optimal" | "warning" | "critical" | "unknown";
+  lastWeightStr: string;
+  weightDeltaStr: string;
+  weightStatus: "optimal" | "warning" | "critical" | "unknown";
+  lastReportWeek: number | null;
+  reportPending: boolean;
+  globalStatus: "optimal" | "warning" | "critical";
+  statusBadge: {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+  };
+}
+
+function computeAthleteTriage(client: User): AthleteTriageInfo {
+  const anamnesis =
+    client.anamnesisData && typeof client.anamnesisData === "object"
+      ? (client.anamnesisData as any)
+      : {};
+  const sleepLogs: any[] = Array.isArray(anamnesis.sleepLogs)
+    ? anamnesis.sleepLogs
+    : [];
+  const fastedWeighIns: any[] = Array.isArray(anamnesis.fastedWeighIns)
+    ? anamnesis.fastedWeighIns
+    : [];
+  const weeklyReports: any[] = Array.isArray(anamnesis.weeklyReports)
+    ? anamnesis.weeklyReports
+    : [];
+
+  // 1. Sueño Circadiano (Últimos 7 días)
+  const recentSleep = sleepLogs.slice(-7);
+  const sleepCompliedCount = recentSleep.filter(
+    (s) => s.withinOneHourWindow,
+  ).length;
+  let sleepStatus: "optimal" | "warning" | "critical" | "unknown" = "unknown";
+  if (recentSleep.length > 0) {
+    if (sleepCompliedCount >= 5) sleepStatus = "optimal";
+    else if (sleepCompliedCount >= 3) sleepStatus = "warning";
+    else sleepStatus = "critical";
+  }
+
+  // 2. Pesaje en Ayunas
+  const lastWeighIn =
+    fastedWeighIns.length > 0
+      ? fastedWeighIns[fastedWeighIns.length - 1]
+      : null;
+  let weightStatus: "optimal" | "warning" | "critical" | "unknown" = "unknown";
+  let lastWeightStr = client.weight ? `${client.weight} kg` : "--";
+  let weightDeltaStr = "";
+
+  if (lastWeighIn) {
+    lastWeightStr = `${lastWeighIn.weightKg} kg`;
+    const daysAgo = Math.floor(
+      (Date.now() -
+        new Date(lastWeighIn.date || lastWeighIn.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    if (daysAgo <= 7) weightStatus = "optimal";
+    else if (daysAgo <= 14) weightStatus = "warning";
+    else weightStatus = "critical";
+
+    if (lastWeighIn.deltaKg !== undefined && lastWeighIn.deltaKg !== null) {
+      const d = Number(lastWeighIn.deltaKg);
+      weightDeltaStr = d > 0 ? `(+${d}kg)` : `(${d}kg)`;
+    }
+  }
+
+  // 3. Reporte Semanal
+  const lastReport =
+    weeklyReports.length > 0
+      ? weeklyReports[weeklyReports.length - 1]
+      : null;
+  const lastReportWeek = lastReport ? Number(lastReport.weekNumber) : null;
+  let reportPending = false;
+  if (lastReport) {
+    const daysSince = Math.floor(
+      (Date.now() - new Date(lastReport.publishedAt).getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    if (daysSince > 7) reportPending = true;
+  } else {
+    reportPending = true;
+  }
+
+  // 4. Semáforo Global
+  let globalStatus: "optimal" | "warning" | "critical" = "optimal";
+  if (sleepStatus === "critical" || weightStatus === "critical") {
+    globalStatus = "critical";
+  } else if (
+    reportPending ||
+    sleepStatus === "warning" ||
+    weightStatus === "warning"
+  ) {
+    globalStatus = "warning";
+  } else if (sleepStatus === "unknown" && weightStatus === "unknown") {
+    globalStatus = "warning";
+  }
+
+  let statusBadge = {
+    label: "🟢 En Zona Óptima",
+    color: "text-emerald-300",
+    bg: "bg-emerald-500/15",
+    border: "border-emerald-500/30",
+  };
+
+  if (globalStatus === "critical") {
+    statusBadge = {
+      label: "🔴 Atención Requerida",
+      color: "text-rose-300",
+      bg: "bg-rose-500/15",
+      border: "border-rose-500/30",
+    };
+  } else if (globalStatus === "warning") {
+    statusBadge = {
+      label: reportPending ? "🟡 Reporte Pendiente" : "🟡 Atención Media",
+      color: "text-amber-300",
+      bg: "bg-amber-500/15",
+      border: "border-amber-500/30",
+    };
+  }
+
+  return {
+    sleepScoreStr:
+      recentSleep.length > 0
+        ? `${sleepCompliedCount}/7 días`
+        : "Sin datos",
+    sleepCompliedCount,
+    sleepStatus,
+    lastWeightStr,
+    weightDeltaStr,
+    weightStatus,
+    lastReportWeek,
+    reportPending,
+    globalStatus,
+    statusBadge,
+  };
 }
 
 export default function ClientsPage() {
@@ -38,7 +180,7 @@ export default function ClientsPage() {
   const [existingCodes, setExistingCodes] = useState<InvCode[]>([]);
   const [showCodesPanel, setShowCodesPanel] = useState(false);
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
-  const [selectedClientTab, setSelectedClientTab] = useState<"profile" | "assessments" | "progress" | "compliance" | "ai">("profile");
+  const [selectedClientTab, setSelectedClientTab] = useState<"pact" | "assessments" | "progress" | "compliance" | "ai" | "evolution">("pact");
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkEmail, setLinkEmail] = useState("");
   const [linkLoading, setLinkLoading] = useState(false);
@@ -47,17 +189,31 @@ export default function ClientsPage() {
   // Pagination & Filtering
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "name_asc" | "name_desc">("recent");
+  const [triageFilter, setTriageFilter] = useState<"all" | "critical" | "pending_report" | "optimal">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   const loadClients = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    const fallbackSelf: User = {
+      ...user,
+      avatarUrl: null,
+      phone: null,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
     try {
-      const res = await clientsService.getByTrainer(user.id);
-      setClients(res.data ?? []);
+      const [res, selfRes] = await Promise.all([
+        clientsService.getByTrainer(user.id).catch(() => ({ data: [] as User[] })),
+        clientsService.getById(user.id).catch(() => ({ data: fallbackSelf })),
+      ]);
+      const list = res.data ?? [];
+      const selfUser: User = selfRes.data ?? fallbackSelf;
+      const withoutSelf = list.filter((c) => c.id !== user.id);
+      setClients([selfUser, ...withoutSelf]);
     } catch {
-      setClients([]);
+      setClients([fallbackSelf]);
     } finally {
       setLoading(false);
     }
@@ -67,9 +223,43 @@ export default function ClientsPage() {
     loadClients();
   }, [loadClients]);
 
+  // Conteo rápido para el Semáforo de Triage
+  const triageCounts = useMemo(() => {
+    let critical = 0;
+    let pendingReport = 0;
+    let optimal = 0;
+    clients.forEach((c) => {
+      const t = computeAthleteTriage(c);
+      if (t.globalStatus === "critical") critical++;
+      if (t.reportPending) pendingReport++;
+      if (t.globalStatus === "optimal") optimal++;
+    });
+    return {
+      all: clients.length,
+      critical,
+      pendingReport,
+      optimal,
+    };
+  }, [clients]);
+
   // Client filtering, sorting and pagination logic
   const filteredAndSortedClients = useMemo(() => {
     let result = [...clients];
+
+    // Filtro por Semáforo
+    if (triageFilter === "critical") {
+      result = result.filter(
+        (c) => computeAthleteTriage(c).globalStatus === "critical",
+      );
+    } else if (triageFilter === "pending_report") {
+      result = result.filter(
+        (c) => computeAthleteTriage(c).reportPending,
+      );
+    } else if (triageFilter === "optimal") {
+      result = result.filter(
+        (c) => computeAthleteTriage(c).globalStatus === "optimal",
+      );
+    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -80,13 +270,15 @@ export default function ClientsPage() {
     }
 
     result.sort((a, b) => {
+      if (user && a.id === user.id) return -1;
+      if (user && b.id === user.id) return 1;
       if (sortBy === "name_asc") return a.name.localeCompare(b.name);
       if (sortBy === "name_desc") return b.name.localeCompare(a.name);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
     return result;
-  }, [clients, searchQuery, sortBy]);
+  }, [clients, triageFilter, searchQuery, sortBy, user]);
 
   const totalPages = Math.ceil(filteredAndSortedClients.length / ITEMS_PER_PAGE) || 1;
 
@@ -97,7 +289,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, triageFilter]);
 
   const handleGenerateCode = async () => {
     if (!user) return;
@@ -184,9 +376,9 @@ export default function ClientsPage() {
   return (
     <>
       <Header
-        title="Gestión de Clientes"
+        title="Mis Atletas"
         subtitle={
-          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'CLIENTE TOTAL' : 'CLIENTES TOTALES'}`
+          loading ? "CARGANDO..." : `${clients.length} ${clients.length === 1 ? 'ATLETA ACTIVO' : 'ATLETAS EN SEGUIMIENTO'}`
         }
         action={
           <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
@@ -213,11 +405,109 @@ export default function ClientsPage() {
               variant="primary"
               className="col-span-2 sm:col-auto font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
             >
-              + Nuevo Cliente
+              + Nuevo Atleta
             </Button>
           </div>
         }
       />
+
+      {/* ── SEMÁFORO GENERAL DEL ENTRENADOR (TRIAGE EN VIVO) ── */}
+      {!loading && clients.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-6">
+          <button
+            type="button"
+            onClick={() => setTriageFilter("all")}
+            className={cn(
+              "p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between",
+              triageFilter === "all"
+                ? "bg-white/10 border-white/40 shadow-md text-white font-black"
+                : "bg-white/[0.02] border-white/10 text-neutral-400 hover:border-white/20 hover:text-white",
+            )}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider block">
+              Todos los Atletas
+            </span>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-2xl font-black font-mono text-white">
+                {triageCounts.all}
+              </span>
+              <span className="text-[10px] text-neutral-400 font-medium">Total</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTriageFilter("critical")}
+            className={cn(
+              "p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between",
+              triageFilter === "critical"
+                ? "bg-rose-500/20 border-rose-500/60 shadow-md shadow-rose-500/10 text-rose-200 font-black"
+                : "bg-rose-500/5 border-rose-500/20 text-rose-400/80 hover:bg-rose-500/10",
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-wider block text-rose-300">
+                🚨 Requieren Atención
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-2xl font-black font-mono text-rose-200">
+                {triageCounts.critical}
+              </span>
+              <span className="text-[10px] text-rose-300/80 font-medium">Sueño o Pesaje</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTriageFilter("pending_report")}
+            className={cn(
+              "p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between",
+              triageFilter === "pending_report"
+                ? "bg-amber-500/20 border-amber-500/60 shadow-md shadow-amber-500/10 text-amber-200 font-black"
+                : "bg-amber-500/5 border-amber-500/20 text-amber-400/80 hover:bg-amber-500/10",
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wider block text-amber-300">
+                📞 Reporte Pendiente
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-2xl font-black font-mono text-amber-200">
+                {triageCounts.pendingReport}
+              </span>
+              <span className="text-[10px] text-amber-300/80 font-medium">Por publicar</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTriageFilter("optimal")}
+            className={cn(
+              "p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between",
+              triageFilter === "optimal"
+                ? "bg-emerald-500/20 border-emerald-500/60 shadow-md shadow-emerald-500/10 text-emerald-200 font-black"
+                : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400/80 hover:bg-emerald-500/10",
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-300">
+                🟢 En Zona Óptima
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-2xl font-black font-mono text-emerald-200">
+                {triageCounts.optimal}
+              </span>
+              <span className="text-[10px] text-emerald-300/80 font-medium">100% al día</span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Toolbar: Search and Filter */}
       {!loading && clients.length > 0 && (
@@ -298,20 +588,35 @@ export default function ClientsPage() {
             {paginatedClients.map((client) => {
               const hasCondition = Boolean(client.medicalConditions && client.medicalConditions.trim().toLowerCase() !== "no");
               const hasDietPref = Boolean(client.dietaryPreferences && client.dietaryPreferences.trim().toLowerCase() !== "no");
+              const anamnesis =
+                client.anamnesisData && typeof client.anamnesisData === "object"
+                  ? (client.anamnesisData as any)
+                  : {};
+              const pact = anamnesis.heroPact || {};
+              const bioObj = pact.objectives?.biometric;
+              const strObj = pact.objectives?.strength;
+              const masObj = pact.objectives?.bodyMastery;
+              const aerObj = pact.objectives?.aerobic;
+              const macrocycleMap = pact.macrocycleMap;
+              const waterTarget =
+                pact.pillars?.nutrition?.waterLitersTarget ||
+                Number((((client.weight || 72) * 35 + 500) / 1000).toFixed(1));
+              const sleepTarget = `${pact.pillars?.recovery?.targetBedtime || "22:30"} - ${pact.pillars?.recovery?.targetWakeTime || "06:00"}`;
+              const triage = computeAthleteTriage(client);
 
               return (
                 <div
                   key={client.id}
                   onClick={() => {
                     setSelectedClient(client);
-                    setSelectedClientTab("profile");
+                    setSelectedClientTab("pact");
                   }}
                   className="group flex flex-col gap-4 rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 sm:p-5 transition-all hover:border-red-500/40 hover:shadow-xl hover:shadow-red-500/5 cursor-pointer backdrop-blur-sm relative overflow-hidden"
                 >
                   {/* Left accent indicator */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  {/* Top: Avatar, Name, Email, Active Status and Objective Badge */}
+                  {/* Top: Avatar, Name, Email, Active Status and 3 Pillars Summary */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5">
                       <div className="relative shrink-0">
@@ -329,6 +634,7 @@ export default function ClientsPage() {
                           <h3 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
                             {client.name}
                           </h3>
+<<<<<<< HEAD
                           {client.id === user?.id && (
                             <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-condensed font-bold uppercase tracking-wider">
                               Tú (Entrenador)
@@ -336,59 +642,169 @@ export default function ClientsPage() {
                           )}
                           <Badge variant={client.isActive ? "success" : "danger"} className="text-[10px] px-2 py-0.5">
                             {client.isActive ? "ACTIVO" : "INACTIVO"}
+=======
+                          {user && client.id === user.id && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                              🏋️ Mi Propia Ficha (Entrenador)
+                            </span>
+                          )}
+                          <Badge variant={anamnesis.cycleStatus === "ACTIVE_CYCLE" ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
+                            {anamnesis.cycleStatus === "ACTIVE_CYCLE" ? "CICLO 120D ACTIVO" : "POR CALIBRAR PACTO"}
+>>>>>>> feature/dani-mejoras
                           </Badge>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
+                              triage.statusBadge.bg,
+                              triage.statusBadge.border,
+                              triage.statusBadge.color,
+                            )}
+                          >
+                            {triage.statusBadge.label}
+                          </span>
+                          {macrocycleMap && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+                              🗺️ Macrociclo Activo
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
                           {client.email}
                         </p>
-                        <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">
-                          Alta: {formatDate(client.createdAt)}
-                        </span>
                       </div>
                     </div>
 
-                    {/* Quick Stats: Goal & Calories */}
-                    <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                    {/* 3 Pilares del Atleta */}
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
                       <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-black/30 border border-neutral-200 dark:border-white/5 text-center">
-                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-neutral-400 block leading-tight">
-                          Objetivo
+                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-amber-400 block leading-tight">
+                          🔥 Energía & Proteína
                         </span>
-                        <span className="text-xs font-bold text-neutral-800 dark:text-white capitalize">
-                          {client.dietaryGoal
-                            ? FITNESS_GOALS[client.dietaryGoal as keyof typeof FITNESS_GOALS]?.label || client.dietaryGoal
-                            : "--"}
+                        <span className="text-xs font-bold text-neutral-800 dark:text-white font-mono">
+                          {client.targetCalories || pact.pillars?.nutrition?.calories || 2200} kcal · {client.targetProtein || pact.pillars?.nutrition?.protein || 150}g P
                         </span>
                       </div>
 
                       <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-black/30 border border-neutral-200 dark:border-white/5 text-center">
-                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-neutral-400 block leading-tight">
-                          Macros
+                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-sky-400 block leading-tight">
+                          💧 Agua Meta
                         </span>
-                        <span className="text-xs font-bold text-red-500 font-mono">
-                          {client.targetCalories ? `${client.targetCalories} kcal` : "--"}
+                        <span className="text-xs font-bold text-sky-300 font-mono">
+                          {waterTarget} L/día
+                        </span>
+                      </div>
+
+                      <div className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-black/30 border border-neutral-200 dark:border-white/5 text-center">
+                        <span className="text-[9px] font-condensed font-bold uppercase tracking-wider text-indigo-400 block leading-tight">
+                          🌙 Sueño (±1h)
+                        </span>
+                        <span className="text-xs font-bold text-indigo-300 font-mono">
+                          {sleepTarget}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Middle: Pills (Experience & Equipment) */}
-                  {(client.experienceLevel || client.equipmentAccess) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {client.experienceLevel && (
-                        <span className="inline-flex items-center rounded-lg bg-neutral-100 dark:bg-white/5 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10">
-                          <Dumbbell className="w-3 h-3 mr-1.5 text-red-500" /> {client.experienceLevel}
-                        </span>
-                      )}
-                      {client.equipmentAccess && (
-                        <span className="inline-flex items-center rounded-lg bg-neutral-100 dark:bg-white/5 px-2.5 py-1 text-xs font-condensed font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10">
-                          <Activity className="w-3 h-3 mr-1.5 text-white" /> {client.equipmentAccess}
-                        </span>
-                      )}
+                  {/* ── SEMÁFORO DE TELEMETRÍA EN VIVO (VITAL FIT LABS) ── */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2.5 rounded-2xl bg-black/40 border border-white/5">
+                    {/* Sueño Circadiano */}
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Moon className="w-3.5 h-3.5 text-indigo-400" /> Sueño Circadiano:
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-mono font-bold",
+                          triage.sleepStatus === "optimal"
+                            ? "text-emerald-400"
+                            : triage.sleepStatus === "warning"
+                              ? "text-amber-400"
+                              : triage.sleepStatus === "critical"
+                                ? "text-rose-400"
+                                : "text-neutral-500",
+                        )}
+                      >
+                        {triage.sleepScoreStr}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Medical Conditions & Dietary Restrictions (VISIBLE ON MOBILE & DESKTOP!) */}
-                  {(hasCondition || hasDietPref) ? (
+                    {/* Pesaje en Ayunas */}
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Scale className="w-3.5 h-3.5 text-emerald-400" /> Pesaje en Ayunas:
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-mono font-bold",
+                          triage.weightStatus === "optimal"
+                            ? "text-emerald-400"
+                            : triage.weightStatus === "warning"
+                              ? "text-amber-400"
+                              : triage.weightStatus === "critical"
+                                ? "text-rose-400"
+                                : "text-neutral-500",
+                        )}
+                      >
+                        {triage.lastWeightStr} {triage.weightDeltaStr}
+                      </span>
+                    </div>
+
+                    {/* Reporte Semanal */}
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-amber-400" /> Reporte Mentor:
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-bold",
+                          triage.reportPending ? "text-amber-400" : "text-emerald-400",
+                        )}
+                      >
+                        {triage.lastReportWeek
+                          ? `Sem ${triage.lastReportWeek} al día`
+                          : "Semana 1 Pendiente"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Las 4 Metas de 120 Días del Atleta */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="p-2.5 rounded-2xl bg-neutral-50 dark:bg-black/30 border border-neutral-200 dark:border-white/10">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+                        1. Meta Biométrica
+                      </span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                        {bioObj?.currentWeightKg || client.weight || "--"} kg ➔ {bioObj?.targetWeightKg || "--"} kg
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-2xl bg-neutral-50 dark:bg-black/30 border border-neutral-200 dark:border-white/10">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-red-400">
+                        2. Meta de Fuerza
+                      </span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white truncate block">
+                        {strObj?.exerciseName ? `${strObj.exerciseName}: ${strObj.targetWeight || "--"}kg` : "Por definir en Ficha"}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-2xl bg-neutral-50 dark:bg-black/30 border border-neutral-200 dark:border-white/10">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-amber-400">
+                        3. Dominio Corporal
+                      </span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white truncate block">
+                        {masObj?.skillName ? `${masObj.skillName} (${masObj.targetMark || ""})` : "Por definir en Ficha"}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-2xl bg-neutral-50 dark:bg-black/30 border border-neutral-200 dark:border-white/10">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-sky-400">
+                        4. Meta Aeróbica
+                      </span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white truncate block">
+                        {aerObj?.targetMark ? `${aerObj.metricName || "Cardio"}: ${aerObj.targetMark}` : "Por definir en Ficha"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Medical Conditions & Dietary Restrictions */}
+                  {(hasCondition || hasDietPref) && (
                     <div className="space-y-1.5">
                       {hasCondition && (
                         <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
@@ -407,10 +823,6 @@ export default function ClientsPage() {
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-[11px] text-neutral-500 font-condensed uppercase tracking-wider py-1 px-3 bg-neutral-50 dark:bg-white/[0.02] border border-dashed border-neutral-200 dark:border-white/5 rounded-xl w-fit">
-                      ✓ Sin restricciones o lesiones reportadas
-                    </div>
                   )}
 
                   {/* Bottom: Action Buttons for Trainer */}
@@ -421,12 +833,39 @@ export default function ClientsPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedClient(client);
-                        setSelectedClientTab("profile");
+                        setSelectedClientTab("pact");
                       }}
                       className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5"
                     >
-                      <UserCircle className="w-3.5 h-3.5 mr-1 text-neutral-400" />
-                      Ver Perfil
+                      <UserCircle className="w-3.5 h-3.5 mr-1 text-red-400" />
+                      🎯 4 Metas y Ficha
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setSelectedClientTab("evolution");
+                      }}
+                      className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 text-amber-300 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5 mr-1 text-amber-400" />
+                      📈 Mi Progreso (Cargas)
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClient(client);
+                        setSelectedClientTab("ai");
+                      }}
+                      className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 text-cyan-300 border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20"
+                    >
+                      🔒 Memoria Clínica IA
                     </Button>
 
                     <Button
@@ -439,7 +878,7 @@ export default function ClientsPage() {
                       }}
                       className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 text-white"
                     >
-                      <Ruler className="w-3.5 h-3.5 mr-1 text-red-500" />
+                      <Ruler className="w-3.5 h-3.5 mr-1 text-amber-400" />
                       Valoraciones
                     </Button>
 
@@ -451,10 +890,10 @@ export default function ClientsPage() {
                         setSelectedClient(client);
                         setSelectedClientTab("compliance");
                       }}
-                      className="col-span-2 sm:col-auto font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
+                      className="font-condensed uppercase tracking-wider font-bold text-xs justify-center py-2.5 shadow-md shadow-red-500/20"
                     >
                       <Activity className="w-3.5 h-3.5 mr-1 text-white" />
-                      Rendimiento & % (4/4)
+                      📞 Reporte Semanal
                     </Button>
                   </div>
                 </div>
@@ -579,7 +1018,17 @@ export default function ClientsPage() {
         initialTab={selectedClientTab}
         onClose={() => setSelectedClient(null)}
         onSave={handleSaveProfile}
+<<<<<<< HEAD
         onDelete={selectedClient?.id === user?.id ? undefined : async (clientId) => {
+=======
+        onUpdated={(updatedUser: User) => {
+          setSelectedClient(updatedUser);
+          setClients((prev) =>
+            prev.map((c) => (c.id === updatedUser.id ? updatedUser : c)),
+          );
+        }}
+        onDelete={async (clientId) => {
+>>>>>>> feature/dani-mejoras
           const ok = await confirm({
             title: '¿Eliminar cliente?',
             description: 'Se borrarán sus rutinas, comidas y datos permanentemente. Esta acción no se puede deshacer.',

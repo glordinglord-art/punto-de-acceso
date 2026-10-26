@@ -150,6 +150,22 @@ export const clinicalAgentService = {
         [key: string]: unknown;
       }>
     >(`/clinical-agent/execute-action/${trainerId}`, { ...action, ...source }),
+
+  sendAthleteCaseMessage: (
+    athleteId: string,
+    payload: { message: string; trainerPrivateNotes?: string },
+  ) =>
+    api.post<
+      ApiResponse<{ reply: string; trainerPrivateNotes: string }>
+    >(`/clinical-agent/athlete/${athleteId}/chat`, payload),
+
+  getAthleteCaseHistory: (athleteId: string) =>
+    api.get<
+      ApiResponse<{ trainerPrivateNotes: string; messages: ChatMessage[] }>
+    >(`/clinical-agent/athlete/${athleteId}/history`),
+
+  clearAthleteCaseHistory: (athleteId: string) =>
+    api.delete<ApiResponse<null>>(`/clinical-agent/athlete/${athleteId}/history`),
 };
 
 // ─── Parser de bloques de accion ──────────────────────────────────────────

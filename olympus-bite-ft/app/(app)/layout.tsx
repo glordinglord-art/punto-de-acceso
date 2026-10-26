@@ -19,9 +19,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Aplica para clientes directos y para entrenadores / superadmins cuando están en MODO ATLETA
-  const isAthleteMode = user?.role === "client" || activeMode === "client";
-  const needsOnboarding = Boolean(user && isAthleteMode && !user.onboardingCompleted);
+  // OBLIGATORIO PARA TODOS (ATLETAS Y ENTRENADORES):
+  // Cualquier persona que use el app debe haber completado el nuevo formulario "Tu Punto de Partida"
+  const hasCompletedNewDiscovery = Boolean(
+    user?.anamnesisData?.discoveryCompletedAt &&
+      user?.anamnesisData?.cycleStatus !== "NEEDS_DISCOVERY",
+  );
+  const needsOnboarding = Boolean(user && !hasCompletedNewDiscovery);
   const isOnboardingRoute = pathname === "/onboarding";
 
   useEffect(() => {
@@ -84,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               layout === "mini" ? "lg:pt-20 lg:pl-0" : "lg:pl-72",
             )}
           >
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-28 lg:pb-12 min-w-0 w-full flex-1">
+            <div className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8 pb-28 lg:pb-12 min-w-0 w-full flex-1">
               {children}
             </div>
           </main>
