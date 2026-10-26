@@ -20,10 +20,15 @@ import {
   Activity,
   Plus,
   Minus,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { dashboardService } from "@/features/dashboard/services/dashboard.service";
 import { clientsService } from "@/features/clients/services/clients.service";
+import { routinesService } from "@/features/routines/services/routines.service";
+import { EvolutionLayersView } from "@/features/routines/components/EvolutionLayersView";
+import { Modal } from "@/shared/components/ui/Modal";
+import type { Routine, WorkoutLog } from "@/features/routines/types/routines.types";
 import type { ClientDashboard } from "@/features/dashboard/types/dashboard.types";
 import { cn, getLocalDateString } from "@/shared/lib/utils";
 import { calculateNutritionTargets } from "@/features/meals/utils/nutrition-calculator";
@@ -72,11 +77,33 @@ export function ClientDashboardView() {
   );
   const [savingWeight, setSavingWeight] = useState(false);
 
-  // Estado de Medición Mensual % Grasa (US Navy)
+  // Estado de Medición Mensual % Grasa (US Navy y Manual)
   const [neckInput, setNeckInput] = useState<string>("38");
   const [waistInput, setWaistInput] = useState<string>("82");
   const [hipInput, setHipInput] = useState<string>("96");
+  const [directFatInput, setDirectFatInput] = useState<string>("");
   const [savingNavy, setSavingNavy] = useState(false);
+
+  // Modal de Evolución por Capas
+  const [showEvolutionModal, setShowEvolutionModal] = useState(false);
+  const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
+  const [allWorkoutLogs, setAllWorkoutLogs] = useState<WorkoutLog[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    routinesService
+      .getByClient(user.id)
+      .then(async (res) => {
+        const list = res.data || [];
+        const act = list.find((r) => r.isActive) || list[0] || null;
+        setActiveRoutine(act);
+        if (act) {
+          const lRes = await routinesService.getWorkoutLogs(act.id, user.id);
+          setAllWorkoutLogs(lRes.data || []);
+        }
+      })
+      .catch(() => null);
+  }, [user]);
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -197,14 +224,46 @@ export function ClientDashboardView() {
     [sleepLogs, todayStr],
   );
 
-  const handleSaveSleep = async () => {
+  // 7-day strip calculation for current week (Lun a Dom)
+  const weekDaysSleep = useMemo(() => {
+    const today = new Date();
+    const currentDayOfWeek = (today.getDay() + 6) % 7; // 0 for Mon, 6 for Sun
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - currentDayOfWeek);
+
+    const dayLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+    return dayLabels.map((label, idx) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + idx);
+      const dateStr = d.toISOString().slice(0, 10);
+      const log = sleepLogs.find((s) => s.date === dateStr);
+      const isPastOrToday = dateStr <= todayStr;
+      const isToday = dateStr === todayStr;
+      return {
+        label,
+        dateStr,
+        log,
+        isPastOrToday,
+        isToday,
+        complied: log?.withinOneHourWindow === true,
+      };
+    });
+  }, [sleepLogs, todayStr]);
+
+  const compliedDaysCount = useMemo(() => {
+    return weekDaysSleep.filter((d) => d.complied).length;
+  }, [weekDaysSleep]);
+
+  const handleSaveSleep = async (customBed?: string, customWake?: string) => {
     if (!user || savingSleep) return;
+    const bTime = customBed || bedtimeInput;
+    const wTime = customWake || wakeTimeInput;
     setSavingSleep(true);
     try {
       const res = await clientsService.logSleepRegularity(user.id, {
         date: todayStr,
-        bedtime: bedtimeInput,
-        wakeTime: wakeTimeInput,
+        bedtime: bTime,
+        wakeTime: wTime,
       });
       if (res?.data?.user) {
         updateUser(res.data.user);
@@ -216,7 +275,7 @@ export function ClientDashboardView() {
         );
       } else {
         toast(
-          `⚠️ Registrado (${log?.hoursSlept}h), pero te alejaste más de 1h de tu horario ancla`,
+          `⚠️ Registrado (${log?.hoursSlept}h), pero varió más de 1h de tu horario ancla`,
           { icon: "🕒" },
         );
       }
@@ -224,6 +283,67 @@ export function ClientDashboardView() {
       toast.error("Error al registrar tu descanso");
     } finally {
       setSavingSleep(false);
+    }
+  };
+
+  // Preview dinámico del % Grasa US Navy
+  const previewNavy = useMemo(() => {
+    const neck = parseFloat(neckInput);
+    const waist = parseFloat(waistInput);
+    const h = user?.height || 172;
+    if (neck > 0 && waist > neck) {
+      const navy =
+        495 /
+          (1.0324 -
+            0.19077 * Math.log10(waist - neck) +
+            0.15456 * Math.log10(h)) -
+        450;
+      return Number(Math.max(4, Math.min(45, navy)).toFixed(1));
+    }
+    return null;
+  }, [neckInput, waistInput, user?.height]);
+
+  // Registro Mensual de % Grasa Corporal (US Navy y Directo)
+  const handleSaveMonthlyNavy = async () => {
+    if (!user || savingNavy) return;
+    const directVal = parseFloat(directFatInput);
+    const neck = parseFloat(neckInput);
+    const waist = parseFloat(waistInput);
+    const hip = parseFloat(hipInput);
+
+    let finalBodyFat: number | undefined = undefined;
+
+    if (!isNaN(directVal) && directVal >= 3 && directVal <= 50) {
+      finalBodyFat = directVal;
+    } else if (previewNavy !== null) {
+      finalBodyFat = previewNavy;
+    } else {
+      toast.error(
+        "Ingresa medidas de cuello y cintura (en cm) o ingresa tu % de grasa directo",
+      );
+      return;
+    }
+
+    setSavingNavy(true);
+    try {
+      const res = await clientsService.logWeeklyWeighIn(user.id, {
+        weight: user.weight || 72,
+        unit: "kg",
+        date: todayStr,
+        bodyFatPct: finalBodyFat,
+        neckCm: !isNaN(neck) ? neck : undefined,
+        waistCm: !isNaN(waist) ? waist : undefined,
+        hipCm: !isNaN(hip) ? hip : undefined,
+        notes: "Control mensual de % grasa",
+      });
+      if (res?.data?.user) {
+        updateUser(res.data.user);
+      }
+      toast.success(`🎯 % Grasa registrado: ${finalBodyFat}%`);
+    } catch {
+      toast.error("Error al registrar el % de grasa");
+    } finally {
+      setSavingNavy(false);
     }
   };
 
@@ -260,43 +380,6 @@ export function ClientDashboardView() {
       toast.error("No se pudo guardar el pesaje");
     } finally {
       setSavingWeight(false);
-    }
-  };
-
-  // Registro Mensual de % Grasa Corporal (US Navy)
-  const handleSaveMonthlyNavy = async () => {
-    if (!user || savingNavy) return;
-    const neck = parseFloat(neckInput);
-    const waist = parseFloat(waistInput);
-    const hip = parseFloat(hipInput);
-    if (isNaN(neck) || isNaN(waist) || waist <= neck) {
-      toast.error("Verifica las medidas de cuello y cintura (en cm)");
-      return;
-    }
-    setSavingNavy(true);
-    try {
-      const res = await clientsService.logWeeklyWeighIn(user.id, {
-        weight: user.weight || 72,
-        unit: "kg",
-        date: todayStr,
-        neckCm: neck,
-        waistCm: waist,
-        hipCm: hip,
-        notes: "Control mensual de % grasa (US Navy)",
-      });
-      if (res?.data?.user) {
-        updateUser(res.data.user);
-      }
-      const bf = res?.data?.entry?.bodyFatPct;
-      toast.success(
-        bf
-          ? `📐 % Grasa Mensual calculado: ${bf}%`
-          : "Medidas mensuales guardadas",
-      );
-    } catch {
-      toast.error("Error al calcular el % de grasa");
-    } finally {
-      setSavingNavy(false);
     }
   };
 
@@ -544,6 +627,28 @@ export function ClientDashboardView() {
               </div>
             </div>
           </div>
+
+          {/* BOTÓN PROMINENTE: EVOLUCIÓN POR CAPAS (SEMANA 1 A 16) */}
+          <button
+            type="button"
+            onClick={() => setShowEvolutionModal(true)}
+            className="w-full mt-3.5 p-3 rounded-2xl bg-gradient-to-r from-red-600/20 via-primary-500/15 to-amber-500/20 border border-red-500/30 text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-between hover:border-amber-500/50 hover:bg-white/[0.04] transition group cursor-pointer shadow-lg"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 group-hover:scale-110 transition shrink-0">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <span className="block text-white font-bold text-xs">
+                  Mi Progreso (Semana a Semana)
+                </span>
+                <span className="block text-[10px] text-neutral-400 font-medium">
+                  1. Carta del Coach • 2. Cargas y Récords • 3. Cuerpo y Peso
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition shrink-0" />
+          </button>
         </section>
 
         {/* TARJETA EXCLUSIVA PARA PC: VISTA RÁPIDA DE TUS 4 METAS SIEMPRE VISIBLE */}
@@ -831,19 +936,24 @@ export function ClientDashboardView() {
               </div>
             </div>
 
-            {/* 3. TU DESCANSO (DORMIR A LA MISMA HORA) */}
-            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+            {/* 3. TU DESCANSO (DORMIR A LA MISMA HORA - X DE 7 DÍAS) */}
+            <div className="rounded-3xl bg-white/[0.03] border border-indigo-500/30 p-4 sm:p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
                     <Moon className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 block">
-                      3. Tu Descanso (7 a 8 horas)
-                    </span>
-                    <h2 className="text-sm font-bold text-white">
-                      Meta: Dormir {defaultBedtime} → Despertar {defaultWakeTime}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                        3. Tu Descanso Circadiano (±1h)
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 text-[10px] font-black font-mono">
+                        {compliedDaysCount} de 7 días
+                      </span>
+                    </div>
+                    <h2 className="text-sm font-bold text-white mt-0.5">
+                      Horario Ancla: Dormir {defaultBedtime} → Despertar {defaultWakeTime}
                     </h2>
                   </div>
                 </div>
@@ -858,47 +968,107 @@ export function ClientDashboardView() {
                     )}
                   >
                     {todaySleepLog.withinOneHourWindow
-                      ? `🟢 A tiempo (${todaySleepLog.hoursSlept}h)`
+                      ? `🟢 Hoy cumplido (${todaySleepLog.hoursSlept}h)`
                       : `🟡 Varió >1h (${todaySleepLog.hoursSlept}h)`}
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-neutral-300 leading-relaxed">
-                🌙 <strong>Lo más importante:</strong> Acuéstate y levántate todos los días a la misma hora (máximo 1 hora de diferencia).
-              </p>
+              {/* ── Tira Visual de los 7 Días de la Semana (L M M J V S D) ── */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-[10px] text-neutral-400 font-bold uppercase tracking-wider px-1">
+                  <span>Tu racha esta semana:</span>
+                  <span className={compliedDaysCount >= 5 ? "text-emerald-400" : "text-amber-400"}>
+                    {compliedDaysCount >= 5 ? "🔥 Racha Óptima (SNC al 100%)" : "⚠️ Cuidar horario"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-7 gap-1.5 text-center">
+                  {weekDaysSleep.map((d) => (
+                    <div
+                      key={d.dateStr}
+                      className={cn(
+                        "p-2 rounded-xl border text-xs transition-all",
+                        d.log
+                          ? d.complied
+                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                            : "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                          : d.isToday
+                            ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-200 animate-pulse"
+                            : "bg-black/30 border-white/5 text-neutral-500",
+                      )}
+                    >
+                      <span className="block text-[9px] font-bold uppercase">
+                        {d.label}
+                      </span>
+                      <span className="block text-xs font-black mt-0.5">
+                        {d.log ? (
+                          d.complied ? "✓" : "!"
+                        ) : d.isToday ? (
+                          "Hoy"
+                        ) : (
+                          "—"
+                        )}
+                      </span>
+                      {d.log && (
+                        <span className="block text-[8px] opacity-80 font-mono mt-0.5">
+                          {d.log.hoursSlept}h
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-              <div className="grid grid-cols-3 gap-2 items-end">
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
-                  <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
-                    Me dormí
-                  </label>
-                  <input
-                    type="time"
-                    value={bedtimeInput}
-                    onChange={(e) => setBedtimeInput(e.target.value)}
-                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
-                  />
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
-                  <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
-                    Me levanté
-                  </label>
-                  <input
-                    type="time"
-                    value={wakeTimeInput}
-                    onChange={(e) => setWakeTimeInput(e.target.value)}
-                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
-                  />
-                </div>
+              {/* Botón Rápido de 1 Clic si no ha registrado hoy */}
+              {!todaySleepLog && (
                 <button
                   type="button"
                   disabled={savingSleep}
-                  onClick={handleSaveSleep}
-                  className="h-[52px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider active:scale-95 transition disabled:opacity-50"
+                  onClick={() => handleSaveSleep(defaultBedtime, defaultWakeTime)}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-600/30 via-indigo-500/20 to-sky-500/20 hover:from-indigo-600/40 hover:to-sky-500/30 border border-indigo-500/40 text-indigo-200 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-[0.99]"
                 >
-                  {savingSleep ? "..." : "Guardar"}
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>⚡ Dormí a mi hora habitual ({defaultBedtime} a {defaultWakeTime})</span>
                 </button>
+              )}
+
+              {/* Formulario manual por si varió el horario */}
+              <div className="pt-1 border-t border-white/5">
+                <span className="text-[10px] text-neutral-400 block mb-1">
+                  O anota tus horas exactas si tuviste que variar:
+                </span>
+                <div className="grid grid-cols-3 gap-2 items-end">
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                    <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
+                      Me dormí
+                    </label>
+                    <input
+                      type="time"
+                      value={bedtimeInput}
+                      onChange={(e) => setBedtimeInput(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                    <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
+                      Me levanté
+                    </label>
+                    <input
+                      type="time"
+                      value={wakeTimeInput}
+                      onChange={(e) => setWakeTimeInput(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={savingSleep}
+                    onClick={() => handleSaveSleep()}
+                    className="h-[46px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {savingSleep ? "..." : "Guardar"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1081,6 +1251,16 @@ export function ClientDashboardView() {
                 </p>
               )}
             </div>
+
+            {/* BOTÓN EXPLORAR LÍNEA DE TIEMPO COMPLETA */}
+            <button
+              type="button"
+              onClick={() => setShowEvolutionModal(true)}
+              className="w-full p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-500/40 text-neutral-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/[0.06] transition cursor-pointer"
+            >
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <span>Ver Mi Progreso (Semana a Semana)</span>
+            </button>
           </div>
         )}
 
@@ -1179,26 +1359,34 @@ export function ClientDashboardView() {
               )}
             </div>
 
-            {/* MEDICIÓN MENSUAL DE % DE GRASA CON CINTA MÉTRICA */}
-            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <Ruler className="w-5 h-5 text-amber-400 shrink-0" />
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
-                    1 Vez al Mes • Con Cinta Métrica
-                  </span>
-                  <h3 className="text-base font-bold text-white">
-                    Calcular mi % de Grasa Corporal
-                  </h3>
+            {/* MEDICIÓN MENSUAL DE % DE GRASA (US NAVY O DIRECTO) */}
+            <div className="rounded-3xl bg-white/[0.03] border border-amber-500/30 p-4 sm:p-5 space-y-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Ruler className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
+                      1 Vez al Mes • Con Cinta Métrica o Báscula
+                    </span>
+                    <h3 className="text-base font-bold text-white">
+                      Control Mensual de % de Grasa Corporal
+                    </h3>
+                  </div>
                 </div>
+
+                {objectives.biometric.bodyFatPct && (
+                  <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold font-mono">
+                    Actual: {objectives.biometric.bodyFatPct}%
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-neutral-300 leading-relaxed">
-                Una vez al mes, mide con una cinta métrica tu <strong>cuello</strong> y tu{" "}
-                <strong>cintura</strong> (a la altura del ombligo) en centímetros:
+                Mide con cinta métrica tu <strong>cuello</strong> y <strong>cintura</strong> (a la altura del ombligo) para calcularlo automáticamente, o ingresa tu porcentaje directamente:
               </p>
 
-              <div className="grid grid-cols-3 gap-2">
+              {/* Opción A: Cuello y Cintura */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
                   <label className="block text-[9px] font-bold uppercase text-neutral-400">
                     Cuello (cm)
@@ -1209,7 +1397,8 @@ export function ClientDashboardView() {
                     inputMode="decimal"
                     value={neckInput}
                     onChange={(e) => setNeckInput(e.target.value)}
-                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                    className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"
+                    placeholder="38"
                   />
                 </div>
                 <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
@@ -1222,22 +1411,80 @@ export function ClientDashboardView() {
                     inputMode="decimal"
                     value={waistInput}
                     onChange={(e) => setWaistInput(e.target.value)}
-                    className="w-full bg-transparent text-base font-bold text-white focus:outline-none"
+                    className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"
+                    placeholder="82"
                   />
                 </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <label className="block text-[9px] font-bold uppercase text-amber-400">
+                    O % Directo (Báscula)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={directFatInput}
+                    onChange={(e) => setDirectFatInput(e.target.value)}
+                    className="w-full bg-transparent text-sm font-bold text-amber-300 focus:outline-none"
+                    placeholder="Ej: 14.5"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] text-neutral-400 font-mono">
+                  {previewNavy !== null ? (
+                    <span className="text-emerald-400 font-bold">
+                      📐 Estimación US Navy: {previewNavy}% de grasa
+                    </span>
+                  ) : directFatInput ? (
+                    <span className="text-amber-300 font-bold">
+                      ⚖️ Valor directo: {directFatInput}%
+                    </span>
+                  ) : (
+                    "Ingresa tus centímetros o tu porcentaje directo"
+                  )}
+                </span>
+
                 <button
                   type="button"
                   disabled={savingNavy}
                   onClick={handleSaveMonthlyNavy}
-                  className="rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider active:scale-95 transition"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs uppercase tracking-wider active:scale-95 transition cursor-pointer disabled:opacity-50"
                 >
-                  {savingNavy ? "..." : "Calcular %"}
+                  {savingNavy
+                    ? "Guardando..."
+                    : previewNavy
+                      ? `Guardar ${previewNavy}%`
+                      : directFatInput
+                        ? `Guardar ${directFatInput}%`
+                        : "Guardar % de Grasa"}
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Modal de Evolución por Capas ── */}
+      {showEvolutionModal && user && (
+        <Modal
+          isOpen={showEvolutionModal}
+          onClose={() => setShowEvolutionModal(false)}
+          title=""
+          size="xl"
+          noPadding={true}
+          className="max-w-5xl overflow-hidden"
+        >
+          <EvolutionLayersView
+            user={user}
+            routine={activeRoutine || (data?.activeRoutine as any) || null}
+            workoutLogs={allWorkoutLogs}
+            weightUnit={unit}
+            onClose={() => setShowEvolutionModal(false)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

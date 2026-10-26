@@ -18,12 +18,40 @@ import { toast } from "react-hot-toast";
 
 interface ClientAiChatProps {
   client: User;
+  onAthleteUpdated?: () => void;
 }
 
 interface Message {
   role: "user" | "ai";
   content: string;
 }
+
+const CLINICAL_WORKFLOW_STEPS = [
+  {
+    step: "Paso 1",
+    label: "🎯 1. Fijar Acuerdo 4 Metas + 3 Pilares",
+    prompt:
+      "Analiza el perfil actual de este Atleta y propón el Acuerdo de las 4 Metas de 120 Días (Biométrico, Fuerza, Dominio Corporal y Aeróbico) junto con sus metas de Agua y Calorías/Proteína. Ejecuta los comandos update_hero_pact y update_nutrition para dejarlo guardado en su Ficha Técnica.",
+    badgeClass:
+      "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-200",
+  },
+  {
+    step: "Paso 2",
+    label: "🗺️ 2. Crear Mapa del Macrociclo (120 Días)",
+    prompt:
+      "Con base en sus 4 Metas de 120 Días, diseña el Mapa del Macrociclo dividido en 3 Mesociclos de 4 semanas (progresión MEV -> MAV -> Peaking/Descarga) y guárdalo directamente en su Ficha Técnica emitiendo el comando save_macrocycle_map.",
+    badgeClass:
+      "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-200",
+  },
+  {
+    step: "Paso 3",
+    label: "⚡ 3. Crear y Asignar Rutina Activa en BD",
+    prompt:
+      "Crea y ASIGNA inmediatamente en la base de datos la Rutina Activa del Mesociclo actual (4 días por semana, respetando la Jerarquía Híbrida: 1º Dominio Corporal, 2º Compuestos Pesados, 3º Hipertrofia MAV 10-16 series/sem, 4º Aeróbico) emitiendo obligatoriamente el comando create_and_assign_routine al final.",
+    badgeClass:
+      "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/50 text-emerald-200 shadow-sm shadow-emerald-500/10",
+  },
+];
 
 const CASE_PROMPTS = [
   "📐 Audita sus series efectivas semanales (MEV-MAV-MRV) y dime si hay volumen basura o déficit",
@@ -32,7 +60,7 @@ const CASE_PROMPTS = [
   "📝 Redacta y publica su Reporte Semanal de esta semana con base en sus 3 pilares",
 ];
 
-export function ClientAiChat({ client }: ClientAiChatProps) {
+export function ClientAiChat({ client, onAthleteUpdated }: ClientAiChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [privateNotes, setPrivateNotes] = useState<string>("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -143,15 +171,28 @@ export function ClientAiChat({ client }: ClientAiChatProps) {
       if (res?.data?.trainerPrivateNotes !== undefined) {
         setPrivateNotes(res.data.trainerPrivateNotes);
       }
+      const replyContent =
+        res?.data?.reply ||
+        "Diagnóstico procesado en la memoria clínica del atleta.";
       setMessages((prev) => [
         ...prev,
         {
           role: "ai",
-          content:
-            res?.data?.reply ||
-            "Diagnóstico procesado en la memoria clínica del atleta.",
+          content: replyContent,
         },
       ]);
+      if (
+        replyContent.includes("⚡") ||
+        replyContent.includes("🗺️") ||
+        replyContent.includes("Rutina Creada y Asignada") ||
+        replyContent.includes("Mapa del Macrociclo") ||
+        replyContent.includes("Pacto de 120 Días")
+      ) {
+        toast.success(
+          "⚡ Vital Fit Labs ejecutó y guardó los cambios en la Base de Datos",
+        );
+        onAthleteUpdated?.();
+      }
     } catch (error) {
       console.error("Clinical Case AI Error:", error);
       setMessages((prev) => [
@@ -223,6 +264,31 @@ export function ClientAiChat({ client }: ClientAiChatProps) {
           placeholder="Escribe aquí observaciones privadas del atleta (ej. molestia leve en hombro derecho al bajar de RIR 1, responde mejor a frecuencia 2 en pierna, tiende a subestimar calorías el fin de semana)..."
           className="w-full rounded-xl bg-black/50 border border-white/10 px-3 py-2 text-xs text-white placeholder-neutral-500 focus:border-cyan-500/50 focus:outline-none"
         />
+      </div>
+
+      {/* Ruta Ejecutora en 3 Pasos: Acuerdo 4 Metas -> Mapa del Macrociclo -> Asignar Rutina en BD */}
+      <div className="px-3.5 py-2.5 bg-gradient-to-r from-emerald-950/30 via-cyan-950/30 to-amber-950/20 border-b border-white/10 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            ⚡ Flujo Ejecutor Vital Fit Labs (1 Clic — Guarda y Asigna en Base de Datos):
+          </span>
+          <span className="text-[10px] text-neutral-400">
+            1º Objetivos ➔ 2º Mapa Macrociclo ➔ 3º Asignar Rutina
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {CLINICAL_WORKFLOW_STEPS.map((item) => (
+            <button
+              key={item.step}
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleSend(item.prompt)}
+              className={`rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition cursor-pointer disabled:opacity-50 ${item.badgeClass}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Botones Rápidos de Discusión Clínica */}

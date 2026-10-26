@@ -6,6 +6,7 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { cn, formatRest } from "@/shared/lib/utils";
 import { MUSCLE_GROUPS } from "@/shared/lib/constants";
+import { analyzeExerciseProgression } from "../utils/vital-fit-labs-engine";
 import type {
   Exercise,
   Routine,
@@ -1721,75 +1722,109 @@ export function RoutineListView({
                               (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek
                             );
                             const muscleInfo = MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
+                            const exInsight = analyzeExerciseProgression(
+                              ex,
+                              activeRoutineLogs,
+                              currentWeek,
+                            );
 
                             return (
                               <div
                                 key={ex.id}
                                 className={cn(
-                                  "flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all duration-200",
+                                  "flex flex-col gap-2 p-3 rounded-2xl border transition-all duration-200",
                                   isExLoggedCurrentWeek
                                     ? "bg-emerald-500/[0.07] border-emerald-500/30"
-                                    : "bg-black/40 border-white/8 hover:bg-white/[0.04] hover:border-white/15"
+                                    : exInsight.state === "fatigue_shield_2w"
+                                      ? "bg-cyan-500/[0.06] border-cyan-500/30"
+                                      : exInsight.state === "double_progression"
+                                        ? "bg-amber-500/[0.06] border-amber-500/30"
+                                        : "bg-black/40 border-white/8 hover:bg-white/[0.04] hover:border-white/15"
                                 )}
                               >
-                                {/* Left: Icon and Name */}
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-base">
-                                    {muscleInfo?.icon || "🏋️"}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-black text-white truncate">
-                                      {ex.name}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
-                                      <span className="font-bold text-slate-300 tabular-nums">
-                                        {ex.sets} × {ex.reps}
-                                      </span>
-                                      <span>·</span>
-                                      <span className="font-bold text-amber-400/90 flex items-center gap-0.5">
-                                        🔒{" "}
-                                        {ex.targetWeight && ex.targetWeight > 0
-                                          ? weightUnit === "lbs"
-                                            ? `${Math.round(ex.targetWeight * 2.20462 * 2) / 2} lbs`
-                                            : `${ex.targetWeight} kg`
-                                          : "Corporal"}
-                                      </span>
-                                      <span>·</span>
-                                      <span>⏱️ {formatRest(ex.restSeconds)}</span>
+                                <div className="flex items-center justify-between gap-3">
+                                  {/* Left: Icon and Name */}
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-base">
+                                      {muscleInfo?.icon || "🏋️"}
                                     </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-black text-white truncate">
+                                        {ex.name}
+                                      </p>
+                                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
+                                        <span className="font-bold text-slate-300 tabular-nums">
+                                          {ex.sets} × {ex.reps}
+                                        </span>
+                                        <span>·</span>
+                                        <span className="font-bold text-amber-400/90 flex items-center gap-0.5">
+                                          🏋️{" "}
+                                          {ex.targetWeight && ex.targetWeight > 0
+                                            ? weightUnit === "lbs"
+                                              ? `${Math.round(ex.targetWeight * 2.20462 * 2) / 2} lbs`
+                                              : `${ex.targetWeight} kg`
+                                            : "Corporal"}
+                                        </span>
+                                        <span>·</span>
+                                        <span>⏱️ {formatRest(ex.restSeconds)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Right: Intensity and Status Badges */}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {/* Semáforo badge */}
+                                    {ex.intensity === "failure" && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm shadow-red-500/20">
+                                        🔴 Al Fallo
+                                      </span>
+                                    )}
+                                    {ex.intensity === "relax" && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        🟢 Relax
+                                      </span>
+                                    )}
+                                    {(!ex.intensity || ex.intensity === "medium") && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                        🟡 Media
+                                      </span>
+                                    )}
+
+                                    {/* Logged check */}
+                                    {isExLoggedCurrentWeek ? (
+                                      <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-xs">
+                                        ✓
+                                      </div>
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 text-xs">
+                                        ○
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
-                                {/* Right: Intensity and Status Badges */}
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {/* Semáforo badge */}
-                                  {ex.intensity === "failure" && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm shadow-red-500/20">
-                                      🔴 Al Fallo
+                                {/* Vital Fit Labs Week-over-Week Progression & Mission Bar */}
+                                {exInsight.state !== "first_week" && (
+                                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 text-[11px] flex-wrap">
+                                    <span className="text-slate-400 font-medium truncate">
+                                      Historial: <strong className="text-slate-200">{exInsight.historyChainText}</strong>
                                     </span>
-                                  )}
-                                  {ex.intensity === "relax" && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                      🟢 Relax
+                                    <span
+                                      className={cn(
+                                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
+                                        exInsight.tone === "emerald"
+                                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
+                                          : exInsight.tone === "cyan"
+                                            ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/35"
+                                            : exInsight.tone === "amber"
+                                              ? "bg-amber-500/15 text-amber-300 border-amber-500/35"
+                                              : "bg-rose-500/15 text-rose-300 border-rose-500/35"
+                                      )}
+                                    >
+                                      {exInsight.badgeLabel}
                                     </span>
-                                  )}
-                                  {(!ex.intensity || ex.intensity === "medium") && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                      🟡 Media
-                                    </span>
-                                  )}
-
-                                  {/* Logged check */}
-                                  {isExLoggedCurrentWeek ? (
-                                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-xs">
-                                      ✓
-                                    </div>
-                                  ) : (
-                                    <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 text-xs">
-                                      ○
-                                    </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

@@ -37,8 +37,8 @@ export default function ClinicalAgentPage() {
   return (
     <div className="space-y-6">
       <Header
-        title="Director Clínico IA"
-        subtitle="Terminal médica, metabólica y biomecánica con supervisión activa de tus atletas"
+        title="Co-Piloto Científico · Vital Fit Labs"
+        subtitle="Cerebro ejecutor del Entrenador: 4 Metas de 120 Días, 3 Pilares, Mapa del Macrociclo y Asignación de Rutinas"
       />
 
       {/* Top Banner with high-ticket badges */}
@@ -50,19 +50,19 @@ export default function ClinicalAgentPage() {
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-primary-500 dark:text-primary-400">
-                Red Neuronal Omnisciente Activa
+                Vital Fit Labs · Permisos Ejecutores Activos en Base de Datos
               </p>
               <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                Sincronizada con registros de adherencia, bio-readiness de 4 pilares, pesos y alertas biomecánicas en vivo.
+                Sincronizado con las Fichas Técnicas, 4 Metas de 120 Días, 3 Pilares (Entreno, Agua/Nutrición, Sueño ±1h) y Volumen Semanal MEV-MAV-MRV.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              ● Motor 1 & 3 Enlazados
+              ● Ejecutor de Rutinas & Macrociclos
             </span>
             <span className="inline-flex items-center gap-1 rounded-md border border-primary-500/30 bg-primary-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
-              Gemini 2.5 Flash
+              Vital Fit Labs AI
             </span>
           </div>
         </div>

@@ -101,9 +101,7 @@ export default function MealsPage() {
   }, [user, selectedDate]);
 
   useEffect(() => {
-    if (activeMode === 'client') {
-      loadMeals();
-    }
+    loadMeals();
   }, [loadMeals, activeMode]);
 
   const { confirm } = useConfirm();
@@ -208,21 +206,21 @@ export default function MealsPage() {
   return (
     <>
       <Header
-        title={activeMode === "trainer" ? "Comidas de Atletas" : "Agua y Comidas"}
+        title="Agua y Comidas · Vital Fit Labs"
         subtitle={
-          activeMode === "trainer"
-            ? "Supervisa la hidratación y alimentación de tus atletas"
-            : "Cada comida y cada litro de agua alimentan tus 4 metas"
+          activeMode === "trainer" && tab === "clients"
+            ? "Supervisa la hidratación prioritaria y adherencia nutricional de tus Atletas"
+            : "Cada litro de agua y cada comida sostienen tus 4 Metas de 120 Días"
         }
         action={
-          activeMode !== "trainer" ? (
+          activeMode !== "trainer" || tab === "mine" ? (
             <div className="flex gap-2">
               <Button
                 variant="secondary"
                 onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
                 size="md"
               >
-                ✨ Pedir a la IA
+                ✨ Pedir a Vital Fit Labs
               </Button>
               <Button onClick={() => setShowScanner(true)} size="md">
                 + Anotar comida
@@ -232,8 +230,37 @@ export default function MealsPage() {
         }
       />
 
+      {activeMode === "trainer" && (
+        <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6">
+          <button
+            type="button"
+            onClick={() => setTab("clients")}
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
+              tab === "clients"
+                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
+            )}
+          >
+            👥 Supervisión de Atletas
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("mine")}
+            className={cn(
+              "rounded-xl px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
+              tab === "mine"
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
+            )}
+          >
+            💧 Mi Agua y Comidas (Entrenador)
+          </button>
+        </div>
+      )}
+
       {/* Clients view (Trainer Mode) */}
-      {activeMode === 'trainer' && user ? (
+      {activeMode === 'trainer' && tab === 'clients' && user ? (
         <ClientMealsView trainerId={user.id} />
       ) : (
         <div className="space-y-6">

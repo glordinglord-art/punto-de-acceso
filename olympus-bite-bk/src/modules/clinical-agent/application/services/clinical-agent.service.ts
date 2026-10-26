@@ -83,39 +83,54 @@ export class ClinicalAgentService implements OnModuleInit {
     sharedClients.forEach((c) => clientMap.set(c.id, c));
     const allClients = Array.from(clientMap.values());
 
-    // 2. Fetch today's telemetry for all clients
+    // 2. Fetch today's telemetry + last 7 days meals + real WorkoutLogs for all clients
     const todayStr = new Date().toISOString().slice(0, 10);
     const startOfToday = new Date(`${todayStr}T00:00:00.000Z`);
     const endOfToday = new Date(`${todayStr}T23:59:59.999Z`);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const clientIds = allClients.map((c) => c.id);
 
-    const [todayMeals, todayStress, activeRoutines] = await Promise.all([
-      this.prisma.meal.findMany({
-        where: {
-          userId: { in: clientIds },
-          date: { gte: startOfToday, lte: endOfToday },
-        },
-      }),
-      this.prisma.dailyStressLog.findMany({
-        where: {
-          userId: { in: clientIds },
-          date: todayStr,
-        },
-      }),
-      this.prisma.routine.findMany({
-        where: {
-          clientId: { in: clientIds },
-          isActive: true,
-        },
-        include: {
-          routineDays: {
-            include: {
-              exercises: true,
+    const [weekMeals, todayStress, activeRoutines, recentWorkoutLogs] =
+      await Promise.all([
+        this.prisma.meal.findMany({
+          where: {
+            userId: { in: clientIds },
+            date: { gte: sevenDaysAgo, lte: endOfToday },
+          },
+        }),
+        this.prisma.dailyStressLog.findMany({
+          where: {
+            userId: { in: clientIds },
+            date: todayStr,
+          },
+        }),
+        this.prisma.routine.findMany({
+          where: {
+            clientId: { in: clientIds },
+            isActive: true,
+          },
+          include: {
+            routineDays: {
+              include: {
+                exercises: true,
+              },
             },
           },
-        },
-      }),
-    ]);
+        }),
+        this.prisma.workoutLog.findMany({
+          where: {
+            userId: { in: clientIds },
+          },
+          include: {
+            exercise: true,
+          },
+          orderBy: [{ weekNumber: 'asc' }, { createdAt: 'asc' }],
+        }),
+      ]);
+
+    const todayMeals = weekMeals.filter(
+      (m) => m.date >= startOfToday && m.date <= endOfToday,
+    );
 
     // Build comprehensive clinical portfolio context
     const clientsContextSummary = allClients
@@ -205,17 +220,56 @@ export class ClinicalAgentService implements OnModuleInit {
             ? `${c.weight}kg (base)`
             : 'Sin pesaje en ayunas';
 
+        // Analizar WorkoutLogs reales (progresión o caída de 2 semanas por ejercicio)
+        const cLogs = recentWorkoutLogs.filter((l) => l.userId === c.id);
+        const logsByEx = new Map<string, any[]>();
+        cLogs.forEach((l) => {
+          const exName = l.exercise?.name || 'Ejercicio';
+          if (!logsByEx.has(exName)) logsByEx.set(exName, []);
+          logsByEx.get(exName)!.push(l);
+        });
+        const progressionAlerts: string[] = [];
+        logsByEx.forEach((exLogs, exName) => {
+          const summaryChain = exLogs
+            .slice(-3)
+            .map(
+              (l) =>
+                `Sem${l.weekNumber}:${l.weight ? `${l.weight}kg` : 'Corp'}x${l.repsDone || '?'}`,
+            )
+            .join(' -> ');
+          progressionAlerts.push(`${exName} [${summaryChain}]`);
+        });
+        const realPerformanceSummary =
+          progressionAlerts.length > 0
+            ? progressionAlerts.slice(0, 8).join(' | ')
+            : 'Sin series registradas aún en WorkoutLogs';
+
+        const cWeekMeals = weekMeals.filter((m) => m.userId === c.id);
+        const avgWeekKcal =
+          cWeekMeals.length > 0
+            ? Math.round(
+                cWeekMeals.reduce((acc, m) => acc + (m.calories || 0), 0) /
+                  Math.max(
+                    1,
+                    new Set(
+                      cWeekMeals.map((m) => m.date.toISOString().slice(0, 10)),
+                    ).size,
+                  ),
+              )
+            : 0;
+
         return `
 - ATLETA: ${c.name}${c.id === trainer.id ? ' (TU PROPIA FICHA DE ENTRENADOR)' : ''}
   • Pacto y 4 Metas (120 Días): ${pactSummary}
-  • Nutrición Meta: ${c.targetCalories || 2200} kcal (P:${c.targetProtein || 150}g, C:${c.targetCarbs || 220}g, G:${c.targetFats || 70}g) | Agua Hoy: ${waterTodayLiters}L / ${waterTargetLiters}L
+  • Nutrición Meta: ${c.targetCalories || 2200} kcal (P:${c.targetProtein || 150}g, C:${c.targetCarbs || 220}g, G:${c.targetFats || 70}g) | Promedio 7 días: ${avgWeekKcal} kcal/día | Agua Hoy: ${waterTodayLiters}L / ${waterTargetLiters}L
   • Biometría y Último Pesaje en Ayunas: ${weighInSummary}, Altura ${c.height ? `${c.height} cm` : 'No registrada'} (Preferencia: ${c.weightUnitPreference || 'kg'})
   • Perfil Clínico / Lesiones: ${c.medicalConditions || 'Sin lesiones reportadas'}
   • Nivel / Equipamiento: ${c.experienceLevel || 'Intermedio'} / ${c.equipmentAccess || 'Gimnasio completo'}
   • Telemetría de Hoy:
     - Comidas: ${cMeals.length > 0 ? `${cMeals.length} comidas (${totalKcal} kcal, ${totalProt}g proteína)` : 'Sin comidas registradas hoy'}
     - Sueño y Regularidad Circadiana (±1h): ${sleepInfo}
-  • Plan de Entrenamiento y Volumen: ${routineDetails}
+  • Plan de Entrenamiento y Volumen Planeado: ${routineDetails}
+  • RENDIMIENTO REAL EN GIMNASIO (WorkoutLogs Semana a Semana): ${realPerformanceSummary}
 `;
       })
       .join('\n');
@@ -268,9 +322,13 @@ RESPONSABILIDADES CLARAS DE LA IA EN EL ECOSISTEMA:
      [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "log_sleep", "hoursSlept": 7.5, "bedtime": "22:30", "wakeTime": "06:00", "withinOneHourWindow": true}]
    - Registrar pesaje semanal en ayunas (y % de grasa mensual opcional):
      [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "log_weighin", "weight": 76.4, "unit": "kg", "bodyFatPct": 14.5}]
-   - Publicar el Reporte Semanal del Entrenador en la pantalla del atleta:
-     [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "publish_weekly_report", "summary": "Gran semana cumpliendo el volumen óptimo MAV.", "wins": "Subiste +0.25kg limpios y mantuviste tu horario de sueño.", "nextWeekFocus": "Subir 2.5kg en press inclinado y mantener 3.2L de agua/día."}]
-   En consultas diagnósticas donde no te pidan ejecutar un cambio, NO emitas etiquetas [COMANDO_RUTINA].
+   - Publicar o co-crear el Reporte Semanal del Entrenador en la pantalla y bitácora del atleta (Capa 1: Bitácora del Héroe):
+     [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "publish_weekly_report", "weekNumber": 2, "summary": "Gran semana cumpliendo el volumen óptimo MAV (+350 kg movidos vs sem anterior).", "wins": "Subiste +0.25kg limpios, lograste 6/7 días de sueño circadiano y batiste PR en Sentadilla.", "nextWeekFocus": "Subir 2.5kg en press inclinado y mantener 3.2L de agua/día."}]
+   - Guardar el Mapa del Macrociclo de 120 Días (3 Mesociclos) en la Ficha Técnica del Atleta:
+     [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "save_macrocycle_map", "title": "Macrociclo 120 Días: Fuerza e Hipertrofia Híbrida", "splitType": "Upper / Lower + Skill (4 días/sem)", "weeklyVolumeTarget": "12-16 series/músculo/sem (Zona MAV)", "mesocycles": [{"number": 1, "weeks": "Sem 1-4", "name": "Base Técnica y MEV-MAV", "focus": "Control motor y RIR 2-3", "volumeRange": "10-12 series/sem"}, {"number": 2, "weeks": "Sem 5-8", "name": "Sobrecarga Progresiva MAV", "focus": "Doble progresión de cargas", "volumeRange": "14-16 series/sem"}, {"number": 3, "weeks": "Sem 9-12", "name": "Intensificación y Récords", "focus": "Pico de fuerza y consolidación", "volumeRange": "12-15 series/sem + Descarga"}]}]
+   - CREAR Y ASIGNAR UNA RUTINA COMPLETA ACTIVA EN LA BASE DE DATOS (REGLA DE ORO: Siempre que el Entrenador te pida crear, armar o asignar una rutina para un Atleta o para sí mismo, NUNCA te limites a escribirla en el chat; DEBES emitir obligatoriamente este comando al final para que quede creada y asignada en la base de datos):
+     [COMANDO_RUTINA: {"clientName": "NombreExacto", "action": "create_and_assign_routine", "routineName": "Mesociclo 1: Fuerza y Dominio Corporal (Vital Fit Labs)", "description": "Frecuencia 2 · Jerarquía Híbrida · Zona MAV", "weekCount": 4, "days": [{"dayNumber": 1, "focusArea": "Torso Fuerza + Dominio Corporal", "exercises": [{"name": "Dominadas Estrictas / Lastradas", "muscleGroup": "back", "sets": 4, "reps": "6-8", "targetWeight": 10, "restSeconds": 120, "observations": "1º Dominio Corporal · RIR 2"}, {"name": "Press Banca con Barra", "muscleGroup": "chest", "sets": 4, "reps": "6-8", "targetWeight": 70, "restSeconds": 120, "observations": "2º Compuesto Pesado · Doble Progresión"}]}]}]
+   En consultas diagnósticas donde no te pidan crear/asignar rutina ni ejecutar un cambio, NO emitas etiquetas [COMANDO_RUTINA].
 
 TELEMETRÍA EN VIVO DE LOS ATLETAS DE ${trainer.name.toUpperCase()}:
 ${clientsContextSummary}
@@ -324,15 +382,35 @@ ${clientsContextSummary}
       let replyText = response.response.text();
 
       // Check if response contains any [COMANDO_RUTINA: ...] block and process it
-      const commandMatches = [
-        ...replyText.matchAll(/\[COMANDO_RUTINA:\s*(\{.*?\})\]/gs),
-      ];
+      const commandMatches = this.extractRoutineCommands(replyText);
       for (const match of commandMatches) {
         try {
-          const cmd = JSON.parse(match[1]);
+          const cmd = JSON.parse(match.jsonStr);
           const action = cmd.action || 'replace_exercise';
 
           if (
+            action === 'create_and_assign_routine' &&
+            (cmd.clientName || cmd.clientId) &&
+            Array.isArray(cmd.days)
+          ) {
+            const createdName = await this.executeCreateAndAssignRoutine(
+              cmd,
+              trainerId,
+            );
+            replyText = replyText.replace(
+              match.fullMatch,
+              `\n> ⚡ **Rutina Creada y Asignada en Base de Datos:** Se activó **${createdName || cmd.routineName || 'Nueva Rutina Vital Fit Labs'}** (${cmd.days.length} días programados) en el perfil de ${cmd.clientName || 'el atleta'}.\n`,
+            );
+          } else if (
+            action === 'save_macrocycle_map' &&
+            (cmd.clientName || cmd.clientId)
+          ) {
+            await this.executeSaveMacrocycleMap(cmd);
+            replyText = replyText.replace(
+              match.fullMatch,
+              `\n> 🗺️ **Mapa del Macrociclo (120 Días) Guardado:** Se estructuraron los 3 Mesociclos en la Ficha Técnica de ${cmd.clientName || 'el atleta'}.\n`,
+            );
+          } else if (
             action === 'replace_exercise' &&
             (cmd.clientName || cmd.clientId) &&
             cmd.oldExercise &&
@@ -346,7 +424,7 @@ ${clientsContextSummary}
               cmd.rationale,
             );
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Acción Ejecutada:** Se sustituyó *${cmd.oldExercise}* por *${cmd.newExercise}* en la rutina activa de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -356,7 +434,7 @@ ${clientsContextSummary}
           ) {
             await this.executeLoadUpdate(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Carga Actualizada:** Se ajustó *${cmd.exerciseName}* en la rutina activa de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -365,7 +443,7 @@ ${clientsContextSummary}
           ) {
             await this.executeNutritionUpdate(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Nutrición Calibrada:** Se actualizaron las metas nutricionales de ${cmd.clientName || 'el atleta'} (${cmd.calories ? `${cmd.calories} kcal` : 'macros actualizados'}).\n`,
             );
           } else if (
@@ -375,7 +453,7 @@ ${clientsContextSummary}
           ) {
             await this.executeMealLog(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Comida Registrada:** Se añadió *${cmd.mealName}* (${cmd.calories || 0} kcal) al registro de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -383,9 +461,9 @@ ${clientsContextSummary}
             (cmd.clientName || cmd.clientId) &&
             cmd.exerciseName
           ) {
-            await this.executeAddExercise(cmd);
+            await this.executeAddExercise(cmd, trainerId);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Ejercicio Añadido:** Se agregó *${cmd.exerciseName}* (${cmd.sets || 3}x${cmd.reps || '8-10'}) al Día ${cmd.dayNumber || 1} de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -395,7 +473,7 @@ ${clientsContextSummary}
           ) {
             await this.executeRemoveExercise(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Volumen Depurado:** Se eliminó *${cmd.exerciseName}* de la rutina activa de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -404,7 +482,7 @@ ${clientsContextSummary}
           ) {
             await this.executeHeroPactUpdate(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Metas de 120 Días Actualizadas:** Se actualizaron los objetivos del ciclo de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -414,7 +492,7 @@ ${clientsContextSummary}
           ) {
             await this.executeWaterLog(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Agua Registrada:** Se actualizaron **${cmd.liters} L** de agua hoy para ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -424,7 +502,7 @@ ${clientsContextSummary}
           ) {
             await this.executeSleepLog(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Sueño Registrado:** Se guardaron **${cmd.hoursSlept}h** de descanso (${cmd.bedtime || '22:30'} a ${cmd.wakeTime || '06:30'}) para ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -434,7 +512,7 @@ ${clientsContextSummary}
           ) {
             await this.executeWeighInLog(cmd);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Pesaje en Ayunas Registrado:** Se guardó **${cmd.weight} ${cmd.unit || 'kg'}** para ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else if (
@@ -444,20 +522,20 @@ ${clientsContextSummary}
           ) {
             await this.executePublishWeeklyReport(cmd, trainer.name);
             replyText = replyText.replace(
-              match[0],
+              match.fullMatch,
               `\n> ⚡ **Reporte Semanal Publicado:** El informe de la semana ya está visible en la pantalla principal de ${cmd.clientName || 'el atleta'}.\n`,
             );
           } else {
-            replyText = replyText.replace(match[0], '');
+            replyText = replyText.replace(match.fullMatch, '');
           }
-        } catch {
-          replyText = replyText.replace(match[0], '');
+        } catch (cmdErr) {
+          this.logger.warn('Error procesando COMANDO_RUTINA:', cmdErr);
+          replyText = replyText.replace(match.fullMatch, '');
         }
       }
 
       // Cleanup: strip any leftover command tags, JSON leftovers or raw UUIDs
-      replyText = replyText
-        .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
+      replyText = this.stripLeftoverRoutineCommands(replyText)
         .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
         .trim();
 
@@ -583,15 +661,312 @@ ${clientsContextSummary}
     }
   }
 
-  private async executeAddExercise(cmd: any) {
+  /**
+   * Extrae todos los bloques [COMANDO_RUTINA: { ... }] soportando objetos y arrays anidados
+   * (ej. días y ejercicios dentro de create_and_assign_routine o mesocycles en save_macrocycle_map).
+   */
+  private extractRoutineCommands(
+    text: string,
+  ): { fullMatch: string; jsonStr: string }[] {
+    const results: { fullMatch: string; jsonStr: string }[] = [];
+    const marker = '[COMANDO_RUTINA:';
+    let searchFrom = 0;
+
+    while (searchFrom < text.length) {
+      const startIdx = text.indexOf(marker, searchFrom);
+      if (startIdx === -1) break;
+
+      const braceStart = text.indexOf('{', startIdx + marker.length);
+      if (braceStart === -1) break;
+
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      let braceEnd = -1;
+
+      for (let i = braceStart; i < text.length; i++) {
+        const ch = text[i];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (ch === '{') depth++;
+          else if (ch === '}') {
+            depth--;
+            if (depth === 0) {
+              braceEnd = i;
+              break;
+            }
+          }
+        }
+      }
+
+      if (braceEnd === -1) break;
+
+      let endIdx = braceEnd + 1;
+      while (endIdx < text.length && /\s/.test(text[endIdx])) {
+        endIdx++;
+      }
+      if (text[endIdx] === ']') {
+        endIdx++;
+      }
+
+      results.push({
+        fullMatch: text.slice(startIdx, endIdx),
+        jsonStr: text.slice(braceStart, braceEnd + 1),
+      });
+      searchFrom = endIdx;
+    }
+
+    return results;
+  }
+
+  private stripLeftoverRoutineCommands(text: string): string {
+    let cleaned = text;
+    const leftover = this.extractRoutineCommands(cleaned);
+    for (const item of leftover) {
+      cleaned = cleaned.replace(item.fullMatch, '');
+    }
+    return cleaned.replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '');
+  }
+
+  private normalizeMuscleGroup(raw?: string): string {
+    const val = String(raw || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    const validMuscleGroups = [
+      'chest',
+      'back',
+      'shoulders',
+      'biceps',
+      'triceps',
+      'legs',
+      'glutes',
+      'abs',
+      'cardio',
+      'full_body',
+      'quads',
+      'hamstrings',
+      'calves',
+      'forearms',
+      'traps',
+      'core',
+      'abductors',
+      'adductors',
+      'hybrid',
+    ];
+    if (validMuscleGroups.includes(val)) return val;
+
+    if (val.includes('pecho') || val.includes('pectoral') || val.includes('empuje')) return 'chest';
+    if (val.includes('espalda') || val.includes('dorsal') || val.includes('traccion') || val.includes('dominada')) return 'back';
+    if (val.includes('hombro') || val.includes('deltoide')) return 'shoulders';
+    if (val.includes('bicep')) return 'biceps';
+    if (val.includes('tricep')) return 'triceps';
+    if (val.includes('cuadricep')) return 'quads';
+    if (val.includes('isquio') || val.includes('femoral')) return 'hamstrings';
+    if (val.includes('glute')) return 'glutes';
+    if (val.includes('gemelo') || val.includes('pantorrilla') || val.includes('soleo')) return 'calves';
+    if (val.includes('pierna') || val.includes('tren inferior')) return 'legs';
+    if (val.includes('abdom') || val.includes('core')) return 'abs';
+    if (val.includes('cardio') || val.includes('aerob') || val.includes('correr')) return 'cardio';
+    if (val.includes('calistenia') || val.includes('skill') || val.includes('hibrid')) return 'hybrid';
+    return 'full_body';
+  }
+
+  private async executeSaveMacrocycleMap(cmd: any) {
     const targetId = await this.resolveAthleteId(cmd.clientId, cmd.clientName);
     if (!targetId) return;
 
-    const routine = await this.prisma.routine.findFirst({
+    const athlete = await this.prisma.user.findUnique({ where: { id: targetId } });
+    if (!athlete) return;
+
+    const anamnesis =
+      athlete.anamnesisData && typeof athlete.anamnesisData === 'object'
+        ? { ...(athlete.anamnesisData as any) }
+        : {};
+    if (!anamnesis.heroPact) {
+      anamnesis.heroPact = { status: 'ACTIVE', objectives: {} };
+    }
+
+    anamnesis.heroPact.macrocycleMap = {
+      title: cmd.title || 'Mapa del Macrociclo de 120 Días — Vital Fit Labs',
+      splitType: cmd.splitType || 'Frecuencia 2 · Jerarquía Híbrida (MAV)',
+      weeklyVolumeTarget:
+        cmd.weeklyVolumeTarget || '10–18 series efectivas/músculo/semana',
+      updatedAt: new Date().toISOString().slice(0, 10),
+      mesocycles:
+        Array.isArray(cmd.mesocycles) && cmd.mesocycles.length > 0
+          ? cmd.mesocycles.map((m: any, idx: number) => ({
+              number: Number(m.number) || idx + 1,
+              weeks: m.weeks || `Semanas ${idx * 4 + 1}-${(idx + 1) * 4}`,
+              name: m.name || `Mesociclo ${idx + 1}`,
+              focus: m.focus || 'Sobrecarga progresiva y control técnico',
+              volumeRange: m.volumeRange || '12-16 series/sem · RIR 1-2',
+            }))
+          : [
+              {
+                number: 1,
+                weeks: 'Semanas 1-4',
+                name: 'Mesociclo 1: Adaptación Anatómica y Base MEV-MAV',
+                focus: 'Fijación técnica, dominio corporal fresco y RIR 2-3',
+                volumeRange: '10-12 series/sem · RIR 2-3',
+              },
+              {
+                number: 2,
+                weeks: 'Semanas 5-8',
+                name: 'Mesociclo 2: Sobrecarga Progresiva (Pico MAV)',
+                focus: 'Doble progresión de cargas en básicos e hipertrofia',
+                volumeRange: '14-18 series/sem · RIR 1-2',
+              },
+              {
+                number: 3,
+                weeks: 'Semanas 9-12',
+                name: 'Mesociclo 3: Intensificación, Récords y Consolidación',
+                focus: 'Conquista de las 4 Metas de 120 Días + Descarga Inteligente',
+                volumeRange: '12-15 series/sem · RIR 1 + Deload',
+              },
+            ],
+    };
+
+    await this.prisma.user.update({
+      where: { id: targetId },
+      data: { anamnesisData: anamnesis },
+    });
+  }
+
+  private async executeCreateAndAssignRoutine(
+    cmd: any,
+    fallbackTrainerId?: string,
+  ): Promise<string | null> {
+    const targetId = await this.resolveAthleteId(cmd.clientId, cmd.clientName);
+    if (!targetId) return null;
+
+    const athlete = await this.prisma.user.findUnique({ where: { id: targetId } });
+    if (!athlete) return null;
+
+    const trainerId = athlete.trainerId || fallbackTrainerId || athlete.id;
+    const routineName = String(
+      cmd.routineName ||
+        cmd.name ||
+        `Mesociclo Activo — ${athlete.name} (Vital Fit Labs)`,
+    );
+    const description = String(
+      cmd.description ||
+        'Rutina estructurada y asignada automáticamente por Vital Fit Labs (Jerarquía Híbrida + Zona MAV)',
+    );
+    const weekCount = Number(cmd.weekCount) || 4;
+    const rawDays = Array.isArray(cmd.days) ? cmd.days : [];
+    if (rawDays.length === 0) return null;
+
+    // Desactivar rutinas previas del atleta para que esta quede como la Rutina Activa oficial
+    await this.prisma.routine.updateMany({
+      where: { clientId: targetId, isActive: true },
+      data: { isActive: false },
+    });
+
+    const createdRoutine = await this.prisma.routine.create({
+      data: {
+        name: routineName,
+        description,
+        trainerId,
+        clientId: targetId,
+        weekCount,
+        isFavorable: true,
+        isActive: true,
+        routineDays: {
+          create: rawDays.map((day: any, dIdx: number) => {
+            const rawExercises = Array.isArray(day.exercises)
+              ? day.exercises
+              : [];
+            const isRestDay = Boolean(day.isRestDay) || rawExercises.length === 0;
+            return {
+              dayNumber: Number(day.dayNumber) || dIdx + 1,
+              focusArea: String(
+                day.focusArea || day.name || `Día ${dIdx + 1}`,
+              ),
+              isRestDay,
+              restDayNote: day.restDayNote
+                ? String(day.restDayNote)
+                : isRestDay
+                  ? 'Día de recuperación sistémica, sueño ±1h e hidratación óptima'
+                  : null,
+              exercises: {
+                create: rawExercises.map((ex: any, exIdx: number) => {
+                  const rawWeight =
+                    ex.targetWeight !== undefined ? Number(ex.targetWeight) : null;
+                  const weightInKg =
+                    rawWeight !== null && !Number.isNaN(rawWeight)
+                      ? ex.unit === 'lbs'
+                        ? Math.round((rawWeight / 2.20462) * 10) / 10
+                        : rawWeight
+                      : null;
+
+                  return {
+                    name: String(
+                      ex.name || ex.exerciseName || `Ejercicio ${exIdx + 1}`,
+                    ),
+                    muscleGroup: this.normalizeMuscleGroup(
+                      ex.muscleGroup || day.focusArea,
+                    ) as any,
+                    sets: Number(ex.sets) || 3,
+                    reps: String(ex.reps || '8-10'),
+                    restSeconds: Number(ex.restSeconds) || 90,
+                    targetWeight: weightInKg,
+                    observations: ex.observations
+                      ? String(ex.observations)
+                      : 'Doble progresión Vital Fit Labs · RIR 1-2',
+                    order: exIdx + 1,
+                  };
+                }),
+              },
+            };
+          }),
+        },
+      },
+    });
+
+    return createdRoutine.name;
+  }
+
+  private async executeAddExercise(cmd: any, fallbackTrainerId?: string) {
+    const targetId = await this.resolveAthleteId(cmd.clientId, cmd.clientName);
+    if (!targetId) return;
+
+    let routine = await this.prisma.routine.findFirst({
       where: { clientId: targetId, isActive: true },
       include: { routineDays: { include: { exercises: true } } },
     });
-    if (!routine || routine.routineDays.length === 0) return;
+
+    // Si el atleta aún no tenía rutina activa, crear una automáticamente para no fallar en silencio
+    if (!routine || routine.routineDays.length === 0) {
+      await this.executeCreateAndAssignRoutine(
+        {
+          clientId: targetId,
+          routineName: 'Mesociclo 1 — Vital Fit Labs',
+          days: [
+            {
+              dayNumber: Number(cmd.dayNumber) || 1,
+              focusArea: cmd.focusArea || 'Entrenamiento Principal',
+              exercises: [cmd],
+            },
+          ],
+        },
+        fallbackTrainerId,
+      );
+      return;
+    }
 
     const targetDay =
       routine.routineDays.find((d) => d.dayNumber === Number(cmd.dayNumber)) ||
@@ -604,36 +979,18 @@ ${clientsContextSummary}
           : Number(cmd.targetWeight)
         : null;
 
-    const validMuscleGroups = [
-      'chest',
-      'back',
-      'shoulders',
-      'biceps',
-      'triceps',
-      'quads',
-      'hamstrings',
-      'glutes',
-      'calves',
-      'abs',
-      'cardio',
-      'full_body',
-    ];
-    const normalizedMuscle = validMuscleGroups.includes(
-      String(cmd.muscleGroup || '').toLowerCase(),
-    )
-      ? String(cmd.muscleGroup).toLowerCase()
-      : 'full_body';
+    const normalizedMuscle = this.normalizeMuscleGroup(cmd.muscleGroup);
 
     await this.prisma.exercise.create({
       data: {
         routineDayId: targetDay.id,
-        name: String(cmd.exerciseName),
+        name: String(cmd.exerciseName || cmd.name),
         muscleGroup: normalizedMuscle as any,
         sets: Number(cmd.sets) || 3,
         reps: String(cmd.reps || '8-10'),
         targetWeight: weightInKg,
         restSeconds: Number(cmd.restSeconds) || 90,
-        observations: cmd.observations ? String(cmd.observations) : 'Añadido por Co-Piloto IA',
+        observations: cmd.observations ? String(cmd.observations) : 'Añadido por Vital Fit Labs',
         order: targetDay.exercises.length + 1,
       },
     });
@@ -878,21 +1235,34 @@ ${clientsContextSummary}
       athlete.anamnesisData && typeof athlete.anamnesisData === 'object'
         ? (athlete.anamnesisData as any)
         : {};
-    const prevReports = Array.isArray(anamnesis.weeklyReports)
-      ? anamnesis.weeklyReports
+    const prevReports: any[] = Array.isArray(anamnesis.weeklyReports)
+      ? [...anamnesis.weeklyReports]
       : [];
-    anamnesis.weeklyReports = [
-      ...prevReports.slice(-24),
-      {
-        id: `rep-${Date.now()}`,
-        weekNumber: prevReports.length + 1,
-        publishedAt: todayStr,
-        trainerName,
-        summary: String(cmd.summary || ''),
-        wins: String(cmd.wins || ''),
-        nextWeekFocus: String(cmd.nextWeekFocus || ''),
-      },
-    ];
+
+    const targetWeekNumber = Number(cmd.weekNumber) || (prevReports.length + 1);
+    const existingIndex = prevReports.findIndex(
+      (r) => Number(r.weekNumber) === targetWeekNumber,
+    );
+
+    const reportPayload = {
+      id: existingIndex >= 0 ? prevReports[existingIndex].id : `rep-${Date.now()}`,
+      weekNumber: targetWeekNumber,
+      publishedAt: todayStr,
+      trainerName: trainerName || 'Tu Entrenador',
+      summary: String(cmd.summary || ''),
+      wins: String(cmd.wins || ''),
+      nextWeekFocus: String(cmd.nextWeekFocus || ''),
+      volumeTotalKg: cmd.volumeTotalKg ? Number(cmd.volumeTotalKg) : undefined,
+      volumeDeltaPct: cmd.volumeDeltaPct ? Number(cmd.volumeDeltaPct) : undefined,
+      sleepCompliance: cmd.sleepCompliance ? String(cmd.sleepCompliance) : undefined,
+    };
+
+    if (existingIndex >= 0) {
+      prevReports[existingIndex] = reportPayload;
+      anamnesis.weeklyReports = prevReports;
+    } else {
+      anamnesis.weeklyReports = [...prevReports.slice(-24), reportPayload];
+    }
 
     await this.prisma.user.update({
       where: { id: targetId },
@@ -991,17 +1361,27 @@ ${clientsContextSummary}
     const startOfToday = new Date(`${todayStr}T00:00:00.000Z`);
     const endOfToday = new Date(`${todayStr}T23:59:59.999Z`);
 
-    const [recentMeals, activeRoutine] = await Promise.all([
-      this.prisma.meal.findMany({
-        where: { userId: athleteId },
-        orderBy: { date: 'desc' },
-        take: 10,
-      }),
-      this.prisma.routine.findFirst({
-        where: { clientId: athleteId, isActive: true },
-        include: { routineDays: { include: { exercises: true } } },
-      }),
-    ]);
+    const [recentMeals, activeRoutine, athleteWorkoutLogs, lastAssessment] =
+      await Promise.all([
+        this.prisma.meal.findMany({
+          where: { userId: athleteId },
+          orderBy: { date: 'desc' },
+          take: 20,
+        }),
+        this.prisma.routine.findFirst({
+          where: { clientId: athleteId, isActive: true },
+          include: { routineDays: { include: { exercises: true } } },
+        }),
+        this.prisma.workoutLog.findMany({
+          where: { userId: athleteId },
+          include: { exercise: true },
+          orderBy: [{ weekNumber: 'asc' }, { createdAt: 'asc' }],
+        }),
+        this.prisma.physicalAssessment.findFirst({
+          where: { clientId: athleteId },
+          orderBy: { date: 'desc' },
+        }),
+      ]);
 
     const todayMeals = recentMeals.filter(
       (m) => m.date >= startOfToday && m.date <= endOfToday,
@@ -1062,6 +1442,38 @@ ${clientsContextSummary}
       ? anamnesis.waterLogs.slice(-5)
       : [];
 
+    // Construir cadena de progresión/fatiga real desde WorkoutLogs
+    const logsByEx = new Map<string, any[]>();
+    athleteWorkoutLogs.forEach((l) => {
+      const exName = l.exercise?.name || 'Ejercicio';
+      if (!logsByEx.has(exName)) logsByEx.set(exName, []);
+      logsByEx.get(exName)!.push(l);
+    });
+    const workoutProgressionLines: string[] = [];
+    logsByEx.forEach((exLogs, exName) => {
+      const chain = exLogs
+        .slice(-4)
+        .map((l) => {
+          const setsStr = Array.isArray(l.setsData)
+            ? (l.setsData as any[])
+                .filter((s) => s.completed || s.reps)
+                .map((s) => `${s.weight || 0}kgx${s.reps || 0}`)
+                .join(',')
+            : `${l.weight || 0}kgx${l.repsDone || '?'}`;
+          return `Sem ${l.weekNumber}: [${setsStr}]${l.observations ? ` (Nota: ${l.observations})` : ''}`;
+        })
+        .join(' ➔ ');
+      workoutProgressionLines.push(`  • ${exName}: ${chain}`);
+    });
+    const workoutLogsSummary =
+      workoutProgressionLines.length > 0
+        ? workoutProgressionLines.join('\n')
+        : '  • Sin series registradas aún en WorkoutLogs.';
+
+    const assessmentSummary = lastAssessment
+      ? `Última Valoración Física (${lastAssessment.date.toISOString().slice(0, 10)}): Cintura ${lastAssessment.waist || '?'}cm, Espalda ${lastAssessment.back || '?'}cm, Brazo ${lastAssessment.rightArm || '?'}cm, Muslo ${lastAssessment.rightThigh || '?'}cm, %Grasa ${lastAssessment.fatPercentage || '?'}%`
+      : 'Sin valoraciones antropométricas registradas';
+
     const systemInstruction = `
 Eres el AGENTE CLÍNICO Y CO-PILOTO CIENTÍFICO PRIVADO DEL ENTRENADOR analizando el caso exclusivo del atleta **${athlete.name}**.
 IMPORTANTE: Esta es la MEMORIA CLÍNICA PRIVADA de la Ficha Técnica de ${athlete.name}. El atleta NUNCA ve este chat. Aquí puedes discutir con total franqueza clínica y biomecánica con el entrenador sobre adherencia, estancamientos, psicología del atleta, ajustes de volumen semanal (MEV-MAV-MRV), cargas y nutrición.
@@ -1081,17 +1493,33 @@ EXPEDIENTE COMPLETO EN VIVO DE ${athlete.name.toUpperCase()}:
   • Últimos Pesajes en Ayunas: ${weighIns.length > 0 ? weighIns.map((w: any) => `${w.date}: ${w.weightKg}kg (EMA:${w.movingAverageKg || w.trendWeightKg || w.weightKg}kg)`).join(' | ') : 'Sin pesajes'}
 - Plan de Entrenamiento y Volumen Semanal (MEV 6-9, MAV 10-20, MRV >20, máx 8-10 series/sesión por músculo):
 ${routineDetails}
+- HISTORIAL REAL DE CARGAS Y SERIES SEMANA A SEMANA (WorkoutLogs en Gimnasio):
+${workoutLogsSummary}
+- VALORACIÓN FÍSICA / PERÍMETROS: ${assessmentSummary}
 
-REGLAS Y PERMISOS EJECUTORES SOBRE ${athlete.name.toUpperCase()}:
-1. Incluye siempre al final una breve cápsula: ### 🎓 Fundamento Científico para el Entrenador.
-2. Si el entrenador te pide ejecutar cualquier cambio sobre ${athlete.name}, emite al final la etiqueta exacta (usando siempre "clientId": "${athlete.id}"):
+PROTOCOLO ANTE CAÍDA DE RENDIMIENTO DE 2 SEMANAS:
+- Si detectas en los WorkoutLogs que el atleta bajó peso o repeticiones durante 2 semanas seguidas:
+  1) Revisa primero si falló en Sueño (±1h) o Agua/Calorías (Deuda de Recuperación).
+  2) Si Sueño y Agua están bien pero cayó 2 semanas seguidas, diagnostica fatiga acumulada / exceso de MRV y propón una Descarga Inteligente (-1 serie y -10% de peso con RIR 2-3).
+
+REGLAS Y PERMISOS EJECUTORES DE VITAL FIT LABS SOBRE ${athlete.name.toUpperCase()}:
+1. FLUJO DE TRABAJO CLÍNICO EN 3 PASOS:
+   - Paso 1: Debatir y fijar el Acuerdo de las 4 Metas de 120 Días + 3 Pilares (Entreno, Agua/Nutrición, Sueño ±1h).
+   - Paso 2: Estructurar y guardar el Mapa del Macrociclo de 120 Días (3 Mesociclos de 4 semanas) en la Ficha Técnica.
+   - Paso 3: Crear y asignar directamente la Rutina Activa en la base de datos.
+2. Incluye siempre al final una breve cápsula: ### 🎓 Fundamento Científico para el Entrenador.
+3. REGLA DE ORO DE EJECUCIÓN AUTOMÁTICA: El Entrenador NUNCA debe transcribir ni asignar manualmente lo que acuerden aquí. Cuando el Entrenador te pida fijar metas, guardar el mapa del macrociclo o crear/asignar la rutina para ${athlete.name}, DEBES emitir obligatoriamente al final de tu respuesta la etiqueta exacta (usando siempre "clientId": "${athlete.id}"):
+   - CREAR Y ASIGNAR LA RUTINA COMPLETA EN LA BASE DE DATOS (úsalo SIEMPRE que te pidan crear, armar, diseñar o asignar una rutina):
+     [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "create_and_assign_routine", "routineName": "Mesociclo 1: Fuerza y Dominio Corporal (Vital Fit Labs)", "description": "Frecuencia 2 · Jerarquía Híbrida · Zona MAV", "weekCount": 4, "days": [{"dayNumber": 1, "focusArea": "Día 1: Torso Fuerza + Dominio Corporal", "exercises": [{"name": "Dominadas Estrictas / Lastradas", "muscleGroup": "back", "sets": 4, "reps": "6-8", "targetWeight": 10, "restSeconds": 120, "observations": "1º Dominio Corporal · RIR 2"}, {"name": "Press Inclinado con Mancuernas", "muscleGroup": "chest", "sets": 4, "reps": "8-10", "targetWeight": 28, "restSeconds": 120, "observations": "2º Compuesto Pesado · Doble Progresión"}]}]}]
+   - GUARDAR EL MAPA DEL MACROCICLO DE 120 DÍAS (3 MESOCICLOS) EN LA FICHA TÉCNICA:
+     [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "save_macrocycle_map", "title": "Macrociclo 120 Días — Vital Fit Labs", "splitType": "Upper / Lower Híbrido (4 días/sem)", "weeklyVolumeTarget": "12-16 series/músculo/sem (Zona MAV)", "mesocycles": [{"number": 1, "weeks": "Semanas 1-4", "name": "Mesociclo 1: Base Técnica y MEV-MAV", "focus": "Control motor, RIR 2-3 y adherencia a los 3 pilares", "volumeRange": "10-12 series/sem"}, {"number": 2, "weeks": "Semanas 5-8", "name": "Mesociclo 2: Sobrecarga Progresiva (Pico MAV)", "focus": "Doble progresión de cargas e hipertrofia", "volumeRange": "14-16 series/sem"}, {"number": 3, "weeks": "Semanas 9-12", "name": "Mesociclo 3: Intensificación y Récords", "focus": "Conquista de las 4 Metas + Descarga Inteligente", "volumeRange": "12-15 series/sem + Deload"}]}]
    - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "replace_exercise", "oldExercise": "...", "newExercise": "...", "rationale": "..."}]
    - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "update_load", "exerciseName": "...", "sets": 4, "reps": "6-8", "targetWeight": 80, "unit": "kg"}]
    - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "add_exercise", "dayNumber": 1, "exerciseName": "...", "muscleGroup": "chest", "sets": 3, "reps": "8-10", "targetWeight": 20, "unit": "kg"}]
    - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "remove_exercise", "exerciseName": "..."}]
    - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "update_nutrition", "calories": 2500, "protein": 170, "carbs": 280, "fats": 70, "waterLitersTarget": 3.2}]
-   - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "update_hero_pact", "targetWeightKg": 76, "weeklyDeltaTargetKg": 0.25}]
-   - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "publish_weekly_report", "summary": "...", "wins": "...", "nextWeekFocus": "..."}]
+   - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "update_hero_pact", "targetWeightKg": 76, "weeklyDeltaTargetKg": 0.25, "strengthExercise": "Press Banca", "strengthTargetWeight": 100, "skillName": "Dominadas", "skillTargetMark": "12 reps estrictas", "aerobicTargetMark": "5K en 24 min"}]
+   - [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "publish_weekly_report", "weekNumber": 1, "summary": "...", "wins": "...", "nextWeekFocus": "..."}]
    - Si el entrenador menciona un dato clínico nuevo importante para recordar en el futuro, puedes guardarlo en la bitácora privada con:
      [COMANDO_RUTINA: {"clientId": "${athlete.id}", "action": "append_private_note", "note": "Resumen corto del hallazgo o acuerdo clínico"}]
 `;
@@ -1119,7 +1547,7 @@ REGLAS Y PERMISOS EJECUTORES SOBRE ${athlete.name.toUpperCase()}:
         role: 'model' as const,
         parts: [
           {
-            text: `Memoria clínica privada de ${athlete.name} sincronizada. Lista para discutir su evolución y ejecutar ajustes en su plan.`,
+            text: `Memoria clínica privada de ${athlete.name} sincronizada en Vital Fit Labs. Lista para definir el Acuerdo de 4 Metas, diseñar el Mapa del Macrociclo y crear/asignar su Rutina Activa en la base de datos.`,
           },
         ],
       },
@@ -1137,17 +1565,30 @@ REGLAS Y PERMISOS EJECUTORES SOBRE ${athlete.name.toUpperCase()}:
     let replyText = response.response.text();
     let updatedNotes = anamnesis.trainerPrivateMemory || '';
 
-    const commandMatches = [
-      ...replyText.matchAll(/\[COMANDO_RUTINA:\s*(\{.*?\})\]/gs),
-    ];
+    const commandMatches = this.extractRoutineCommands(replyText);
     for (const match of commandMatches) {
       try {
-        const cmd = JSON.parse(match[1]);
+        const cmd = JSON.parse(match.jsonStr);
         cmd.clientId = athlete.id;
         cmd.clientName = athlete.name;
         const action = cmd.action;
 
-        if (action === 'replace_exercise' && cmd.oldExercise && cmd.newExercise) {
+        if (action === 'create_and_assign_routine' && Array.isArray(cmd.days)) {
+          const createdName = await this.executeCreateAndAssignRoutine(
+            cmd,
+            athlete.trainerId || athlete.id,
+          );
+          replyText = replyText.replace(
+            match.fullMatch,
+            `\n> ⚡ **Rutina Creada y Asignada en Base de Datos:** Se activó **${createdName || cmd.routineName || 'Nueva Rutina Vital Fit Labs'}** (${cmd.days.length} días programados) directamente en el perfil de ${athlete.name}.\n`,
+          );
+        } else if (action === 'save_macrocycle_map') {
+          await this.executeSaveMacrocycleMap(cmd);
+          replyText = replyText.replace(
+            match.fullMatch,
+            `\n> 🗺️ **Mapa del Macrociclo (120 Días) Guardado:** Los 3 Mesociclos quedaron registrados en la Ficha Técnica de ${athlete.name}.\n`,
+          );
+        } else if (action === 'replace_exercise' && cmd.oldExercise && cmd.newExercise) {
           await this.executeRoutineReplacement(
             athlete.id,
             athlete.name,
@@ -1156,43 +1597,43 @@ REGLAS Y PERMISOS EJECUTORES SOBRE ${athlete.name.toUpperCase()}:
             cmd.rationale,
           );
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Acción Ejecutada:** Se cambió *${cmd.oldExercise}* por *${cmd.newExercise}* en la rutina de ${athlete.name}.\n`,
           );
         } else if (action === 'update_load' && cmd.exerciseName) {
           await this.executeLoadUpdate(cmd);
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Carga Actualizada:** Se ajustó *${cmd.exerciseName}* en la rutina de ${athlete.name}.\n`,
           );
-        } else if (action === 'add_exercise' && cmd.exerciseName) {
-          await this.executeAddExercise(cmd);
+        } else if (action === 'add_exercise' && (cmd.exerciseName || cmd.name)) {
+          await this.executeAddExercise(cmd, athlete.trainerId || athlete.id);
           replyText = replyText.replace(
-            match[0],
-            `\n> ⚡ **Ejercicio Añadido:** Se agregó *${cmd.exerciseName}* al Día ${cmd.dayNumber || 1} de ${athlete.name}.\n`,
+            match.fullMatch,
+            `\n> ⚡ **Ejercicio Añadido:** Se agregó *${cmd.exerciseName || cmd.name}* al Día ${cmd.dayNumber || 1} de ${athlete.name}.\n`,
           );
         } else if (action === 'remove_exercise' && cmd.exerciseName) {
           await this.executeRemoveExercise(cmd);
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Volumen Depurado:** Se eliminó *${cmd.exerciseName}* de la rutina de ${athlete.name}.\n`,
           );
         } else if (action === 'update_nutrition') {
           await this.executeNutritionUpdate(cmd);
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Nutrición/Agua Calibrada:** Metas actualizadas en la ficha de ${athlete.name}.\n`,
           );
         } else if (action === 'update_hero_pact') {
           await this.executeHeroPactUpdate(cmd);
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Pacto de 120 Días Actualizado:** Se recalibraron las metas de ${athlete.name}.\n`,
           );
         } else if (action === 'publish_weekly_report' && cmd.summary) {
           await this.executePublishWeeklyReport(cmd, 'Tu Entrenador');
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> ⚡ **Reporte Semanal Publicado:** Ya visible en el panel de ${athlete.name}.\n`,
           );
         } else if (action === 'append_private_note' && cmd.note) {
@@ -1217,19 +1658,19 @@ REGLAS Y PERMISOS EJECUTORES SOBRE ${athlete.name.toUpperCase()}:
             data: { anamnesisData: freshAnamnesis },
           });
           replyText = replyText.replace(
-            match[0],
+            match.fullMatch,
             `\n> 🔒 **Guardado en Memoria Clínica Privada:** *"${cmd.note}"*\n`,
           );
         } else {
-          replyText = replyText.replace(match[0], '');
+          replyText = replyText.replace(match.fullMatch, '');
         }
-      } catch {
-        replyText = replyText.replace(match[0], '');
+      } catch (cmdErr) {
+        this.logger.warn('Error procesando COMANDO_RUTINA en Ficha Técnica:', cmdErr);
+        replyText = replyText.replace(match.fullMatch, '');
       }
     }
 
-    replyText = replyText
-      .replace(/\[COMANDO_RUTINA:[^\]]*\]/gs, '')
+    replyText = this.stripLeftoverRoutineCommands(replyText)
       .replace(/\(ID:\s*[0-9a-f-]{10,}\)/gi, '')
       .trim();
 

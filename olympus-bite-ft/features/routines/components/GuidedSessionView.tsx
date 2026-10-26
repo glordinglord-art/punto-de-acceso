@@ -9,6 +9,7 @@ import {
   type ExerciseDict,
 } from "../services/exercise-dictionary.service";
 import { findPreciseDictEntry } from "../utils/exercise-matching";
+import { analyzeExerciseProgression } from "../utils/vital-fit-labs-engine";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
 import { ArrowLeft, Trophy } from "lucide-react";
 
@@ -42,6 +43,8 @@ export function GuidedSessionView({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
+  const [prCount, setPrCount] = useState(0);
+  const [achievementBanner, setAchievementBanner] = useState<string | null>(null);
 
   // Live session elapsed timer
   useEffect(() => {
@@ -100,6 +103,44 @@ export function GuidedSessionView({
   );
   const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
+  // Week-over-week Volume metrics for Post-Workout Victory screen
+  const todayVolume = useMemo(() => {
+    return exercises.reduce((acc, ex) => {
+      const log = logs.find(
+        (l) => l.exerciseId === ex.id && l.weekNumber === weekNumber,
+      );
+      if (!log || !Array.isArray(log.setsData)) return acc;
+      const exVol = log.setsData.reduce(
+        (sAcc, s: any) =>
+          sAcc + (Number(s.weight) || 0) * (Number(s.reps) || 0),
+        0,
+      );
+      return acc + exVol;
+    }, 0);
+  }, [exercises, logs, weekNumber]);
+
+  const prevWeekVolume = useMemo(() => {
+    if (weekNumber <= 1) return 0;
+    return exercises.reduce((acc, ex) => {
+      const log = logs.find(
+        (l) => l.exerciseId === ex.id && l.weekNumber === weekNumber - 1,
+      );
+      if (!log || !Array.isArray(log.setsData)) return acc;
+      const exVol = log.setsData.reduce(
+        (sAcc, s: any) =>
+          sAcc + (Number(s.weight) || 0) * (Number(s.reps) || 0),
+        0,
+      );
+      return acc + exVol;
+    }, 0);
+  }, [exercises, logs, weekNumber]);
+
+  const volumeDeltaKg = todayVolume - prevWeekVolume;
+  const volumeDeltaPct =
+    prevWeekVolume > 0
+      ? Math.round((volumeDeltaKg / prevWeekVolume) * 100)
+      : 0;
+
   const muscleGroups = [...new Set(exercises.map((ex) => ex.muscleGroup))];
 
   // Countdown for rest timer
@@ -117,12 +158,41 @@ export function GuidedSessionView({
     return () => clearInterval(interval);
   }, [restRemaining]);
 
+  const currentInsight = useMemo(() => {
+    if (!exercise) return null;
+    return analyzeExerciseProgression(exercise, logs, weekNumber);
+  }, [exercise, logs, weekNumber]);
+
   const handleSetComplete = async (
     sIdx: number,
     weight: number | null,
     reps: number | null,
   ) => {
     if (!exercise) return;
+
+    // Check if PR or Smart Shield achieved
+    if (currentInsight) {
+      const w = weight ?? 0;
+      const r = reps ?? 0;
+      const e1Rm = w > 0 ? w * (1 + r / 30) : r;
+      if (
+        currentInsight.state !== "first_week" &&
+        currentInsight.state !== "fatigue_shield_2w" &&
+        e1Rm > currentInsight.bestE1RmKg + 0.05
+      ) {
+        setPrCount((prev) => prev + 1);
+        setAchievementBanner(
+          `🏆 ¡NUEVO RÉCORD PERSONAL en ${exercise.name}: ${w > 0 ? `${w}kg × ` : ""}${r} reps!`,
+        );
+        setTimeout(() => setAchievementBanner(null), 4500);
+      } else if (currentInsight.state === "fatigue_shield_2w") {
+        setAchievementBanner(
+          `🛡️ ¡Recuperación Inteligente cumplida en Serie ${sIdx + 1}! Cero lesión, máxima calidad.`,
+        );
+        setTimeout(() => setAchievementBanner(null), 4000);
+      }
+    }
+
     await onSaveSet(exercise, sIdx + 1, weight, reps);
 
     const nextSetIdx = sIdx + 1;
@@ -159,19 +229,61 @@ export function GuidedSessionView({
             {day.focusArea} · Semana {weekNumber}
           </p>
           <p className="text-sm text-slate-300 mt-2">
-            Completaste todas tus series con la exigencia fijada por tu entrenador. ¡Gran trabajo! 🏆
+            Completaste todas tus series con el sistema de autorregulación de Vital Fit Labs. ¡Gran trabajo, Atleta! 🏆
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 w-full max-w-xs space-y-1">
-          <p className="text-xs font-bold text-slate-400 uppercase">Tiempo total de sesión</p>
-          <p className="text-2xl font-black text-white tabular-nums">{formatElapsed(elapsedSeconds)}</p>
+        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-0.5 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Tiempo total</p>
+            <p className="text-xl font-black text-white tabular-nums">{formatElapsed(elapsedSeconds)}</p>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-0.5 text-center">
+            <p className="text-[10px] font-bold text-amber-300 uppercase">Nuevos Récords</p>
+            <p className="text-xl font-black text-amber-400 tabular-nums">🏆 {prCount}</p>
+          </div>
+        </div>
+
+        {/* ── Métrica Semana a Semana & Carga Acumulada ── */}
+        <div className="w-full max-w-sm p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-2 text-left">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Carga Acumulada Hoy:
+            </span>
+            <span className="font-mono font-black text-white text-sm">
+              {todayVolume > 0 ? `${todayVolume.toLocaleString()} kg` : "Completado"}
+            </span>
+          </div>
+
+          {weekNumber > 1 && prevWeekVolume > 0 && (
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                Delta vs Semana {weekNumber - 1}:
+              </span>
+              <span
+                className={cn(
+                  "font-mono font-black text-sm",
+                  volumeDeltaKg > 0 ? "text-emerald-400" : "text-amber-400",
+                )}
+              >
+                {volumeDeltaKg > 0
+                  ? `+${volumeDeltaKg} kg (+${volumeDeltaPct}%) 🚀`
+                  : `${volumeDeltaKg} kg (${volumeDeltaPct}%)`}
+              </span>
+            </div>
+          )}
+
+          <p className="text-[11px] text-slate-300 leading-relaxed pt-1">
+            {volumeDeltaKg > 0
+              ? `¡Excelente sobrecarga progresiva! Moviste +${volumeDeltaKg} kg más que la semana pasada respetando el volumen adaptativo MAV.`
+              : `Consolidación de técnica y estímulo completado para la Semana ${weekNumber}.`}
+          </p>
         </div>
 
         <button
           type="button"
           onClick={onBack}
-          className="mt-2 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 px-10 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-red-500/30 active:scale-95 transition-all cursor-pointer"
+          className="mt-1 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 px-10 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-red-500/30 active:scale-95 transition-all cursor-pointer"
         >
           Volver a Mis Rutinas
         </button>
@@ -186,6 +298,13 @@ export function GuidedSessionView({
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-between overflow-y-auto scrollbar-none bg-[#090a0f] text-white select-none pb-12">
+      {/* Live Dopamine Toast Banner */}
+      {achievementBanner && (
+        <div className="fixed bottom-6 left-4 right-4 z-[70] max-w-md mx-auto rounded-2xl bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-600 px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-white shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
+          {achievementBanner}
+        </div>
+      )}
+
       {/* Top Header: Clean and Immersive (No clutter, covers nav bar & assistants) */}
       <div className="sticky top-0 z-40 bg-[#090a0f]/95 backdrop-blur-2xl border-b border-white/10 px-4 py-3">
         <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
@@ -282,6 +401,7 @@ export function GuidedSessionView({
           onRestFinish={handleRestFinish}
           onRestSkip={handleRestSkip}
           dictEntry={currentDictEntry}
+          insight={currentInsight}
         />
       </div>
 

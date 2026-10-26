@@ -33,6 +33,8 @@ import {
   USER_REPOSITORY,
   UserRepositoryPort,
 } from '../../../domain/ports/user.repository.port';
+import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
+import { randomUUID } from 'crypto';
 
 @Controller('users')
 export class UsersController {
@@ -46,6 +48,7 @@ export class UsersController {
     private readonly processOnboardingUseCase: ProcessOnboardingUseCase,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: UserRepositoryPort,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get(':id')
@@ -523,6 +526,45 @@ export class UsersController {
     });
 
     const updated = await this.userRepository.update(user);
+
+    // Sincronizar automáticamente con la tabla physical_assessments si se suministran medidas o % de grasa
+    if (bodyFatPct !== null || waistCm !== null) {
+      try {
+        const assessmentId = randomUUID();
+        const now = new Date();
+        const assessmentDate = body.date ? new Date(body.date) : now;
+        const trainerId = user.trainerId || user.id;
+
+        await this.prisma.$executeRawUnsafe(
+          `INSERT INTO physical_assessments (
+            id, client_id, trainer_id, date,
+            neck, waist, hip,
+            weight, fat_percentage,
+            notes, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4,
+            $5, $6, $7,
+            $8, $9,
+            $10, $11, $12
+          )`,
+          assessmentId,
+          user.id,
+          trainerId,
+          assessmentDate,
+          neckCm,
+          waistCm,
+          hipCm,
+          weightKg,
+          bodyFatPct,
+          body.notes || 'Registro automático desde Bitácora Semanal / Valoración Corporal',
+          now,
+          now,
+        );
+      } catch (err) {
+        console.warn('Aviso: No se pudo registrar en physical_assessments:', err);
+      }
+    }
+
     return {
       success: true,
       data: {

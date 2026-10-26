@@ -7,8 +7,9 @@ import { RestTimer } from "./RestTimer";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import type { Exercise } from "../types/routines.types";
 import type { ExerciseDict } from "../services/exercise-dictionary.service";
+import type { ExerciseAutoregulationInsight } from "../utils/vital-fit-labs-engine";
 import { MUSCLE_GROUPS } from "@/shared/lib/constants";
-import { Info, CheckCircle } from "lucide-react";
+import { Info, CheckCircle, Sparkles } from "lucide-react";
 
 export function ExerciseCard({
   exercise,
@@ -20,6 +21,7 @@ export function ExerciseCard({
   onRestFinish,
   onRestSkip,
   dictEntry,
+  insight,
 }: {
   exercise: Exercise;
   activeSetIndex: number;
@@ -30,6 +32,7 @@ export function ExerciseCard({
   onRestFinish: () => void;
   onRestSkip: () => void;
   dictEntry?: ExerciseDict | null;
+  insight?: ExerciseAutoregulationInsight | null;
 }) {
   const isResting = restRemaining > 0;
   const allDone = completedSetCount >= exercise.sets;
@@ -141,6 +144,60 @@ export function ExerciseCard({
         )}
       </div>
 
+      {/* Tarjeta de Misión Vital Fit Labs (4-State Autoregulation & Dopamine Engine) */}
+      {insight && (
+        <div
+          className={cn(
+            "rounded-2xl p-3.5 border transition-all space-y-1.5",
+            insight.tone === "emerald"
+              ? "bg-emerald-500/10 border-emerald-500/35 shadow-[0_0_20px_rgba(16,185,129,0.12)]"
+              : insight.tone === "cyan"
+                ? "bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+                : insight.tone === "amber"
+                  ? "bg-amber-500/10 border-amber-500/35"
+                  : insight.tone === "rose"
+                    ? "bg-rose-500/10 border-rose-500/35"
+                    : "bg-white/[0.04] border-white/10"
+          )}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              Misión de Hoy · Vital Fit Labs
+            </span>
+            <span
+              className={cn(
+                "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                insight.tone === "emerald"
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  : insight.tone === "cyan"
+                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
+                    : insight.tone === "amber"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                      : insight.tone === "rose"
+                        ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                        : "bg-white/10 text-slate-300 border-white/15"
+              )}
+            >
+              {insight.badgeLabel}
+            </span>
+          </div>
+
+          <p className="text-xs font-extrabold text-white leading-snug">
+            {insight.missionText}
+          </p>
+
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 text-[11px] text-slate-300 flex-wrap">
+            <span className="font-bold text-slate-400">
+              Historial: <strong className="text-slate-200">{insight.historyChainText}</strong>
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            {insight.whyText}
+          </p>
+        </div>
+      )}
+
       {/* Set Progress Indicators (Pills instead of tiny dots) */}
       <div className="flex items-center justify-center gap-2 py-1">
         {Array.from({ length: exercise.sets }, (_, i) => (
@@ -190,8 +247,17 @@ export function ExerciseCard({
           targetWeight={exercise.targetWeight}
           targetReps={exercise.reps}
           intensity={exercise.intensity}
-          previousWeight={null}
-          previousReps={null}
+          previousWeight={
+            insight?.previousWeekSets?.[activeSetIndex]?.weight ??
+            insight?.previousWeekSets?.[0]?.weight ??
+            null
+          }
+          previousReps={
+            insight?.previousWeekSets?.[activeSetIndex]?.reps ??
+            insight?.previousWeekSets?.[0]?.reps ??
+            null
+          }
+          insight={insight}
           disabled={isSaving}
           onComplete={(w, r) => onSetComplete(activeSetIndex, w, r)}
         />

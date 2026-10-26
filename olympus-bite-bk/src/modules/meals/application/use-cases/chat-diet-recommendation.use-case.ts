@@ -121,6 +121,36 @@ export class ChatDietRecommendationUseCase {
         ? anamnesis.fastedWeighIns[anamnesis.fastedWeighIns.length - 1]
         : null;
 
+    // Fetch recent real WorkoutLogs (sets, reps, weight lifted per week)
+    let workoutLogsSummary = '';
+    try {
+      const recentLogs = await this.prisma.workoutLog.findMany({
+        where: { userId },
+        include: { exercise: { select: { name: true, reps: true, targetWeight: true } } },
+        orderBy: [{ weekNumber: 'desc' }, { updatedAt: 'desc' }],
+        take: 15,
+      });
+      if (recentLogs.length > 0) {
+        const logParts = recentLogs.slice(0, 8).map((l) => {
+          const sets = Array.isArray(l.setsData)
+            ? (l.setsData as any[]).filter((s) => s.completed !== false)
+            : [];
+          const best = sets.reduce(
+            (acc, s) => {
+              const w = Number(s.weight) || 0;
+              const r = Number(s.reps) || 0;
+              return w * (1 + r / 30) > acc.e1rm ? { w, r, e1rm: w * (1 + r / 30) } : acc;
+            },
+            { w: 0, r: 0, e1rm: 0 },
+          );
+          return `${l.exercise?.name || 'Ejercicio'} (Sem ${l.weekNumber}: ${best.w}kg×${best.r} reps)`;
+        });
+        workoutLogsSummary = `Marcas Reales Recientes (WorkoutLogs): ${logParts.join(' | ')}`;
+      }
+    } catch {
+      // ignore if workout_logs query fails
+    }
+
     dto.context.ecosystemSummary = [
       pact?.objectives
         ? `4 Metas de 120 Días: 1) Biométrica: ${pact.objectives.biometric?.currentWeightKg || athleteRecord?.weight || '?'}kg -> ${pact.objectives.biometric?.targetWeightKg || '?'}kg (ritmo ${pact.objectives.biometric?.weeklyDeltaTargetKg || 0.25}kg/sem) | 2) Fuerza: ${pact.objectives.strength?.exerciseName || ''} (${pact.objectives.strength?.currentWeight || '?'} -> ${pact.objectives.strength?.targetWeight || '?'}${pact.weightUnit || 'kg'}) | 3) Dominio Corporal: ${pact.objectives.bodyMastery?.skillName || ''} (${pact.objectives.bodyMastery?.targetMark || ''}) | 4) Aeróbico: ${pact.objectives.aerobic?.enabled ? pact.objectives.aerobic?.targetMark : 'No activo'}`
@@ -132,6 +162,7 @@ export class ChatDietRecommendationUseCase {
       lastWeighIn
         ? `Último Pesaje en Ayunas: ${lastWeighIn.weightKg}kg (${lastWeighIn.date})`
         : '',
+      workoutLogsSummary,
     ]
       .filter(Boolean)
       .join(' | ');

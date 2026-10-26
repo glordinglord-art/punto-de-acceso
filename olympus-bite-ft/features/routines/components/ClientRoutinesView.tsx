@@ -6,8 +6,9 @@ import { Header } from "@/shared/components/layout/Header";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
+import { EvolutionLayersView } from "./EvolutionLayersView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { Dumbbell, Flame, TrendingUp, CalendarCheck } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers } from "lucide-react";
 
 export function ClientRoutinesView() {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ export function ClientRoutinesView() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [savingLog, setSavingLog] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "session">("list");
+  const [view, setView] = useState<"list" | "session" | "evolution">("list");
   const [sessionDay, setSessionDay] = useState<RoutineDay | null>(null);
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">(
     (user?.weightUnitPreference as "kg" | "lbs") || "kg",
@@ -230,27 +231,51 @@ export function ClientRoutinesView() {
     );
   }
 
+  if (view === "evolution" && user) {
+    return (
+      <div className="space-y-4">
+        <EvolutionLayersView
+          user={user}
+          routine={selectedRoutine}
+          workoutLogs={logs}
+          weightUnit={weightUnit}
+          onClose={() => setView("list")}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <Header
         title="Mi Rutina"
         subtitle="Cada sesión tiene un propósito conectado a tus metas de 4 meses"
         action={
-          <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-            {(["kg", "lbs"] as const).map((u) => (
-              <button
-                key={u}
-                type="button"
-                onClick={() => setWeightUnit(u)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
-                  weightUnit === u
-                    ? "bg-red-600 text-white shadow"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                {u}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView("evolution")}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600/30 to-amber-600/30 hover:from-red-600/40 hover:to-amber-600/40 border border-red-500/40 text-amber-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+              <span>Mi Progreso</span>
+            </button>
+            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
+              {(["kg", "lbs"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setWeightUnit(u)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
+                    weightUnit === u
+                      ? "bg-red-600 text-white shadow"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
           </div>
         }
       />

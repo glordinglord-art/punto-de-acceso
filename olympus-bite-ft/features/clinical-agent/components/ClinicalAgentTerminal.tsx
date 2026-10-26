@@ -23,10 +23,11 @@ interface ClinicalAgentTerminalProps {
 }
 
 const QUICK_PROMPTS = [
-  '📐 Audita el volumen semanal por músculo (MEV-MAV-MRV) de mis atletas',
+  '⚡ Créame y asígname en la base de datos una rutina activa de 4 días (Zona MAV + Jerarquía Híbrida)',
+  '🗺️ Diseña y guarda mi Mapa del Macrociclo de 120 Días (3 Mesociclos) en mi Ficha Técnica',
+  '📐 Audita el volumen semanal por músculo (MEV-MAV-MRV) de todos mis atletas',
   '🚨 ¿Quiénes necesitan ajustes hoy en Entreno, Agua o Sueño (±1h)?',
   '⚖️ Evalúa el ritmo de pesaje en ayunas (+0.25 o -0.50 kg/sem) de mis atletas',
-  '🏋️ Revisa mi propia Ficha de Entrenador y sugiere cómo optimizar mi volumen',
   '📝 Redacta y publica el Reporte Semanal para mis atletas activos',
 ];
 
@@ -131,7 +132,7 @@ export function ClinicalAgentTerminal({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-black text-white tracking-tight">
-                Director Clínico IA
+                Co-Piloto Científico · Vital Fit Labs
               </h3>
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
@@ -139,7 +140,7 @@ export function ClinicalAgentTerminal({
               </span>
             </div>
             <p className="text-[11px] font-semibold text-white/40">
-              Cerebro Omnisciente · Leyes Biomecánicas de Vital Fit
+              Cerebro Ejecutor · Crea y Asigna Rutinas, Macrociclos y Metas en Base de Datos
             </p>
           </div>
         </div>

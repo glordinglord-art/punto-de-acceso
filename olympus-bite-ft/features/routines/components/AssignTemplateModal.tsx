@@ -25,15 +25,18 @@ export function AssignTemplateModal({
   trainerId,
   onAssign,
 }: AssignTemplateModalProps) {
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedClient, setSelectedClient] = useState<string>(trainerId || "");
   const [customName, setCustomName] = useState<string>("");
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (template) {
       setCustomName(template.name);
+      if (trainerId && !selectedClient) {
+        setSelectedClient(trainerId);
+      }
     }
-  }, [template]);
+  }, [template, trainerId, selectedClient]);
 
   if (!template) return null;
 

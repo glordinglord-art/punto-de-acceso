@@ -13,6 +13,7 @@ import { ClientRoutinesView } from "@/features/routines/components/ClientRoutine
 import { RoutineTemplateModal } from "@/features/routines/components/RoutineTemplateModal";
 import { CustomTemplatesView } from "@/features/routines/components/CustomTemplatesView";
 import { ClinicalLogBar } from "@/features/routines/components/ClinicalLogBar";
+import { EvolutionLayersView } from "@/features/routines/components/EvolutionLayersView";
 import type { RoutinePreset } from "@/features/routines/data/preset-routines";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { clientsService } from "@/features/clients/services/clients.service";
@@ -25,8 +26,8 @@ import { cn } from "@/shared/lib/utils";
 import { Sparkles, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine";
-type OverviewTab = "calendar" | "cards" | "templates";
+type ViewMode = "overview" | "detail" | "tracking" | "create" | "edit" | "myRoutine" | "evolution";
+type OverviewTab = "myTraining" | "cards" | "templates" | "calendar";
 
 import { useRouter } from 'next/navigation';
 
@@ -107,7 +108,7 @@ function TrainerRoutinesPage() {
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [overviewTab, setOverviewTab] = useState<OverviewTab>("calendar");
+  const [overviewTab, setOverviewTab] = useState<OverviewTab>("myTraining");
   const [routineToDelete, setRoutineToDelete] = useState<Routine | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showGlobalTemplates, setShowGlobalTemplates] = useState(false);
@@ -144,6 +145,8 @@ function TrainerRoutinesPage() {
         setOverviewTab("cards");
       } else if (tabParam === "calendar") {
         setOverviewTab("calendar");
+      } else if (tabParam === "myTraining") {
+        setOverviewTab("myTraining");
       }
     }
   }, []);
@@ -168,11 +171,46 @@ function TrainerRoutinesPage() {
   const handleCreateRoutine = async (data: RoutineForm) => {
     if (!user) return;
     try {
-      await routinesService.create(user.id, data);
+      const sanitizedDays = data.days.map((d) => ({
+        ...d,
+        exercises: (d.exercises || []).map((e) => {
+          const parsedWeight =
+            e.targetWeight === "" ||
+            e.targetWeight === null ||
+            e.targetWeight === undefined ||
+            Number.isNaN(Number(e.targetWeight))
+              ? undefined
+              : Number(e.targetWeight);
+          return {
+            ...e,
+            sets:
+              typeof e.sets === "string" && e.sets === ""
+                ? 3
+                : Number(e.sets) || 3,
+            restSeconds:
+              typeof e.restSeconds === "string" && e.restSeconds === ""
+                ? 60
+                : Number(e.restSeconds) || 60,
+            targetWeight: parsedWeight,
+            intensity: e.intensity || "medium",
+          };
+        }),
+      }));
+      await routinesService.create(user.id, {
+        ...data,
+        days: sanitizedDays,
+      });
       await loadData();
       setView("overview");
+      if (data.clientId === user.id) {
+        setOverviewTab("myTraining");
+        toast.success("🚀 ¡Tu rutina personal está lista en Mi Entrenamiento (Vital Fit Labs)!");
+      } else {
+        setOverviewTab("cards");
+        toast.success("✅ Rutina asignada al Atleta");
+      }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error creando rutina");
+      toast.error(err instanceof Error ? err.message : "Error creando rutina");
     }
   };
 
@@ -343,12 +381,13 @@ function TrainerRoutinesPage() {
           }
         />
 
-        {/* Tab toggle: Calendario / Rutinas de Atletas / Personalizadas */}
+        {/* Tab toggle: Mi Entrenamiento (Vital Fit Labs) / Rutinas de Atletas / Plantillas / Calendario */}
         <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1 overflow-x-auto max-w-full">
           {[
-            { key: "calendar" as OverviewTab, label: "📅 Calendario" },
+            { key: "myTraining" as OverviewTab, label: "🔥 Mi Entrenamiento (Vital Fit Labs)" },
             { key: "cards" as OverviewTab, label: `🗂️ Rutinas de Atletas (${routines.length})` },
             { key: "templates" as OverviewTab, label: "⭐ Personalizadas (Plantillas)" },
+            { key: "calendar" as OverviewTab, label: "📅 Calendario" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -366,7 +405,9 @@ function TrainerRoutinesPage() {
           ))}
         </div>
 
-        {overviewTab === "templates" ? (
+        {overviewTab === "myTraining" ? (
+          <ClientRoutinesView />
+        ) : overviewTab === "templates" ? (
           <CustomTemplatesView
             clients={clients}
             trainerId={user?.id}
@@ -380,7 +421,6 @@ function TrainerRoutinesPage() {
                 days: template.days,
               };
               await handleCreateRoutine(routineForm);
-              setOverviewTab("cards");
             }}
           />
         ) : loading ? (
@@ -487,6 +527,9 @@ function TrainerRoutinesPage() {
             <div className="flex gap-2">
               <Button variant="ghost" size="md" onClick={handleBack}>
                 ← Volver
+              </Button>
+              <Button size="md" variant="secondary" onClick={() => setView("evolution")}>
+                📈 Progreso Semanal
               </Button>
               {isOwnRoutine && (
                 <Button size="md" onClick={() => setView("myRoutine")}>
@@ -695,6 +738,53 @@ function TrainerRoutinesPage() {
         />
       </>
     );
+  }
+
+  /* ─── My Routine (Trainer executing own workout with Vital Fit Labs) ── */
+  if (view === "myRoutine") {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setView("overview");
+              setOverviewTab("myTraining");
+            }}
+          >
+            ← Volver a Gestión de Rutinas
+          </Button>
+        </div>
+        <ClientRoutinesView />
+      </div>
+    );
+  }
+
+  /* ─── Evolution by Layers (Sem 1 to Sem Final) ── */
+  if (view === "evolution" && selectedRoutine) {
+    const athlete = clients.find((c) => c.id === selectedRoutine.clientId) || user;
+    if (athlete) {
+      return (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setView("detail")}
+            >
+              ← Volver al Detalle de Rutina
+            </Button>
+          </div>
+          <EvolutionLayersView
+            user={athlete}
+            routine={selectedRoutine}
+            workoutLogs={logs}
+            onClose={() => setView("detail")}
+          />
+        </div>
+      );
+    }
   }
 
   return null;

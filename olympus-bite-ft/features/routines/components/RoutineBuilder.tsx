@@ -237,7 +237,7 @@ export function RoutineBuilder({
       return {
         name: initialPreset.name,
         description: initialPreset.description,
-        clientId: "",
+        clientId: trainerId || "",
         weekCount: initialPreset.weekCount,
         days: initialPreset.days,
       };
@@ -246,7 +246,7 @@ export function RoutineBuilder({
       return {
         name: "",
         description: "",
-        clientId: "",
+        clientId: trainerId || "",
         weekCount: 4,
         days: [emptyDay(1)],
       };
@@ -426,20 +426,26 @@ export function RoutineBuilder({
         ...form,
         days: form.days.map((d) => ({
           ...d,
-          exercises: d.exercises.map((e) => ({
-            ...e,
-            sets:
-              typeof e.sets === "string" && e.sets === "" ? 1 : Number(e.sets),
-            restSeconds:
-              typeof e.restSeconds === "string" && e.restSeconds === ""
-                ? 0
-                : Number(e.restSeconds),
-            targetWeight:
-              typeof e.targetWeight === "string" && e.targetWeight === ""
-                ? null
-                : Number(e.targetWeight),
-            intensity: e.intensity || "medium",
-          })),
+          exercises: d.exercises.map((e) => {
+            const parsedWeight =
+              e.targetWeight === "" ||
+              e.targetWeight === null ||
+              e.targetWeight === undefined ||
+              Number.isNaN(Number(e.targetWeight))
+                ? undefined
+                : Number(e.targetWeight);
+            return {
+              ...e,
+              sets:
+                typeof e.sets === "string" && e.sets === "" ? 1 : Number(e.sets) || 3,
+              restSeconds:
+                typeof e.restSeconds === "string" && e.restSeconds === ""
+                  ? 60
+                  : Number(e.restSeconds) || 60,
+              targetWeight: parsedWeight,
+              intensity: e.intensity || "medium",
+            };
+          }),
         })),
       };
       await onSubmit(cleanedForm);

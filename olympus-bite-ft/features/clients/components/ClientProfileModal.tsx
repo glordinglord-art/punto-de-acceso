@@ -7,8 +7,15 @@ import { Badge } from "@/shared/components/ui/Badge";
 import type { User } from "@/shared/types/common.types";
 import { cn } from "@/shared/lib/utils";
 import { clientsService } from "@/features/clients/services/clients.service";
+import { routinesService } from "@/features/routines/services/routines.service";
+import type { Routine, WorkoutLog } from "@/features/routines/types/routines.types";
+import {
+  analyzeExerciseProgression,
+  type ExerciseAutoregulationInsight,
+} from "@/features/routines/utils/vital-fit-labs-engine";
 import { ClientMealsProgress } from "./ClientMealsProgress";
 import { ClientAiChat } from "./ClientAiChat";
+import { EvolutionLayersView } from "@/features/routines/components/EvolutionLayersView";
 import { ClientAssessmentsTab } from "@/features/assessments/components/ClientAssessmentsTab";
 import { toast } from "react-hot-toast";
 import {
@@ -30,7 +37,7 @@ import {
 
 interface ClientProfileModalProps {
   client: User | null;
-  initialTab?: "profile" | "assessments" | "progress" | "compliance" | "ai";
+  initialTab?: "profile" | "pact" | "assessments" | "progress" | "compliance" | "ai" | "evolution";
   onClose: () => void;
   onSave: (
     clientId: string,
@@ -40,6 +47,7 @@ interface ClientProfileModalProps {
       password?: string;
     },
   ) => Promise<void>;
+  onUpdated?: (updatedUser: User) => void;
   onDelete?: (clientId: string) => Promise<void>;
 }
 
@@ -48,11 +56,12 @@ export function ClientProfileModal({
   initialTab = "profile",
   onClose,
   onSave,
+  onUpdated,
   onDelete,
 }: ClientProfileModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "profile" | "compliance" | "assessments" | "progress" | "ai"
-  >(initialTab);
+    "profile" | "compliance" | "assessments" | "progress" | "ai" | "evolution"
+  >(initialTab === "pact" ? "profile" : initialTab);
   const [unit, setUnit] = useState<"kg" | "lbs">("kg");
   const [isSaving, setIsSaving] = useState(false);
   const [resettingDiscovery, setResettingDiscovery] = useState(false);
@@ -110,18 +119,24 @@ export function ClientProfileModal({
   const [nextWeekFocus, setNextWeekFocus] = useState<string>("");
   const [isDeloadWeek, setIsDeloadWeek] = useState<boolean>(false);
   const [publishingReport, setPublishingReport] = useState<boolean>(false);
+  const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [applyingActionId, setApplyingActionId] = useState<string | null>(null);
+
+  const [liveClientOverride, setLiveClientOverride] = useState<User | null>(null);
+  const effectiveClient = liveClientOverride && liveClientOverride.id === client?.id ? liveClientOverride : client;
 
   const anamnesis = useMemo(
     () =>
-      client?.anamnesisData && typeof client.anamnesisData === "object"
-        ? client.anamnesisData
+      effectiveClient?.anamnesisData && typeof effectiveClient.anamnesisData === "object"
+        ? effectiveClient.anamnesisData
         : {},
-    [client?.anamnesisData],
+    [effectiveClient?.anamnesisData],
   );
 
   useEffect(() => {
     if (!client) return;
-    if (initialTab) setActiveTab(initialTab);
+    if (initialTab) setActiveTab(initialTab === "pact" ? "profile" : initialTab);
 
     const pact = anamnesis.heroPact || {};
     const prefUnit =
@@ -206,7 +221,104 @@ export function ClientProfileModal({
       ? anamnesis.weeklyReports
       : [];
     setReportWeekNumber(existingReports.length + 1);
+
+    // Fetch active routine & real WorkoutLogs for Vital Fit Labs 1-Click Radar
+    routinesService
+      .getByClient(client.id)
+      .then(async (res) => {
+        const list = res.data || [];
+        const active = list.find((r) => r.isActive) || list[0] || null;
+        setActiveRoutine(active);
+        if (active) {
+          const logsRes = await routinesService.getWorkoutLogs(active.id, client.id);
+          setWorkoutLogs(logsRes.data || []);
+        } else {
+          setWorkoutLogs([]);
+        }
+      })
+      .catch(() => {
+        setActiveRoutine(null);
+        setWorkoutLogs([]);
+      });
   }, [client, initialTab, anamnesis]);
+
+  const refreshAthleteAndRoutine = async () => {
+    if (!client) return;
+    try {
+      const [userRes, routinesRes] = await Promise.all([
+        clientsService.getById(client.id),
+        routinesService.getByClient(client.id),
+      ]);
+      if (userRes?.data) {
+        setLiveClientOverride(userRes.data);
+        if (onUpdated) {
+          onUpdated(userRes.data);
+        }
+      }
+      const list = routinesRes?.data || [];
+      const active = list.find((r) => r.isActive) || list[0] || null;
+      setActiveRoutine(active);
+      if (active) {
+        const logsRes = await routinesService.getWorkoutLogs(active.id, client.id);
+        setWorkoutLogs(logsRes.data || []);
+      } else {
+        setWorkoutLogs([]);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const sleepLogs: any[] = useMemo(
+    () => (Array.isArray(anamnesis.sleepLogs) ? anamnesis.sleepLogs : []),
+    [anamnesis.sleepLogs],
+  );
+  const fastedWeighIns: any[] = useMemo(
+    () =>
+      Array.isArray(anamnesis.fastedWeighIns) ? anamnesis.fastedWeighIns : [],
+    [anamnesis.fastedWeighIns],
+  );
+  const weeklyReports: any[] = useMemo(
+    () =>
+      Array.isArray(anamnesis.weeklyReports) ? anamnesis.weeklyReports : [],
+    [anamnesis.weeklyReports],
+  );
+  const waterLogs: any[] = useMemo(
+    () => (Array.isArray(anamnesis.waterLogs) ? anamnesis.waterLogs : []),
+    [anamnesis.waterLogs],
+  );
+
+  // Vital Fit Labs 4-State Autoregulation Insights across all exercises in active routine
+  const maxLoggedWeek = useMemo(() => {
+    if (workoutLogs.length === 0) return 1;
+    return Math.max(...workoutLogs.map((l) => l.weekNumber || 1));
+  }, [workoutLogs]);
+
+  const exerciseInsights: ExerciseAutoregulationInsight[] = useMemo(() => {
+    if (!activeRoutine) return [];
+    const recentSleep = sleepLogs.slice(-5);
+    const sleepRegOk =
+      recentSleep.length === 0 ||
+      recentSleep.filter((s) => s.withinOneHourWindow).length >=
+        Math.ceil(recentSleep.length * 0.6);
+    const allEx = activeRoutine.days
+      .filter((d) => !d.isRestDay)
+      .flatMap((d) => d.exercises);
+    return allEx.map((ex) =>
+      analyzeExerciseProgression(ex, workoutLogs, maxLoggedWeek + 1, {
+        sleepRegularityOk: sleepRegOk,
+        waterOk: waterLogs.length > 0,
+      }),
+    );
+  }, [activeRoutine, workoutLogs, maxLoggedWeek, sleepLogs, waterLogs]);
+
+  const actionableInsights = useMemo(
+    () =>
+      exerciseInsights.filter(
+        (i) => i.state === "double_progression" || i.state === "fatigue_shield_2w",
+      ),
+    [exerciseInsights],
+  );
 
   if (!client) return null;
 
@@ -360,15 +472,177 @@ export function ClientProfileModal({
     }
   };
 
-  const sleepLogs: any[] = Array.isArray(anamnesis.sleepLogs)
-    ? anamnesis.sleepLogs
-    : [];
-  const fastedWeighIns: any[] = Array.isArray(anamnesis.fastedWeighIns)
-    ? anamnesis.fastedWeighIns
-    : [];
-  const weeklyReports: any[] = Array.isArray(anamnesis.weeklyReports)
-    ? anamnesis.weeklyReports
-    : [];
+  const handleApplyOneClickAdjustment = async (
+    insight: ExerciseAutoregulationInsight,
+  ) => {
+    if (!activeRoutine) return;
+    setApplyingActionId(insight.exerciseId);
+    try {
+      const clientId = activeRoutine.clientId || client.id;
+      const updatedDays = (activeRoutine.days || []).map((d) => ({
+        dayNumber: d.dayNumber,
+        focusArea: d.focusArea || `Día ${d.dayNumber}`,
+        isRestDay: Boolean(d.isRestDay),
+        restDayNote: d.restDayNote || undefined,
+        exercises: (d.exercises || []).map((ex) => {
+          const isTarget = ex.id === insight.exerciseId;
+          const targetWeightNum = isTarget
+            ? (insight.recommendedWeightKg !== null && insight.recommendedWeightKg !== undefined
+                ? Number(insight.recommendedWeightKg)
+                : ex.targetWeight !== null && ex.targetWeight !== undefined
+                  ? Number(ex.targetWeight)
+                  : undefined)
+            : ex.targetWeight !== null && ex.targetWeight !== undefined
+              ? Number(ex.targetWeight)
+              : undefined;
+
+          const setsNum = isTarget
+            ? Number(insight.recommendedSets || ex.sets || 3)
+            : Number(ex.sets || 3);
+
+          return {
+            id: ex.id,
+            name: ex.name,
+            muscleGroup: ex.muscleGroup || "general",
+            sets: setsNum,
+            reps: String(ex.reps || "8-12"),
+            restSeconds:
+              ex.restSeconds !== null && ex.restSeconds !== undefined
+                ? Number(ex.restSeconds)
+                : undefined,
+            targetWeight:
+              targetWeightNum !== undefined && !isNaN(targetWeightNum)
+                ? targetWeightNum
+                : undefined,
+            observations: isTarget
+              ? insight.state === "fatigue_shield_2w"
+                ? `🛡️ Descarga inteligente: ${insight.recommendedWeightKg ?? 0}kg × ${insight.recommendedSets} series (RIR 2)`
+                : `🚀 Sobrecarga progresiva: ${insight.recommendedWeightKg ?? 0}kg`
+              : ex.observations || undefined,
+            intensity: isTarget
+              ? insight.state === "fatigue_shield_2w"
+                ? "medium"
+                : "failure"
+              : ex.intensity || "medium",
+          };
+        }),
+      }));
+
+      const res = await routinesService.update(activeRoutine.id, {
+        name: activeRoutine.name,
+        description: activeRoutine.description || "",
+        weekCount: activeRoutine.weekCount || 4,
+        clientId,
+        days: updatedDays,
+      });
+
+      if (res?.data) {
+        setActiveRoutine(res.data);
+      }
+      toast.success(
+        insight.state === "double_progression"
+          ? `🚀 Carga actualizada a ${insight.recommendedWeightKg}kg en ${insight.exerciseName}`
+          : `🛡️ Descarga aplicada en ${insight.exerciseName}`,
+      );
+    } catch (err) {
+      console.error("Error al aplicar ajuste de 1 clic:", err);
+      toast.error("No se pudo aplicar el ajuste en la rutina");
+    } finally {
+      setApplyingActionId(null);
+    }
+  };
+
+  // 1-Click Auto-Draft for Weekly Report based on real telemetry
+  const handleAutoDraftWeeklyReport = () => {
+    const recentSleep = sleepLogs.slice(-7);
+    const sleepRegPct =
+      recentSleep.length > 0
+        ? Math.round(
+            (recentSleep.filter((s) => s.withinOneHourWindow).length /
+              recentSleep.length) *
+              100,
+          )
+        : 85;
+    const recentWater = waterLogs.slice(-7);
+    const waterTargetNum = parseFloat(waterLiters) || 3.0;
+    const waterPct =
+      recentWater.length > 0
+        ? Math.min(
+            100,
+            Math.round(
+              (recentWater.reduce((acc, w) => acc + (Number(w.liters) || 0), 0) /
+                (recentWater.length * waterTargetNum)) *
+                100,
+            ),
+          )
+        : 88;
+
+    const doubleProgList = exerciseInsights.filter(
+      (i) => i.state === "double_progression",
+    );
+    const shieldList = exerciseInsights.filter(
+      (i) => i.state === "fatigue_shield_2w",
+    );
+    const calcTrainScore =
+      workoutLogs.length > 0
+        ? shieldList.length > 0
+          ? 85
+          : 96
+        : 80;
+
+    setTrainingScore(calcTrainScore);
+    setNutritionScore(waterPct);
+    setRecoveryScore(sleepRegPct);
+    setIsDeloadWeek(shieldList.length > 0);
+
+    const lastWeigh =
+      fastedWeighIns.length > 0
+        ? fastedWeighIns[fastedWeighIns.length - 1]
+        : null;
+
+    const notesParts: string[] = [];
+    if (doubleProgList.length > 0) {
+      notesParts.push(
+        `Excelente sobrecarga progresiva dominando el tope de repeticiones en ${doubleProgList.map((d) => d.exerciseName).join(", ")}.`,
+      );
+    }
+    if (shieldList.length > 0) {
+      notesParts.push(
+        `Detectamos 2 semanas seguidas de fatiga localizada en ${shieldList.map((s) => s.exerciseName).join(", ")}, por lo que activamos el Escudo Protector de Vital Fit Labs (-10% de carga / RIR 2) para supercompensar sin riesgo articular.`,
+      );
+    }
+    if (notesParts.length === 0) {
+      notesParts.push(
+        `Buena semana de consolidación construyendo repeticiones dentro del rango objetivo.`,
+      );
+    }
+    if (lastWeigh) {
+      notesParts.push(
+        `Pesaje en ayunas actual en ${lastWeigh.weightKg} kg (tendencia ${lastWeigh.trendWeightKg || lastWeigh.weightKg} kg).`,
+      );
+    }
+    notesParts.push(
+      `Regularidad de sueño (±1h) al ${sleepRegPct}% e hidratación al ${waterPct}%.`,
+    );
+
+    setTrainerNotes(notesParts.join(" "));
+
+    if (shieldList.length > 0) {
+      setNextWeekFocus(
+        `Ejecutar semana de descarga inteligente en ${shieldList[0].exerciseName} (${shieldList[0].recommendedWeightKg}kg × ${shieldList[0].recommendedSets} series) y asegurar 7/7 días de sueño dentro de ±1h.`,
+      );
+    } else if (doubleProgList.length > 0) {
+      setNextWeekFocus(
+        `Subir carga a ${doubleProgList[0].recommendedWeightKg}kg en ${doubleProgList[0].exerciseName} buscando ${doubleProgList[0].recommendedReps} repeticiones estrictas.`,
+      );
+    } else {
+      setNextWeekFocus(
+        `Sumar +1 repetición por serie en los básicos manteniendo técnica estricta y cumplir ${waterLiters}L de agua diarios.`,
+      );
+    }
+
+    toast.success("⚡ Borrador de Reporte Semanal generado con Vital Fit Labs");
+  };
 
   return (
     <Modal
@@ -452,6 +726,7 @@ export function ClientProfileModal({
           <div className="flex gap-1.5 overflow-x-auto pt-4 mt-4 border-t border-white/10 no-scrollbar">
             {[
               { id: "profile", label: "🎯 4 Metas y Plan" },
+              { id: "evolution", label: "📈 Mi Progreso (Cargas y Récords)" },
               { id: "compliance", label: "📞 Resumen Semanal" },
               { id: "assessments", label: "📐 Medidas y % Grasa" },
               { id: "progress", label: "🍽️ Comidas" },
@@ -830,6 +1105,150 @@ export function ClientProfileModal({
                 </div>
               </div>
 
+              {/* ─── MAPA DEL MACROCICLO DE 120 DÍAS + RUTINA ACTIVA ASIGNADA ─── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Mapa del Macrociclo (3 Mesociclos) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-950/30 via-[#0d111a] to-black border border-cyan-500/30 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 block">
+                        🗺️ Arquitectura de Periodización (120 Días)
+                      </span>
+                      <h4 className="text-sm font-condensed font-black uppercase tracking-wide text-white">
+                        {anamnesis.heroPact?.macrocycleMap?.title ||
+                          "Mapa del Macrociclo (3 Mesociclos)"}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ai")}
+                      className="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition"
+                    >
+                      ✨ Diseñar con IA
+                    </button>
+                  </div>
+
+                  {Array.isArray(anamnesis.heroPact?.macrocycleMap?.mesocycles) &&
+                  anamnesis.heroPact.macrocycleMap.mesocycles.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2 text-[10px] text-cyan-300">
+                        <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">
+                          Split: {anamnesis.heroPact.macrocycleMap.splitType}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">
+                          Volumen: {anamnesis.heroPact.macrocycleMap.weeklyVolumeTarget}
+                        </span>
+                      </div>
+                      {anamnesis.heroPact.macrocycleMap.mesocycles.map(
+                        (m: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 rounded-xl bg-black/40 border border-white/10 space-y-0.5"
+                          >
+                            <div className="flex items-center justify-between text-xs font-bold text-white">
+                              <span>{m.name}</span>
+                              <span className="text-[10px] text-cyan-300">
+                                {m.weeks}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-neutral-300">
+                              {m.focus}
+                            </p>
+                            <span className="inline-block text-[10px] text-amber-300 font-semibold">
+                              📐 {m.volumeRange}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-400 space-y-2">
+                      <p>
+                        Aún no se ha guardado el Mapa del Macrociclo de 120 Días
+                        para {client.name}.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("ai")}
+                        className="text-cyan-300 font-bold hover:underline cursor-pointer"
+                      >
+                        ➔ Ir a 🔒 Memoria Clínica IA y pulsar &quot;Paso 2: Crear Mapa del Macrociclo&quot;
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rutina Activa Asignada en Base de Datos */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/30 via-[#0d111a] to-black border border-emerald-500/30 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">
+                        ⚡ Arma de Entrenamiento en Base de Datos
+                      </span>
+                      <h4 className="text-sm font-condensed font-black uppercase tracking-wide text-white">
+                        {activeRoutine
+                          ? activeRoutine.name
+                          : "Sin Rutina Activa Asignada"}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ai")}
+                      className="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition"
+                    >
+                      ⚡ Crear / Asignar con IA
+                    </button>
+                  </div>
+
+                  {activeRoutine ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-neutral-300">
+                        {activeRoutine.description ||
+                          `${activeRoutine.weekCount} semanas · Asignada y activa`}
+                      </p>
+                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                        {activeRoutine.days
+                          .filter((d) => !d.isRestDay)
+                          .map((d) => (
+                            <div
+                              key={d.id}
+                              className="p-2 rounded-xl bg-black/40 border border-white/10"
+                            >
+                              <div className="flex items-center justify-between text-xs font-bold text-emerald-300">
+                                <span>
+                                  Día {d.dayNumber}: {d.focusArea}
+                                </span>
+                                <span className="text-[10px] text-neutral-400">
+                                  {d.exercises.length} ejercicios
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-neutral-300 truncate mt-0.5">
+                                {d.exercises
+                                  .map((e) => `${e.name} (${e.sets}x${e.reps})`)
+                                  .join(" · ")}
+                              </p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-400 space-y-2">
+                      <p>
+                        {client.name} aún no tiene una rutina activa asignada en
+                        la base de datos.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("ai")}
+                        className="text-emerald-300 font-bold hover:underline cursor-pointer"
+                      >
+                        ➔ Ir a 🔒 Memoria Clínica IA y pulsar &quot;Paso 3: Crear y Asignar Rutina Activa en BD&quot;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Cambio de contraseña o baja */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-white/10">
                 <div className="flex items-center gap-2">
@@ -953,7 +1372,15 @@ export function ClientProfileModal({
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleAutoDraftWeeklyReport}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>⚡ Autocompletar con Vital Fit Labs</span>
+                    </button>
                     <label className="flex items-center gap-1.5 text-xs text-sky-300 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1068,6 +1495,19 @@ export function ClientProfileModal({
             </div>
           )}
 
+          {/* PESTAÑA: MI PROGRESO (SEMANA 1 A SEMANA FINAL) */}
+          {activeTab === "evolution" && (
+            <EvolutionLayersView
+              user={effectiveClient || client}
+              routine={activeRoutine}
+              workoutLogs={workoutLogs}
+              weightUnit={unit}
+              isTrainer={true}
+              onApplyAdjustment={handleApplyOneClickAdjustment}
+              applyingActionId={applyingActionId}
+            />
+          )}
+
           {/* PESTAÑA 3: VALORACIONES Y MEDIDAS */}
           {activeTab === "assessments" && (
             <ClientAssessmentsTab clientId={client.id} />
@@ -1083,7 +1523,10 @@ export function ClientProfileModal({
 
           {/* PESTAÑA 5: CO-PILOTO CIENTÍFICO IA */}
           {activeTab === "ai" && (
-            <ClientAiChat client={client} />
+            <ClientAiChat
+              client={client}
+              onAthleteUpdated={refreshAthleteAndRoutine}
+            />
           )}
         </div>
       </div>
