@@ -130,6 +130,7 @@ export default function OnboardingPage() {
   // Estados de cálculo y resultado
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [showDirectAccess, setShowDirectAccess] = useState(false);
   const [resultData, setResultData] = useState<OnboardingResult | null>(null);
   const [objectivesOpen, setObjectivesOpen] = useState(true);
 
@@ -313,12 +314,22 @@ export default function OnboardingPage() {
   // Disparar cálculo clínico IA y animación de 5 iconos
   const handleGeneratePlan = async () => {
     setCurrentStep(26);
+    setLoadingStepIndex(0);
+    setShowDirectAccess(false);
     setIsSubmitting(true);
 
-    // Animación de los 5 pasos
+    // Animación fluida de los 5 pasos (550ms por paso)
     const interval = setInterval(() => {
       setLoadingStepIndex((prev) => (prev < 4 ? prev + 1 : prev));
-    }, 900);
+    }, 550);
+
+    // Botón de escape seguro si la red o servidor demora más de 5.5s
+    const fallbackTimeout = setTimeout(() => {
+      setShowDirectAccess(true);
+    }, 5500);
+
+    // Mínimo 2.2s para apreciar la secuencia clínica
+    const minAnimationTimer = new Promise((resolve) => setTimeout(resolve, 2200));
 
     try {
       if (!user) throw new Error("Sesión no válida");
@@ -392,7 +403,11 @@ export default function OnboardingPage() {
         mealFrequency: fasting !== "No" ? "2_to_3" : "4_to_5",
       };
 
-      const res = await clientsService.submitOnboarding(user.id, payload);
+      const [res] = await Promise.all([
+        clientsService.submitOnboarding(user.id, payload),
+        minAnimationTimer,
+      ]);
+      clearTimeout(fallbackTimeout);
       clearInterval(interval);
 
       if (res.success && res.data) {
@@ -405,6 +420,7 @@ export default function OnboardingPage() {
         setCurrentStep(25);
       }
     } catch (err: unknown) {
+      clearTimeout(fallbackTimeout);
       clearInterval(interval);
       const msg = err instanceof Error ? err.message : "Error al conectar con el servidor";
       toast.error(msg);
@@ -422,7 +438,7 @@ export default function OnboardingPage() {
   // Salir a modo entrenador de forma segura
   const handleExitToCoach = () => {
     setActiveMode("trainer");
-    router.replace("/coach");
+    router.replace("/clients");
   };
 
   return (
@@ -2653,6 +2669,30 @@ export default function OnboardingPage() {
                 <p className="text-xs text-zinc-500 font-mono">
                   Director Clínico IA personalizando directrices biomédicas
                 </p>
+
+                {showDirectAccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 flex flex-col items-center gap-2"
+                  >
+                    <p className="text-xs text-zinc-400">
+                      Cálculo completado. ¿Quieres ver tu resumen ahora?
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (resultData) {
+                          setCurrentStep(27);
+                        } else {
+                          router.replace("/dashboard");
+                        }
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all shadow-lg shadow-blue-600/30 active:scale-95"
+                    >
+                      Ver mi plan ahora →
+                    </button>
+                  </motion.div>
+                )}
               </div>
             )}
 

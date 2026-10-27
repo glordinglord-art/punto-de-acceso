@@ -272,7 +272,16 @@ Responde ÚNICAMENTE un JSON válido (sin formato markdown ni texto adicional) c
 }
 `;
 
-        const response = await model.generateContent(prompt);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Timeout de 2.5s en modulación IA Gemini')),
+            2500,
+          ),
+        );
+        const response = await Promise.race([
+          model.generateContent(prompt),
+          timeoutPromise,
+        ]);
         const text = response.response.text();
         const cleaned = text
           .replace(/```json/g, '')
