@@ -135,7 +135,12 @@ export class ProcessOnboardingUseCase {
       weightUnitPreference: dto.weightUnit,
       gender: dto.gender,
       age: dto.age,
-      anamnesisData: dto,
+      anamnesisData: {
+        ...dto,
+        discoveryCompletedAt: new Date().toISOString(),
+        onboardingCompletedAt: new Date().toISOString(),
+        cycleStatus: 'ACTIVE_CYCLE',
+      },
       experienceLevel: dto.experienceLevel,
       equipmentAccess: dto.equipmentAccess,
       medicalConditions,

@@ -19,13 +19,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // OBLIGATORIO PARA TODOS (ATLETAS Y ENTRENADORES):
-  // Cualquier persona que use el app debe haber completado el nuevo formulario "Tu Punto de Partida"
-  const hasCompletedNewDiscovery = Boolean(
-    user?.anamnesisData?.discoveryCompletedAt &&
-      user?.anamnesisData?.cycleStatus !== "NEEDS_DISCOVERY",
+  // Solo los atletas necesitan completar onboarding; entrenadores y administradores nunca se bloquean
+  const isAthlete = user?.role === "client";
+  const hasCompletedOnboarding = Boolean(
+    user?.onboardingCompleted ||
+      (user?.anamnesisData?.discoveryCompletedAt &&
+        user?.anamnesisData?.cycleStatus !== "NEEDS_DISCOVERY"),
   );
-  const needsOnboarding = Boolean(user && !hasCompletedNewDiscovery);
+  const needsOnboarding = Boolean(user && isAthlete && !hasCompletedOnboarding);
   const isOnboardingRoute = pathname === "/onboarding";
 
   useEffect(() => {

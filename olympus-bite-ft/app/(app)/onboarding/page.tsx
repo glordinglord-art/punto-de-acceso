@@ -412,7 +412,15 @@ export default function OnboardingPage() {
 
       if (res.success && res.data) {
         setResultData(res.data);
-        updateUser(res.data.user);
+        updateUser({
+          ...res.data.user,
+          onboardingCompleted: true,
+          anamnesisData: {
+            ...(res.data.user?.anamnesisData || {}),
+            discoveryCompletedAt: new Date().toISOString(),
+            cycleStatus: "ACTIVE_CYCLE",
+          },
+        });
         // Avanzar a la pantalla de entrega del plan
         setCurrentStep(27);
       } else {
@@ -432,6 +440,14 @@ export default function OnboardingPage() {
 
   const handleFinishAndEnter = () => {
     toast.success("¡Bienvenido a Vital Fit!");
+    updateUser({
+      onboardingCompleted: true,
+      anamnesisData: {
+        ...(user?.anamnesisData || {}),
+        discoveryCompletedAt: new Date().toISOString(),
+        cycleStatus: "ACTIVE_CYCLE",
+      },
+    });
     router.replace("/dashboard");
   };
 
@@ -471,6 +487,7 @@ export default function OnboardingPage() {
             </div>
 
             {/* Salida segura para modo entrenador */}
+            {/* Acceso directo a dashboard o coach */}
             {availableModes && availableModes.length > 1 ? (
               <button
                 onClick={handleExitToCoach}
@@ -479,6 +496,14 @@ export default function OnboardingPage() {
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Modo Coach</span>
+              </button>
+            ) : (user?.onboardingCompleted || user?.anamnesisData?.discoveryCompletedAt) ? (
+              <button
+                onClick={() => router.replace("/dashboard")}
+                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 py-1 px-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800 transition-colors"
+                title="Ir al Dashboard"
+              >
+                <span>Dashboard →</span>
               </button>
             ) : (
               <div className="w-8" />
