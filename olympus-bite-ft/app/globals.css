@@ -26,25 +26,25 @@
 }
 
 :root {
-  --background: #f6f8fb;
+  --background: #f8fafc;
   --foreground: #0f172a;
 
-  /* Default Theme: VITALFIT Red — JS overrides these at runtime */
-  --color-p50: #fef2f2;
-  --color-p100: #fee2e2;
-  --color-p200: #fecaca;
-  --color-p300: #fca5a5;
-  --color-p400: #f87171;
-  --color-p500: #ef4444;
-  --color-p600: #dc2626;
-  --color-p700: #b91c1c;
-  --color-p800: #991b1b;
-  --color-p900: #7f1d1d;
-  --color-p950: #450a0a;
+  /* Default Theme: Precision Titanium Cyan (Athletic Focus & Anti-Stress) */
+  --color-p50: #f0f9ff;
+  --color-p100: #e0f2fe;
+  --color-p200: #bae6fd;
+  --color-p300: #7dd3fc;
+  --color-p400: #38bdf8;
+  --color-p500: #0ea5e9;
+  --color-p600: #0284c7;
+  --color-p700: #0369a1;
+  --color-p800: #075985;
+  --color-p900: #0c4a6e;
+  --color-p950: #082f49;
 }
 
 .dark {
-  --background: #050505;
+  --background: #07080c;
   --foreground: #f8fafc;
 }
 
@@ -71,14 +71,15 @@ body {
   overflow-x: hidden;
   max-width: 100vw;
   background-image:
-    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1), transparent 24%),
-    linear-gradient(180deg, #f8fafc 0%, #eef4fb 45%, #e8eef6 100%);
+    radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%);
 }
 
 .dark body {
+  background-color: #07080c;
   background-image:
-    radial-gradient(circle at 85% 15%, rgba(239, 68, 68, 0.08), transparent 28%),
-    linear-gradient(180deg, #0a0a0a 0%, #050505 45%, #000000 100%);
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.04), transparent 40%),
+    linear-gradient(180deg, #090a0f 0%, #06070a 100%);
 }
 
 a {
@@ -89,15 +90,20 @@ a {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
 }
 
+/* Tabular figures for telemetry, timers, and weights */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Smooth page transitions */
 main {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -107,7 +113,7 @@ main {
 
 /* Custom scrollbar for dark mode */
 .dark * {
-  scrollbar-color: #404040 transparent;
+  scrollbar-color: #27272a transparent;
 }
 
 /* Safe area for mobile bottom nav (iPhone notch) */

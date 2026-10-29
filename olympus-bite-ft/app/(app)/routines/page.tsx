@@ -369,7 +369,7 @@ function TrainerRoutinesPage() {
                 className={cn(
                   "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 border",
                   overviewTab === "templates"
-                    ? "bg-red-600 text-white border-red-500 shadow-red-600/30"
+                    ? "bg-white text-black border-white shadow-sm font-semibold"
                     : "bg-white/10 hover:bg-white/15 text-slate-300 hover:text-white border-white/10",
                 )}
               >
@@ -404,7 +404,7 @@ function TrainerRoutinesPage() {
               className={cn(
                 "rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0",
                 overviewTab === tab.key
-                  ? "bg-red-600 text-white shadow-md shadow-red-600/30"
+                  ? "bg-white text-black shadow-sm font-semibold"
                   : "text-slate-400 hover:text-white hover:bg-white/5",
               )}
             >
@@ -458,7 +458,7 @@ function TrainerRoutinesPage() {
               <button
                 type="button"
                 onClick={() => setOverviewTab("templates")}
-                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-semibold uppercase tracking-wider shadow-sm transition-all cursor-pointer"
               >
                 ⭐ Ver Plantillas Personalizadas
               </button>

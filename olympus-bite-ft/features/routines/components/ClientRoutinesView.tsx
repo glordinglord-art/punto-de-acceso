@@ -271,7 +271,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             <button
               type="button"
               onClick={() => setView("evolution")}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600/30 to-amber-600/30 hover:from-red-600/40 hover:to-amber-600/40 border border-red-500/40 text-amber-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
             >
               <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
               <span>Mi Progreso</span>
@@ -284,7 +284,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
                   onClick={() => setWeightUnit(u)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
                     weightUnit === u
-                      ? "bg-red-600 text-white shadow"
+                      ? "bg-white text-black font-bold shadow-sm"
                       : "text-neutral-400 hover:text-white"
                   }`}
                 >
@@ -297,10 +297,10 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       />
 
       {/* RESUMEN DE AVANCE (DIARIO • SEMANAL • MENSUAL) Y EL PORQUÉ DEL CICLO */}
-      <div className="mb-5 rounded-3xl bg-gradient-to-br from-[#141720] via-[#0e1017] to-[#1a0b0e] border border-white/10 p-4 sm:p-5 space-y-4">
+      <div className="mb-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">
               💡 ¿Por qué entrenas este ciclo?
             </span>
             <p className="text-xs sm:text-sm text-neutral-200 mt-0.5 leading-relaxed">

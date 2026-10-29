@@ -1001,7 +1001,7 @@ export function RoutineListView({
               className={cn(
                 "rounded-xl px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
                 activeTab === "routine"
-                  ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white shadow-md shadow-primary-500/30"
+                  ? "bg-white text-black font-semibold shadow-sm"
                   : "text-slate-400 hover:text-white"
               )}
             >
@@ -1013,7 +1013,7 @@ export function RoutineListView({
               className={cn(
                 "rounded-xl px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
                 activeTab === "history"
-                  ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white shadow-md shadow-primary-500/30"
+                  ? "bg-white text-black font-semibold shadow-sm"
                   : "text-slate-400 hover:text-white"
               )}
             >
@@ -1060,7 +1060,7 @@ export function RoutineListView({
                               className={cn(
                                 "flex items-center justify-between w-full rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all cursor-pointer text-left",
                                 isSelected
-                                  ? "bg-red-600 border border-red-500 text-white font-black shadow-lg shadow-red-600/30"
+                                  ? "bg-white border-white text-black font-bold shadow-sm"
                                   : r.isActive
                                     ? "bg-white/10 text-white hover:bg-white/15 border border-white/15"
                                     : "text-slate-300 hover:bg-white/10 hover:text-white"
@@ -1129,7 +1129,7 @@ export function RoutineListView({
                               className={cn(
                                 "flex items-center justify-between w-full rounded-xl px-3 py-2 text-xs font-bold transition-all cursor-pointer",
                                 isSelected
-                                  ? "bg-red-600 border border-red-500 text-white font-black shadow-md shadow-red-600/25"
+                                  ? "bg-white border-white text-black font-bold shadow-sm"
                                   : isCompleted
                                     ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                                     : "text-slate-300 hover:bg-white/10 hover:text-white"
@@ -1275,7 +1275,7 @@ export function RoutineListView({
                     <button
                       type="button"
                       onClick={() => onStartSession(todayDay)}
-                      className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 text-white font-black uppercase tracking-wider text-xs shadow-[0_0_30px_rgba(239,68,68,0.4)] hover:shadow-[0_0_40px_rgba(239,68,68,0.6)] active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                      className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-neutral-100 text-black font-bold uppercase tracking-wider text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
                       <span className="text-base">⚡</span>
                       <span>Entrenar Hoy ({DAY_NAMES[todayDay.dayNumber]})</span>
@@ -1423,13 +1423,13 @@ export function RoutineListView({
                           className={cn(
                             "relative mx-auto flex h-11 w-11 sm:h-13 sm:w-13 flex-col items-center justify-center rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer",
                             isSelected
-                              ? "bg-red-600 text-white shadow-lg shadow-red-600/40 ring-2 ring-white/30 scale-105"
+                              ? "bg-white text-black shadow-sm font-bold scale-105"
                               : isTodayDate
-                                ? "border-2 border-red-500/80 bg-red-500/10 text-white shadow-sm"
+                                ? "border-2 border-sky-400 bg-sky-500/10 text-white shadow-sm"
                                 : isDayDone
                                   ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
                                   : hasTraining
-                                    ? "bg-red-500/15 text-white border border-red-500/30 hover:bg-red-500/25 hover:border-red-500/50"
+                                    ? "bg-white/[0.04] text-neutral-300 border border-white/10 hover:border-white/20"
                                     : hasRest
                                       ? "bg-white/[0.04] text-slate-400 border border-white/8 hover:bg-white/10"
                                       : "text-slate-500 hover:bg-white/10 hover:text-white border border-transparent",
@@ -1442,7 +1442,7 @@ export function RoutineListView({
                               {isDayDone ? (
                                 <span className="text-[9px] text-emerald-400 font-extrabold leading-none">✓</span>
                               ) : hasTraining ? (
-                                <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
                               ) : hasRest ? (
                                 <span className="h-1.5 w-1.5 rounded-full bg-slate-500/60" />
                               ) : null}
@@ -1456,7 +1456,7 @@ export function RoutineListView({
                   {/* Legend */}
                   <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 border-t border-white/10 pt-3.5 flex-wrap">
                     <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                      <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/50" />
                       <span>Entrenamiento</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
@@ -1519,7 +1519,7 @@ export function RoutineListView({
                             <div className="rounded-3xl border border-white/10 bg-[#0c0e17] p-5 shadow-2xl backdrop-blur-xl space-y-4">
                               <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3.5 flex-wrap">
                                 <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600/20 text-red-400 border border-red-500/30 font-black text-sm shrink-0">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300 border border-sky-500/25 font-black text-sm shrink-0">
                                     D{selectedDayInfo.dayNumber}
                                   </div>
                                   <div>
@@ -1544,7 +1544,7 @@ export function RoutineListView({
                                     <button
                                       type="button"
                                       onClick={() => onStartSession(selectedDayInfo)}
-                                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 active:scale-95 transition-all cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
                                     >
                                       ▶ Iniciar Sesión
                                     </button>
@@ -1598,7 +1598,7 @@ export function RoutineListView({
 
                                       <div className="flex items-center gap-2 shrink-0">
                                         {ex.intensity === "failure" && (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/40">
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/[0.05] text-neutral-300 border border-white/10">
                                             🔴 Al Fallo
                                           </span>
                                         )}
@@ -1705,7 +1705,7 @@ export function RoutineListView({
                               <button
                                 type="button"
                                 onClick={() => onStartSession(day)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-red-600/30 active:scale-95 transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
                               >
                                 ▶ Iniciar
                               </button>
@@ -1775,7 +1775,7 @@ export function RoutineListView({
                                   <div className="flex items-center gap-2 shrink-0">
                                     {/* Semáforo badge */}
                                     {ex.intensity === "failure" && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm shadow-red-500/20">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/[0.05] text-neutral-300 border border-white/10 shadow-sm shadow-red-500/20">
                                         🔴 Al Fallo
                                       </span>
                                     )}
@@ -1870,7 +1870,7 @@ export function RoutineListView({
                     placeholder="Buscar ejercicio..."
                     value={historySearchQuery}
                     onChange={(e) => setHistorySearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-8 py-2.5 rounded-2xl border border-white/15 bg-white/5 text-white placeholder:text-slate-400 text-xs font-bold outline-none focus:border-red-500 focus:bg-white/10 transition-all"
+                    className="w-full pl-10 pr-8 py-2.5 rounded-2xl border border-white/15 bg-white/5 text-white placeholder:text-slate-400 text-xs font-bold outline-none focus:border-primary-400 focus:bg-white/10 transition-all"
                   />
                   {historySearchQuery && (
                     <button
@@ -1891,7 +1891,7 @@ export function RoutineListView({
                   <select
                     value={historyRoutineFilter}
                     onChange={(e) => setHistoryRoutineFilter(e.target.value)}
-                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-red-500 transition-all appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-primary-400 transition-all appearance-none cursor-pointer"
                   >
                     <option value="all" className="bg-[#0c0e17] text-white py-2">Todas las rutinas</option>
                     {routines.map((r) => (
@@ -1913,7 +1913,7 @@ export function RoutineListView({
                   <select
                     value={historyWeekFilter}
                     onChange={(e) => setHistoryWeekFilter(e.target.value)}
-                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-red-500 transition-all appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-primary-400 transition-all appearance-none cursor-pointer"
                   >
                     <option value="all" className="bg-[#0c0e17] text-white py-2">Todas las semanas</option>
                     {Array.from(
@@ -1976,7 +1976,7 @@ export function RoutineListView({
               {groupedSessions.map((session) => (
                 <div key={session.dateStr} className="relative pl-6 pb-6 last:pb-0 border-l-2 border-white/10 ml-3">
                   {/* Timeline Glowing Dot */}
-                  <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full border-2 border-primary-500 bg-gradient-to-r from-red-600 to-amber-500 shadow-[0_0_12px_rgba(239,68,68,0.6)]" />
+                  <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full border-2 border-sky-400 bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
 
                   {/* Session Card */}
                   <div className="rounded-3xl border border-white/10 bg-[#0c0e17]/90 backdrop-blur-2xl p-5 shadow-2xl hover:border-white/20 transition-all">

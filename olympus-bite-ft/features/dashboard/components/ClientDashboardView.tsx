@@ -11,13 +11,10 @@ import {
   Scale,
   TrendingUp,
   ChevronRight,
-  Clock,
   CheckCircle2,
-  AlertTriangle,
   Sparkles,
   Ruler,
   FileText,
-  Activity,
   Plus,
   Minus,
   Layers,
@@ -467,7 +464,7 @@ export function ClientDashboardView() {
   const carbsToday = data?.carbsToday || 0;
   const fatToday = data?.fatToday || 0;
 
-  // Score Adictivo del Día (Los 3 Pilares Diarios) + Racha de Días Cumpliendo
+  // Score del Día (Los 3 Pilares Diarios) + Racha de Días Cumpliendo
   const dailyVictory = useMemo(() => {
     const waterDone = currentWaterLiters >= targetWaterLiters * 0.8;
     const nutritionDone = caloriesToday > 0;
@@ -501,128 +498,135 @@ export function ClientDashboardView() {
 
   if (loading && !data) {
     return (
-      <div className="max-w-lg lg:max-w-6xl mx-auto space-y-3 py-2">
-        <div className="h-32 rounded-3xl bg-white/5 animate-pulse" />
-        <div className="h-12 rounded-2xl bg-white/5 animate-pulse" />
-        <div className="h-64 rounded-3xl bg-white/5 animate-pulse" />
+      <div className="max-w-lg lg:max-w-6xl mx-auto space-y-4 py-2">
+        <div className="h-44 rounded-3xl bg-[#0e1017] border border-white/[0.06] animate-pulse" />
+        <div className="h-12 rounded-2xl bg-[#0e1017] border border-white/[0.06] animate-pulse" />
+        <div className="h-64 rounded-3xl bg-[#0e1017] border border-white/[0.06] animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
+    <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start space-y-4 lg:space-y-0 pb-16">
       {/* ═════════════════════════════════════════════════════════
           COLUMNA IZQUIERDA (EN PC) / CABECERA (EN CELULAR):
           RELOJ DE 120 DÍAS + RESUMEN RÁPIDO EN PC
          ═════════════════════════════════════════════════════════ */}
       <div className="lg:col-span-5 space-y-4">
-        {/* 1. EL RELOJ DE 120 DÍAS (UN DÍA MENOS) */}
-        <section className="rounded-3xl bg-gradient-to-br from-[#141720] via-[#0e1017] to-[#1a0b0e] border border-white/10 p-4 sm:p-5 shadow-xl relative overflow-hidden">
-          <div className="flex items-start justify-between gap-2">
+        {/* 1. EL RELOJ DE 120 DÍAS (HORIZONTE DE TRANSFORMACIÓN) */}
+        <section className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 shadow-xl relative overflow-hidden">
+          {/* Sutil halo ambiental */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex items-start justify-between gap-3 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1.5">
-                <Clock className="w-3 h-3" />
-                <span>No es un día más • Es un día menos</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-condensed font-black uppercase tracking-tight text-white leading-none">
-                DÍA {clockStats.dayNumber} DE {clockStats.totalDays}{" "}
-                <span className="text-red-500">
-                  • QUEDAN {clockStats.daysRemaining} DÍAS
-                </span>
+              <p className="text-xs text-neutral-400 font-medium">
+                Hola, <span className="text-white font-semibold">{user?.name?.split(' ')[0] || "Atleta"}</span>
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold uppercase tracking-tight text-white mt-0.5">
+                Día {clockStats.dayNumber}{" "}
+                <span className="text-neutral-400 text-lg font-normal">/ {clockStats.totalDays}</span>
               </h1>
-              <p className="text-xs text-neutral-400 mt-1">
-                Semana {clockStats.weekNumber} de {clockStats.totalWeeks} —{" "}
-                <span className="text-neutral-200 font-medium">
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-neutral-400">
+                  Semana {clockStats.weekNumber} de {clockStats.totalWeeks}
+                </span>
+                <span className="inline-block w-1 h-1 rounded-full bg-neutral-600" />
+                <span className="text-xs text-sky-400 font-medium">
                   {clockStats.phaseName}
                 </span>
-              </p>
+              </div>
             </div>
 
-            {/* Selector Rápido kg | lbs */}
-            <div className="flex rounded-xl bg-white/5 p-0.5 border border-white/10 shrink-0">
-              {(["kg", "lbs"] as const).map((u) => (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() => setUnit(u)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition",
-                    unit === u
-                      ? "bg-red-600 text-white shadow"
-                      : "text-neutral-400 hover:text-white",
-                  )}
-                >
-                  {u}
-                </button>
-              ))}
+            {/* Selector Rápido kg | lbs & Días restantes */}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/10 text-neutral-200 text-xs font-semibold tabular-nums">
+                {clockStats.daysRemaining} días restantes
+              </span>
+
+              <div className="flex rounded-xl bg-white/[0.04] p-0.5 border border-white/[0.08]">
+                {(['kg', 'lbs'] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => setUnit(u)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-semibold uppercase transition active:scale-95",
+                      unit === u
+                        ? "bg-white text-black font-bold shadow-sm"
+                        : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Barra de Progreso de los 4 Meses */}
-          <div className="mt-3.5 space-y-1">
-            <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
+          <div className="mt-4 space-y-1.5 relative z-10">
+            <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-red-600 via-amber-500 to-emerald-400 transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-sky-400 via-teal-400 to-emerald-400 transition-all duration-500"
                 style={{ width: `${Math.max(4, clockStats.pct)}%` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+            <div className="flex justify-between text-[11px] font-mono text-neutral-400 tabular-nums">
               <span>Día 1</span>
-              <span>{clockStats.pct}% avanzado</span>
+              <span className="text-neutral-300 font-medium">{clockStats.pct}% completado</span>
               <span>Meta: Día {clockStats.totalDays}</span>
             </div>
           </div>
 
-          {/* ── LOOP ADICTIVO DIARIO: TU VICTORIA DE HOY + RACHA ACTIVA ── */}
-          <div className="mt-4 pt-3.5 border-t border-white/10 space-y-2.5">
+          {/* ── LOOP DIARIO: LOS 3 PILARES + RACHA ── */}
+          <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-3 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[11px] font-black text-amber-300">
-                  🔥 Racha: {dailyVictory.streakDays} día{dailyVictory.streakDays === 1 ? "" : "s"}
-                </span>
-                <span className="text-xs font-bold text-white">
-                  Tu Día Hoy: {dailyVictory.scorePct}% completado
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-300">
+                  <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span>Racha: {dailyVictory.streakDays} día{dailyVictory.streakDays === 1 ? '' : 's'}</span>
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-emerald-400">
-                {dailyVictory.completedCount}/3 Pilares
+              <span className="text-xs font-semibold text-neutral-300">
+                {dailyVictory.completedCount} de 3 Pilares Hoy
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <div
                 className={cn(
-                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
                   dailyVictory.waterDone
-                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                    : "bg-black/40 border-white/10 text-neutral-400",
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                    : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
                 )}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Agua (≥80%)</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span className="truncate">Agua</span>
               </div>
 
               <div
                 className={cn(
-                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
                   dailyVictory.nutritionDone
-                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                    : "bg-black/40 border-white/10 text-neutral-400",
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                    : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
                 )}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Comidas Hoy</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span className="truncate">Comidas</span>
               </div>
 
               <div
                 className={cn(
-                  "rounded-xl px-2.5 py-1.5 border flex items-center gap-1.5 font-semibold transition",
+                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
                   dailyVictory.sleepDone
-                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                    : "bg-black/40 border-white/10 text-neutral-400",
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                    : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
                 )}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span className="truncate">Sueño ±1h</span>
               </div>
             </div>
@@ -632,85 +636,85 @@ export function ClientDashboardView() {
           <button
             type="button"
             onClick={() => setShowEvolutionModal(true)}
-            className="w-full mt-3.5 p-3 rounded-2xl bg-gradient-to-r from-red-600/20 via-primary-500/15 to-amber-500/20 border border-red-500/30 text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-between hover:border-amber-500/50 hover:bg-white/[0.04] transition group cursor-pointer shadow-lg"
+            className="w-full mt-4 p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 text-white transition-all group cursor-pointer active:scale-[0.98] shadow-sm flex items-center justify-between"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 group-hover:scale-110 transition shrink-0">
-                <Layers className="w-4 h-4" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition shrink-0">
+                <Layers className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <span className="block text-white font-bold text-xs">
+                <span className="block text-sm font-semibold text-white">
                   Mi Progreso (Semana a Semana)
                 </span>
-                <span className="block text-[10px] text-neutral-400 font-medium">
-                  1. Carta del Coach • 2. Cargas y Récords • 3. Cuerpo y Peso
+                <span className="block text-xs text-neutral-400">
+                  Cartas del Coach · Récords · Fotos y Medidas
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition shrink-0" />
+            <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-white group-hover:translate-x-0.5 transition shrink-0" />
           </button>
         </section>
 
         {/* TARJETA EXCLUSIVA PARA PC: VISTA RÁPIDA DE TUS 4 METAS SIEMPRE VISIBLE */}
-        <section className="hidden lg:block rounded-3xl bg-white/[0.03] border border-white/10 p-5 space-y-3">
+        <section className="hidden lg:block rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-red-400" />
-              Tus 4 Metas de estos 4 Meses
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
+              <Target className="w-4 h-4 text-sky-400" />
+              Tus 4 Metas del Programa
             </span>
             <button
               type="button"
-              onClick={() => setHorizon("month")}
-              className="text-[11px] font-bold text-red-400 hover:text-red-300"
+              onClick={() => setHorizon('month')}
+              className="text-xs font-semibold text-sky-400 hover:text-sky-300"
             >
               Ver detalle →
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <span className="text-[10px] font-bold uppercase text-emerald-400 block">
                 1. Peso y Físico
               </span>
-              <p className="text-sm font-bold text-white mt-0.5">
-                {formatWeight(objectives.biometric.currentKg)} →{" "}
+              <p className="text-sm font-bold text-white mt-1 tabular-nums">
+                {formatWeight(objectives.biometric.currentKg)} →{' '}
                 {formatWeight(objectives.biometric.targetKg)}
               </p>
             </div>
 
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <span className="text-[10px] font-bold uppercase text-amber-400 block">
                 2. Fuerza
               </span>
-              <p className="text-sm font-bold text-white truncate mt-0.5">
+              <p className="text-sm font-bold text-white truncate mt-1">
                 {objectives.strength.exerciseName}
               </p>
-              <span className="text-[11px] text-neutral-400">
+              <span className="text-xs text-neutral-400 tabular-nums">
                 Meta: {objectives.strength.targetWeight} {objectives.strength.unit}
               </span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <span className="text-[10px] font-bold uppercase text-sky-400 block">
                 3. Dominio Corporal
               </span>
-              <p className="text-sm font-bold text-white truncate mt-0.5">
+              <p className="text-sm font-bold text-white truncate mt-1">
                 {objectives.bodyMastery.skillName}
               </p>
-              <span className="text-[11px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 {objectives.bodyMastery.targetMark}
               </span>
             </div>
 
             {objectives.aerobic.enabled && (
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                 <span className="text-[10px] font-bold uppercase text-purple-400 block">
                   4. Cardio / Aire
                 </span>
-                <p className="text-sm font-bold text-white truncate mt-0.5">
+                <p className="text-sm font-bold text-white truncate mt-1">
                   {objectives.aerobic.metricName}
                 </p>
-                <span className="text-[11px] text-neutral-400">
+                <span className="text-xs text-neutral-400">
                   {objectives.aerobic.targetMark}
                 </span>
               </div>
@@ -723,22 +727,22 @@ export function ClientDashboardView() {
           COLUMNA DERECHA (EN PC) / CUERPO PRINCIPAL (EN CELULAR)
          ═════════════════════════════════════════════════════════ */}
       <div className="lg:col-span-7 space-y-4">
-        {/* BARRA ÚNICA DE NAVEGACIÓN (SIN BOTONES REPETIDOS) */}
-        <div className="grid grid-cols-3 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10">
+        {/* BARRA ÚNICA DE NAVEGACIÓN */}
+        <div className="grid grid-cols-3 p-1 rounded-2xl bg-[#0e1017] border border-white/[0.08]">
           {[
-            { id: "today", label: "📍 Hoy" },
-            { id: "week", label: "📊 Mi Semana" },
-            { id: "month", label: "🎯 Mis 4 Metas" },
+            { id: 'today', label: 'Hoy' },
+            { id: 'week', label: 'Mi Semana' },
+            { id: 'month', label: 'Mis 4 Metas' },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setHorizon(tab.id as HorizonTab)}
               className={cn(
-                "py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition",
+                "py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition active:scale-95",
                 horizon === tab.id
-                  ? "bg-white text-black shadow"
-                  : "text-neutral-400 hover:text-white",
+                  ? "bg-white text-black font-bold shadow-sm"
+                  : "text-neutral-400 hover:text-white"
               )}
             >
               {tab.label}
@@ -747,20 +751,20 @@ export function ClientDashboardView() {
         </div>
 
         {/* ═════════════════════════════════════════════════════════
-            VISTA 1: HOY (LOS 3 HÁBITOS DEL DÍA EXPLICADOS FÁCIL)
+            VISTA 1: HOY (LOS 3 HÁBITOS DEL DÍA)
            ═════════════════════════════════════════════════════════ */}
-        {horizon === "today" && (
-          <div className="space-y-3.5 animate-in fade-in duration-200">
+        {horizon === 'today' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
             {/* 1. TU ENTRENAMIENTO DE HOY */}
-            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
-                    <Dumbbell className="w-4 h-4" />
+            <div className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <Dumbbell className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
-                      1. Tu Entrenamiento de Hoy
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 block">
+                      Entrenamiento de Hoy
                     </span>
                     <h2 className="text-base font-bold text-white">
                       {data?.activeRoutine?.name || "Mi Rutina Activa"}
@@ -769,7 +773,7 @@ export function ClientDashboardView() {
                 </div>
                 <Link
                   href="/routines"
-                  className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-md shadow-red-600/20 active:scale-95 transition shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition shrink-0"
                 >
                   <span>Ir a Entrenar</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -777,183 +781,182 @@ export function ClientDashboardView() {
               </div>
 
               {/* El Porqué en 1 frase clara */}
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-xs text-neutral-300 leading-relaxed">
-                <span className="font-bold text-white">💡 ¿Para qué sirve hoy? </span>
-                Cada serie de hoy te acerca a levantar{" "}
-                <strong className="text-amber-300">
-                  {objectives.strength.targetWeight} {objectives.strength.unit} en{" "}
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs text-neutral-300 leading-relaxed">
+                <span className="font-semibold text-white">Objetivo de la sesión: </span>
+                Cada serie de hoy te acerca a levantar{' '}
+                <strong className="text-amber-300 font-semibold">
+                  {objectives.strength.targetWeight} {objectives.strength.unit} en{' '}
                   {objectives.strength.exerciseName}
-                </strong>{" "}
-                y dominar{" "}
-                <strong className="text-sky-300">
+                </strong>{' '}
+                y dominar{' '}
+                <strong className="text-sky-300 font-semibold">
                   {objectives.bodyMastery.skillName}
                 </strong>
                 .
               </div>
             </div>
 
-            {/* 2. AGUA Y ALIMENTACIÓN */}
-            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-4">
-              {/* Bloque Prioritario: Agua */}
-              <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-sky-400 shrink-0" />
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-sky-300 block">
-                        2. Tu Agua de Hoy (Prioridad)
-                      </span>
-                      <p className="text-base font-black text-white">
-                        {currentWaterLiters} L{" "}
-                        <span className="text-xs font-normal text-neutral-300">
-                          de {targetWaterLiters} Litros
-                        </span>
-                      </p>
-                    </div>
+            {/* 2. AGUA (HIDRATACIÓN) */}
+            <div className="rounded-3xl bg-[#0a121c] border border-sky-500/20 p-5 space-y-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <Droplets className="w-5 h-5" />
                   </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleWaterDelta(-1)}
-                      className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95"
-                      aria-label="Restar vaso"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleWaterDelta(1)}
-                      className="px-3 h-9 rounded-xl bg-sky-500 text-black font-bold text-xs flex items-center gap-1 active:scale-95 shadow"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>1 Vaso (250ml)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleWaterDelta(2)}
-                      className="px-2.5 h-9 rounded-xl bg-sky-400/20 border border-sky-400/40 text-sky-200 font-bold text-xs active:scale-95"
-                    >
-                      +500ml
-                    </button>
-                  </div>
-                </div>
-
-                <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-sky-400 transition-all duration-300"
-                    style={{ width: `${waterPct}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-sky-100/90">
-                  💧 <strong>¿Por qué importa?</strong> Si te falta agua, pierdes hasta 15% de fuerza y te cansas mucho más rápido.
-                </p>
-              </div>
-
-              {/* Bloque: Comidas del Día */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
-                      Tus Comidas de Hoy
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 block">
+                      Hidratación Diaria
                     </span>
-                    <h3 className="text-lg font-black text-white">
-                      {caloriesToday.toLocaleString("es")}{" "}
+                    <p className="text-lg font-bold text-white tabular-nums">
+                      {currentWaterLiters} L{' '}
                       <span className="text-xs font-normal text-neutral-400">
-                        de {targets.calories.toLocaleString("es")} kcal
+                        de {targetWaterLiters} Litros ({waterPct}%)
                       </span>
-                    </h3>
+                    </p>
                   </div>
-                  <Link
-                    href="/meals"
-                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 active:scale-95 transition"
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(-1)}
+                    className="w-10 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95 transition"
+                    aria-label="Restar 250ml"
                   >
-                    <span>+ Anotar Comida</span>
-                  </Link>
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(1)}
+                    className="h-10 px-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs flex items-center gap-1 active:scale-95 transition shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>250ml</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleWaterDelta(2)}
+                    className="h-10 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-200 font-bold text-xs active:scale-95 transition"
+                  >
+                    +500ml
+                  </button>
                 </div>
-
-                {/* Barras de Macros con explicación simple */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    {
-                      label: "Proteína",
-                      val: proteinToday,
-                      goal: targets.protein,
-                      role: "Construye músculo",
-                      color: "bg-sky-400",
-                    },
-                    {
-                      label: "Carbos",
-                      val: carbsToday,
-                      goal: targets.carbs,
-                      role: "Da energía hoy",
-                      color: "bg-amber-400",
-                    },
-                    {
-                      label: "Grasas",
-                      val: fatToday,
-                      goal: targets.fat,
-                      role: "Cuida hormonas",
-                      color: "bg-rose-400",
-                    },
-                  ].map((m) => {
-                    const pct = Math.min(
-                      100,
-                      Math.round((m.val / Math.max(m.goal, 1)) * 100),
-                    );
-                    return (
-                      <div
-                        key={m.label}
-                        className="p-2.5 rounded-2xl bg-black/40 border border-white/5 space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-neutral-200">
-                            {m.label}
-                          </span>
-                          <span className="font-mono text-[11px] text-neutral-400">
-                            {Math.round(m.val)}/{m.goal}g
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full", m.color)}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="block text-[10px] text-neutral-400 truncate">
-                          {m.role}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p className="text-xs text-neutral-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
-                  <strong className="text-white">🍽️ ¿Por qué comes esto?</strong>{" "}
-                  {heroPact?.pillars?.nutrition?.nutritionWhy ||
-                    objectives.biometric.why}
-                </p>
               </div>
+
+              <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-sky-400 transition-all duration-300"
+                  style={{ width: `${waterPct}%` }}
+                />
+              </div>
+              <p className="text-xs text-sky-200/80">
+                💧 La hidratación adecuada preserva hasta un 15% de tu capacidad de fuerza y retrasa la fatiga del sistema nervioso central.
+              </p>
             </div>
 
-            {/* 3. TU DESCANSO (DORMIR A LA MISMA HORA - X DE 7 DÍAS) */}
-            <div className="rounded-3xl bg-white/[0.03] border border-indigo-500/30 p-4 sm:p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-                    <Moon className="w-4 h-4" />
+            {/* 3. ALIMENTACIÓN Y MACROS */}
+            <div className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
+                    Nutrición y Macros
+                  </span>
+                  <h3 className="text-lg font-bold text-white tabular-nums">
+                    {caloriesToday.toLocaleString('es')}{' '}
+                    <span className="text-xs font-normal text-neutral-400">
+                      / {targets.calories.toLocaleString('es')} kcal
+                    </span>
+                  </h3>
+                </div>
+                <Link
+                  href="/meals"
+                  className="px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 active:scale-95 transition"
+                >
+                  <span>+ Anotar Comida</span>
+                </Link>
+              </div>
+
+              {/* Barras de Macros con números tabulares */}
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  {
+                    label: 'Proteína',
+                    val: proteinToday,
+                    goal: targets.protein,
+                    role: 'Músculo & Recuperación',
+                    color: 'bg-sky-400',
+                  },
+                  {
+                    label: 'Carbos',
+                    val: carbsToday,
+                    goal: targets.carbs,
+                    role: 'Energía y Rendimiento',
+                    color: 'bg-amber-400',
+                  },
+                  {
+                    label: 'Grasas',
+                    val: fatToday,
+                    goal: targets.fat,
+                    role: 'Salud Hormonal',
+                    color: 'bg-rose-400',
+                  },
+                ].map((m) => {
+                  const pct = Math.min(
+                    100,
+                    Math.round((m.val / Math.max(m.goal, 1)) * 100),
+                  );
+                  return (
+                    <div
+                      key={m.label}
+                      className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-neutral-200">
+                          {m.label}
+                        </span>
+                        <span className="font-mono text-xs text-neutral-400 tabular-nums">
+                          {Math.round(m.val)}/{m.goal}g
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full', m.color)}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="block text-[10px] text-neutral-400 truncate">
+                        {m.role}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-neutral-300 leading-relaxed bg-white/[0.02] p-3 rounded-2xl border border-white/[0.06]">
+                <strong className="text-white">Fundamento: </strong>{' '}
+                {heroPact?.pillars?.nutrition?.nutritionWhy ||
+                  objectives.biometric.why}
+              </p>
+            </div>
+
+            {/* 4. DESCANSO (REGULARIDAD CIRCADIANA ±1h) */}
+            <div className="rounded-3xl bg-[#0e1017] border border-indigo-500/25 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Moon className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
-                        3. Tu Descanso Circadiano (±1h)
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">
+                        Descanso Circadiano (±1h)
                       </span>
-                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 text-[10px] font-black font-mono">
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-[10px] font-bold font-mono tabular-nums">
                         {compliedDaysCount} de 7 días
                       </span>
                     </div>
-                    <h2 className="text-sm font-bold text-white mt-0.5">
-                      Horario Ancla: Dormir {defaultBedtime} → Despertar {defaultWakeTime}
+                    <h2 className="text-sm font-semibold text-white mt-0.5">
+                      Horario Ancla: {defaultBedtime} → {defaultWakeTime}
                     </h2>
                   </div>
                 </div>
@@ -961,25 +964,25 @@ export function ClientDashboardView() {
                 {todaySleepLog && (
                   <span
                     className={cn(
-                      "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase shrink-0",
+                      "px-3 py-1 rounded-full text-xs font-semibold shrink-0",
                       todaySleepLog.withinOneHourWindow
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+                        ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/15 text-amber-300 border border-amber-500/30",
                     )}
                   >
                     {todaySleepLog.withinOneHourWindow
-                      ? `🟢 Hoy cumplido (${todaySleepLog.hoursSlept}h)`
+                      ? `🟢 Cumplido (${todaySleepLog.hoursSlept}h)`
                       : `🟡 Varió >1h (${todaySleepLog.hoursSlept}h)`}
                   </span>
                 )}
               </div>
 
-              {/* ── Tira Visual de los 7 Días de la Semana (L M M J V S D) ── */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-[10px] text-neutral-400 font-bold uppercase tracking-wider px-1">
-                  <span>Tu racha esta semana:</span>
-                  <span className={compliedDaysCount >= 5 ? "text-emerald-400" : "text-amber-400"}>
-                    {compliedDaysCount >= 5 ? "🔥 Racha Óptima (SNC al 100%)" : "⚠️ Cuidar horario"}
+              {/* Tira Visual de los 7 Días */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-[11px] text-neutral-400 font-medium px-1">
+                  <span>Consistencia semanal:</span>
+                  <span className={compliedDaysCount >= 5 ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+                    {compliedDaysCount >= 5 ? '🔥 Racha Óptima (SNC recuperado)' : 'Horario irregular'}
                   </span>
                 </div>
                 <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -987,30 +990,24 @@ export function ClientDashboardView() {
                     <div
                       key={d.dateStr}
                       className={cn(
-                        "p-2 rounded-xl border text-xs transition-all",
+                        "p-2.5 rounded-xl border text-xs transition-all",
                         d.log
                           ? d.complied
-                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                            : "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                            : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                           : d.isToday
-                            ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-200 animate-pulse"
-                            : "bg-black/30 border-white/5 text-neutral-500",
+                            ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-200 ring-1 ring-indigo-500/40"
+                            : "bg-white/[0.02] border-white/[0.06] text-neutral-500",
                       )}
                     >
-                      <span className="block text-[9px] font-bold uppercase">
+                      <span className="block text-[10px] font-bold uppercase">
                         {d.label}
                       </span>
-                      <span className="block text-xs font-black mt-0.5">
-                        {d.log ? (
-                          d.complied ? "✓" : "!"
-                        ) : d.isToday ? (
-                          "Hoy"
-                        ) : (
-                          "—"
-                        )}
+                      <span className="block text-xs font-bold mt-1">
+                        {d.log ? (d.complied ? '✓' : '!') : d.isToday ? 'Hoy' : '—'}
                       </span>
                       {d.log && (
-                        <span className="block text-[8px] opacity-80 font-mono mt-0.5">
+                        <span className="block text-[9px] opacity-80 font-mono mt-0.5 tabular-nums">
                           {d.log.hoursSlept}h
                         </span>
                       )}
@@ -1025,20 +1022,20 @@ export function ClientDashboardView() {
                   type="button"
                   disabled={savingSleep}
                   onClick={() => handleSaveSleep(defaultBedtime, defaultWakeTime)}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-600/30 via-indigo-500/20 to-sky-500/20 hover:from-indigo-600/40 hover:to-sky-500/30 border border-indigo-500/40 text-indigo-200 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-[0.99]"
+                  className="w-full py-3 px-3 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer active:scale-[0.99]"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>⚡ Dormí a mi hora habitual ({defaultBedtime} a {defaultWakeTime})</span>
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <span>Dormí a mi hora habitual ({defaultBedtime} a {defaultWakeTime})</span>
                 </button>
               )}
 
               {/* Formulario manual por si varió el horario */}
-              <div className="pt-1 border-t border-white/5">
-                <span className="text-[10px] text-neutral-400 block mb-1">
-                  O anota tus horas exactas si tuviste que variar:
+              <div className="pt-2 border-t border-white/[0.06]">
+                <span className="text-[11px] text-neutral-400 block mb-1.5">
+                  O anota tus horas exactas si variaste:
                 </span>
                 <div className="grid grid-cols-3 gap-2 items-end">
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
                     <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
                       Me dormí
                     </label>
@@ -1049,7 +1046,7 @@ export function ClientDashboardView() {
                       className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"
                     />
                   </div>
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                  <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
                     <label className="block text-[9px] font-bold uppercase text-neutral-400 mb-0.5">
                       Me levanté
                     </label>
@@ -1064,9 +1061,9 @@ export function ClientDashboardView() {
                     type="button"
                     disabled={savingSleep}
                     onClick={() => handleSaveSleep()}
-                    className="h-[46px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                    className="h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold uppercase tracking-wider active:scale-95 transition disabled:opacity-50 cursor-pointer"
                   >
-                    {savingSleep ? "..." : "Guardar"}
+                    {savingSleep ? '...' : 'Guardar'}
                   </button>
                 </div>
               </div>
@@ -1075,29 +1072,31 @@ export function ClientDashboardView() {
         )}
 
         {/* ═════════════════════════════════════════════════════════
-            VISTA 2: MI SEMANA (PESO EN AYUNAS + MENSAJE DEL ENTRENADOR)
+            VISTA 2: MI SEMANA (PESO EN AYUNAS + REPORTE COACH)
            ═════════════════════════════════════════════════════════ */}
-        {horizon === "week" && (
+        {horizon === 'week' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             {/* 1. PESAJE SEMANAL EN AYUNAS */}
-            <div className="rounded-3xl bg-white/[0.03] border border-emerald-500/30 p-4 sm:p-5 space-y-3">
+            <div className="rounded-3xl bg-[#0e1017] border border-emerald-500/20 p-5 space-y-3.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Scale className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Scale className="w-5 h-5" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">
-                      1 Vez por Semana • Recién Despierto en Ayunas
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block">
+                      Control Semanal en Ayunas
                     </span>
                     <h2 className="text-base font-bold text-white">
                       Anotar Mi Peso de la Semana
                     </h2>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/15 px-2.5 py-1 rounded-full shrink-0">
-                  Meta:{" "}
+                <span className="text-xs font-mono font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full shrink-0 tabular-nums">
+                  Meta:{' '}
                   {objectives.biometric.weeklyRateKg >= 0
-                    ? `Subir +${objectives.biometric.weeklyRateKg} kg/sem`
-                    : `Bajar ${objectives.biometric.weeklyRateKg} kg/sem`}
+                    ? `+${objectives.biometric.weeklyRateKg} kg/sem`
+                    : `${objectives.biometric.weeklyRateKg} kg/sem`}
                 </span>
               </div>
 
@@ -1106,7 +1105,7 @@ export function ClientDashboardView() {
               </p>
 
               <div className="flex gap-2">
-                <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/10">
+                <div className="flex-1 p-3 rounded-2xl bg-white/[0.02] border border-white/10">
                   <span className="block text-[10px] font-bold uppercase text-neutral-400">
                     Tu peso hoy en ayunas ({unit})
                   </span>
@@ -1116,7 +1115,7 @@ export function ClientDashboardView() {
                     inputMode="decimal"
                     value={fastedWeightInput}
                     onChange={(e) => setFastedWeightInput(e.target.value)}
-                    placeholder={`Ej: ${unit === "lbs" ? "160.5" : "73.2"}`}
+                    placeholder={`Ej: ${unit === 'lbs' ? '160.5' : '73.2'}`}
                     className="w-full bg-transparent text-base font-bold text-white focus:outline-none mt-0.5"
                   />
                 </div>
@@ -1124,39 +1123,39 @@ export function ClientDashboardView() {
                   type="button"
                   disabled={savingWeight}
                   onClick={handleSaveWeeklyWeight}
-                  className="px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-condensed font-bold uppercase tracking-wider text-xs active:scale-95 transition"
+                  className="px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold uppercase tracking-wider text-xs active:scale-95 transition"
                 >
-                  {savingWeight ? "Guardando..." : "Guardar Peso"}
+                  {savingWeight ? 'Guardando...' : 'Guardar Peso'}
                 </button>
               </div>
 
               {/* Historial reciente de pesajes */}
               {fastedWeighIns.length > 0 && (
-                <div className="pt-2 border-t border-white/10 space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                    Tus últimos registros (y tu promedio real sin el engaño de los líquidos):
+                <div className="pt-3 border-t border-white/[0.08] space-y-2">
+                  <span className="text-xs font-semibold text-neutral-400 block">
+                    Últimos registros y promedio real:
                   </span>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {fastedWeighIns
                       .slice(-4)
                       .reverse()
                       .map((w: any) => (
                         <div
                           key={w.id}
-                          className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-black/30"
+                          className="flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.04]"
                         >
                           <span className="text-neutral-400 font-mono">
                             {w.date}
                           </span>
-                          <span className="font-bold text-white">
+                          <span className="font-bold text-white tabular-nums">
                             {formatWeight(w.weightKg)}
                           </span>
-                          <span className="text-[11px] text-sky-300">
-                            Promedio real: {formatWeight(w.trendWeightKg)}
+                          <span className="text-[11px] text-sky-300 tabular-nums">
+                            Tendencia: {formatWeight(w.trendWeightKg)}
                           </span>
                           <span
                             className={cn(
-                              "font-mono text-[11px] font-bold",
+                              "font-mono text-xs font-bold tabular-nums",
                               w.deltaKg > 0
                                 ? "text-emerald-400"
                                 : w.deltaKg < 0
@@ -1173,25 +1172,27 @@ export function ClientDashboardView() {
               )}
             </div>
 
-            {/* 2. MENSAJE Y REPORTE SEMANAL DE TU ENTRENADOR */}
-            <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-5 space-y-3">
+            {/* 2. REPORTE SEMANAL DEL COACH */}
+            <div className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-red-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
-                      Seguimiento Semanal con tu Entrenador
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 block">
+                      Feedback Semanal
                     </span>
                     <h2 className="text-base font-bold text-white">
                       {latestReport
                         ? `Resumen de tu Semana ${latestReport.weekNumber}`
-                        : "Resumen de tu Entrenador"}
+                        : 'Resumen de tu Entrenador'}
                     </h2>
                   </div>
                 </div>
                 {latestReport?.isDeloadWeek && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-bold uppercase">
-                    Semana Suave (Descarga)
+                  <span className="px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 text-xs font-semibold uppercase">
+                    Semana de Descarga
                   </span>
                 )}
               </div>
@@ -1199,34 +1200,34 @@ export function ClientDashboardView() {
               {latestReport ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
-                      <span className="text-[10px] text-neutral-400 uppercase block">
+                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block font-semibold">
                         Entreno
                       </span>
-                      <span className="text-lg font-black text-emerald-400">
+                      <span className="text-lg font-bold text-emerald-400 tabular-nums">
                         {latestReport.trainingScore}%
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
-                      <span className="text-[10px] text-neutral-400 uppercase block">
-                        Comida y Agua
+                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block font-semibold">
+                        Nutrición
                       </span>
-                      <span className="text-lg font-black text-sky-400">
+                      <span className="text-lg font-bold text-sky-400 tabular-nums">
                         {latestReport.nutritionScore}%
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-center">
-                      <span className="text-[10px] text-neutral-400 uppercase block">
+                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
+                      <span className="text-[10px] text-neutral-400 uppercase block font-semibold">
                         Sueño
                       </span>
-                      <span className="text-lg font-black text-indigo-400">
+                      <span className="text-lg font-bold text-indigo-400 tabular-nums">
                         {latestReport.recoveryScore}%
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase text-red-400 block">
+                  <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-1">
+                    <span className="text-[11px] font-bold uppercase text-sky-400 block">
                       Notas de tu Entrenador:
                     </span>
                     <p className="text-xs text-neutral-200 leading-relaxed whitespace-pre-line">
@@ -1235,9 +1236,9 @@ export function ClientDashboardView() {
                   </div>
 
                   {latestReport.nextWeekFocus && (
-                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1">
-                      <span className="text-[10px] font-bold uppercase text-amber-300 block">
-                        🎯 En qué enfocarte esta semana:
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+                      <span className="text-[11px] font-bold uppercase text-amber-300 block">
+                        🎯 Enfoque para tu próxima semana:
                       </span>
                       <p className="text-xs font-semibold text-white">
                         {latestReport.nextWeekFocus}
@@ -1247,42 +1248,41 @@ export function ClientDashboardView() {
                 </div>
               ) : (
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Después de tu llamada semanal, tu entrenador dejará aquí sus notas y el foco principal para tu próxima semana.
+                  Tu entrenador dejará aquí sus notas y el foco principal para tu próxima semana tras cada revisión.
                 </p>
               )}
             </div>
 
-            {/* BOTÓN EXPLORAR LÍNEA DE TIEMPO COMPLETA */}
+            {/* BOTÓN EXPLORAR LÍNEA DE TIEMPO */}
             <button
               type="button"
               onClick={() => setShowEvolutionModal(true)}
-              className="w-full p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-500/40 text-neutral-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/[0.06] transition cursor-pointer"
+              className="w-full p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 text-neutral-200 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/[0.06] transition cursor-pointer active:scale-[0.98]"
             >
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              <span>Ver Mi Progreso (Semana a Semana)</span>
+              <span>Ver Evolución por Capas</span>
             </button>
           </div>
         )}
 
         {/* ═════════════════════════════════════════════════════════
-            VISTA 3: MIS 4 METAS (Y MEDIDA MENSUAL DE % DE GRASA)
+            VISTA 3: MIS 4 METAS (Y MEDICIÓN MENSUAL)
            ═════════════════════════════════════════════════════════ */}
-        {horizon === "month" && (
+        {horizon === 'month' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* LAS 4 METAS EXPLICADAS FÁCIL */}
-            <div className="space-y-2.5">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 px-1">
-                Tus 4 Metas de estos 4 Meses (120 Días)
+            <div className="space-y-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400 px-1">
+                Tus 4 Metas del Ciclo de 120 Días
               </h2>
 
               {/* 1. Peso y Físico */}
-              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-2">
+              <div className="p-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase text-emerald-400">
                     1. Peso y Físico • {objectives.biometric.title}
                   </span>
-                  <span className="text-xs font-mono font-bold text-white">
-                    {formatWeight(objectives.biometric.currentKg)} →{" "}
+                  <span className="text-xs font-mono font-bold text-white tabular-nums">
+                    {formatWeight(objectives.biometric.currentKg)} →{' '}
                     {formatWeight(objectives.biometric.targetKg)}
                   </span>
                 </div>
@@ -1290,23 +1290,23 @@ export function ClientDashboardView() {
                   {objectives.biometric.why}
                 </p>
                 {objectives.biometric.bodyFatPct && (
-                  <div className="text-[11px] text-emerald-300 font-medium">
-                    % de Grasa Actual: {objectives.biometric.bodyFatPct}%{" "}
+                  <div className="text-xs text-emerald-300 font-medium tabular-nums">
+                    % de Grasa Actual: {objectives.biometric.bodyFatPct}%{' '}
                     {objectives.biometric.targetBodyFatPct
                       ? `→ Meta: ${objectives.biometric.targetBodyFatPct}%`
-                      : ""}
+                      : ''}
                   </div>
                 )}
               </div>
 
               {/* 2. Fuerza */}
-              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+              <div className="p-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase text-amber-400">
                     2. Meta de Fuerza
                   </span>
-                  <span className="text-xs font-mono font-bold text-white">
-                    {objectives.strength.currentWeight} →{" "}
+                  <span className="text-xs font-mono font-bold text-white tabular-nums">
+                    {objectives.strength.currentWeight} →{' '}
                     {objectives.strength.targetWeight} {objectives.strength.unit}
                   </span>
                 </div>
@@ -1314,16 +1314,16 @@ export function ClientDashboardView() {
                   {objectives.strength.exerciseName}
                 </p>
                 <p className="text-xs text-neutral-300">
-                  Cómo llegar: subir un poco de peso (+{objectives.strength.weeklyProgression}{" "}
-                  {objectives.strength.unit}) o repeticiones cada semana.
+                  Progresión: subir +{objectives.strength.weeklyProgression}{' '}
+                  {objectives.strength.unit} o repeticiones cada semana.
                 </p>
               </div>
 
-              {/* 3. Dominio de tu Cuerpo */}
-              <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+              {/* 3. Dominio Corporal */}
+              <div className="p-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase text-sky-400">
-                    3. Dominio de tu Cuerpo
+                    3. Dominio Corporal
                   </span>
                   <span className="text-xs font-bold text-sky-200">
                     Meta: {objectives.bodyMastery.targetMark}
@@ -1333,17 +1333,17 @@ export function ClientDashboardView() {
                   {objectives.bodyMastery.skillName}
                 </p>
                 <p className="text-xs text-neutral-300">
-                  Nivel hoy: {objectives.bodyMastery.currentMark} •{" "}
+                  Nivel actual: {objectives.bodyMastery.currentMark} •{' '}
                   {objectives.bodyMastery.weeklyPracticeTarget}
                 </p>
               </div>
 
               {/* 4. Resistencia / Cardio */}
               {objectives.aerobic.enabled && (
-                <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <div className="p-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase text-purple-400">
-                      4. Resistencia / Cardio
+                      4. Resistencia Aeróbica
                     </span>
                     <span className="text-xs font-bold text-purple-200">
                       Meta: {objectives.aerobic.targetMark}
@@ -1360,35 +1360,37 @@ export function ClientDashboardView() {
             </div>
 
             {/* MEDICIÓN MENSUAL DE % DE GRASA (US NAVY O DIRECTO) */}
-            <div className="rounded-3xl bg-white/[0.03] border border-amber-500/30 p-4 sm:p-5 space-y-3.5">
+            <div className="rounded-3xl bg-[#0e1017] border border-amber-500/20 p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Ruler className="w-5 h-5 text-amber-400 shrink-0" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Ruler className="w-5 h-5" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 block">
-                      1 Vez al Mes • Con Cinta Métrica o Báscula
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
+                      Control Mensual
                     </span>
                     <h3 className="text-base font-bold text-white">
-                      Control Mensual de % de Grasa Corporal
+                      % de Grasa Corporal
                     </h3>
                   </div>
                 </div>
 
                 {objectives.biometric.bodyFatPct && (
-                  <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold font-mono">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold tabular-nums">
                     Actual: {objectives.biometric.bodyFatPct}%
                   </span>
                 )}
               </div>
 
               <p className="text-xs text-neutral-300 leading-relaxed">
-                Mide con cinta métrica tu <strong>cuello</strong> y <strong>cintura</strong> (a la altura del ombligo) para calcularlo automáticamente, o ingresa tu porcentaje directamente:
+                Mide con cinta métrica tu <strong>cuello</strong> y <strong>cintura</strong> (a la altura del ombligo) para calcularlo con el método US Navy, o ingresa el valor directo de tu báscula:
               </p>
 
-              {/* Opción A: Cuello y Cintura */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
-                  <label className="block text-[9px] font-bold uppercase text-neutral-400">
+              {/* Inputs Cuello y Cintura */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/10">
+                  <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-0.5">
                     Cuello (cm)
                   </label>
                   <input
@@ -1401,8 +1403,8 @@ export function ClientDashboardView() {
                     placeholder="38"
                   />
                 </div>
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
-                  <label className="block text-[9px] font-bold uppercase text-neutral-400">
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/10">
+                  <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-0.5">
                     Cintura (cm)
                   </label>
                   <input
@@ -1415,9 +1417,9 @@ export function ClientDashboardView() {
                     placeholder="82"
                   />
                 </div>
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
-                  <label className="block text-[9px] font-bold uppercase text-amber-400">
-                    O % Directo (Báscula)
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/10">
+                  <label className="block text-[10px] font-bold uppercase text-amber-400 mb-0.5">
+                    O % Directo
                   </label>
                   <input
                     type="number"
@@ -1431,18 +1433,18 @@ export function ClientDashboardView() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                <span className="text-[11px] text-neutral-400 font-mono">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <span className="text-xs text-neutral-400">
                   {previewNavy !== null ? (
-                    <span className="text-emerald-400 font-bold">
-                      📐 Estimación US Navy: {previewNavy}% de grasa
+                    <span className="text-emerald-400 font-semibold tabular-nums">
+                      📐 Estimación US Navy: {previewNavy}%
                     </span>
                   ) : directFatInput ? (
-                    <span className="text-amber-300 font-bold">
+                    <span className="text-amber-300 font-semibold tabular-nums">
                       ⚖️ Valor directo: {directFatInput}%
                     </span>
                   ) : (
-                    "Ingresa tus centímetros o tu porcentaje directo"
+                    'Ingresa medidas o porcentaje directo'
                   )}
                 </span>
 
@@ -1450,15 +1452,15 @@ export function ClientDashboardView() {
                   type="button"
                   disabled={savingNavy}
                   onClick={handleSaveMonthlyNavy}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs uppercase tracking-wider active:scale-95 transition cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs uppercase tracking-wider active:scale-95 transition cursor-pointer disabled:opacity-50"
                 >
                   {savingNavy
-                    ? "Guardando..."
+                    ? 'Guardando...'
                     : previewNavy
                       ? `Guardar ${previewNavy}%`
                       : directFatInput
                         ? `Guardar ${directFatInput}%`
-                        : "Guardar % de Grasa"}
+                        : 'Guardar % de Grasa'}
                 </button>
               </div>
             </div>

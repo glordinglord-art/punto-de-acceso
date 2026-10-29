@@ -305,7 +305,7 @@ export function GuidedSessionView({
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 p-6 text-center bg-[#090a0f] text-white animate-in fade-in duration-500 overflow-y-auto">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-red-600 via-primary-500 to-amber-500 shadow-[0_0_60px_rgba(239,68,68,0.5)]">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-emerald-500 shadow-[0_0_40px_rgba(245,158,11,0.3)]">
           <Trophy className="h-12 w-12 text-white stroke-[2.5]" />
         </div>
         <div className="space-y-2 max-w-sm">
@@ -370,7 +370,7 @@ export function GuidedSessionView({
         <button
           type="button"
           onClick={onBack}
-          className="mt-1 rounded-2xl bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 px-10 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-red-500/30 active:scale-95 transition-all cursor-pointer"
+          className="mt-1 rounded-2xl bg-white hover:bg-neutral-100 text-black px-10 py-4 text-sm font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
         >
           Volver a Mis Rutinas
         </button>
@@ -443,7 +443,7 @@ export function GuidedSessionView({
               {day.focusArea || "Entrenamiento"}
             </p>
             <div className="flex items-center justify-center gap-1.5 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="text-[11px] font-bold text-slate-400 tabular-nums">
                 {formatElapsed(elapsedSeconds)}
               </span>
@@ -464,7 +464,7 @@ export function GuidedSessionView({
         {/* Top Mini Progress Bar */}
         <div className="mt-2.5 h-1 w-full max-w-lg mx-auto rounded-full bg-white/10 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -486,7 +486,7 @@ export function GuidedSessionView({
                 className={cn(
                   "shrink-0 rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 cursor-pointer",
                   active
-                    ? "bg-gradient-to-r from-red-600 via-primary-500 to-amber-500 border-red-500 text-white shadow-lg shadow-red-500/30 font-black"
+                    ? "bg-white text-black border-white shadow-sm font-bold"
                     : done
                       ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
                       : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
