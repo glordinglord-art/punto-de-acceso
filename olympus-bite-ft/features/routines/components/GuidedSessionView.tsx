@@ -469,10 +469,11 @@ export function GuidedSessionView({
           />
         </div>
 
-        {/* Exercise Pills Carousel */}
-        <div className="flex gap-2 overflow-x-auto pt-2.5 max-w-lg mx-auto scrollbar-none">
+        {/* Exercise Pills Carousel (Smooth, High-Readability & Non-Truncated) */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2.5 max-w-lg mx-auto no-scrollbar scroll-smooth px-1">
           {exercises.map((ex, idx) => {
-            const done = getCompletedCount(ex.id) >= ex.sets;
+            const completedCount = getCompletedCount(ex.id);
+            const done = completedCount >= ex.sets;
             const active = idx === exerciseIndex;
             return (
               <button
@@ -484,22 +485,31 @@ export function GuidedSessionView({
                   setRestRemaining(0);
                 }}
                 className={cn(
-                  "shrink-0 rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 cursor-pointer",
+                  "shrink-0 rounded-2xl px-3.5 py-2 text-xs font-black uppercase tracking-wider border transition-all flex items-center gap-2 cursor-pointer active:scale-95",
                   active
-                    ? "bg-white text-black border-white shadow-sm font-bold"
+                    ? "bg-white text-black border-white shadow-lg font-black scale-[1.02]"
                     : done
-                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                      : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white",
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                      : "bg-white/[0.04] border-white/8 text-slate-400 hover:text-white hover:border-white/20",
                 )}
               >
-                {done ? (
-                  <span className="text-emerald-400 font-extrabold">✓</span>
-                ) : (
-                  <span className="text-[10px]">
-                    {ex.intensity === "failure" ? "🔴" : ex.intensity === "relax" ? "🟢" : "🟡"}
-                  </span>
-                )}
-                <span className="truncate max-w-[120px]">#{idx + 1} {ex.name}</span>
+                <span className="flex items-center gap-1.5">
+                  {done ? (
+                    <span className={cn("font-black text-xs", active ? "text-emerald-700" : "text-emerald-400")}>✓</span>
+                  ) : (
+                    <span className="text-[10px]">
+                      {ex.intensity === "failure" ? "🔴" : ex.intensity === "relax" ? "🟢" : "🟡"}
+                    </span>
+                  )}
+                  <span className="font-mono text-[11px] opacity-75">#{idx + 1}</span>
+                  <span className="truncate max-w-[140px] sm:max-w-[200px]">{ex.name}</span>
+                </span>
+                <span className={cn(
+                  "text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
+                  active ? "bg-black/15 text-black" : "bg-white/10 text-slate-300"
+                )}>
+                  {completedCount}/{ex.sets}
+                </span>
               </button>
             );
           })}
