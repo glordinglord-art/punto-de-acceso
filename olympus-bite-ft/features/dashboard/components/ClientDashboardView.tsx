@@ -170,6 +170,59 @@ export function ClientDashboardView() {
     };
   }, [heroPact, anamnesis?.discoveryCompletedAt, user]);
 
+  // Fecha legible en español y cálculo de los 4 mesociclos
+  const formattedToday = useMemo(() => {
+    try {
+      const d = new Date();
+      const str = d.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+      });
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    } catch {
+      return "Hoy";
+    }
+  }, []);
+
+  const mesocycles = useMemo(() => {
+    const day = clockStats.dayNumber;
+    return [
+      {
+        num: 1,
+        title: "Base",
+        phase: "Semanas 1-4",
+        pct: Math.min(100, Math.max(0, Math.round((Math.min(day, 30) / 30) * 100))),
+        isCurrent: day >= 1 && day <= 30,
+        isCompleted: day > 30,
+      },
+      {
+        num: 2,
+        title: "Fuerza",
+        phase: "Semanas 5-8",
+        pct: Math.min(100, Math.max(0, Math.round(((Math.min(Math.max(day, 30), 60) - 30) / 30) * 100))),
+        isCurrent: day > 30 && day <= 60,
+        isCompleted: day > 60,
+      },
+      {
+        num: 3,
+        title: "Dominio",
+        phase: "Semanas 9-12",
+        pct: Math.min(100, Math.max(0, Math.round(((Math.min(Math.max(day, 60), 90) - 60) / 30) * 100))),
+        isCurrent: day > 60 && day <= 90,
+        isCompleted: day > 90,
+      },
+      {
+        num: 4,
+        title: "Récords",
+        phase: "Semanas 13-16",
+        pct: Math.min(100, Math.max(0, Math.round(((Math.min(Math.max(day, 90), 120) - 90) / 30) * 100))),
+        isCurrent: day > 90,
+        isCompleted: day >= 120,
+      },
+    ];
+  }, [clockStats.dayNumber]);
+
   // Conversión limpia kg <-> lbs
   const formatWeight = useCallback(
     (kgVal: number | null | undefined) => {
@@ -507,16 +560,37 @@ export function ClientDashboardView() {
   }
 
   return (
-    <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start space-y-4 lg:space-y-0 pb-16">
+    <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start space-y-4 lg:space-y-0 pb-20">
       {/* ═════════════════════════════════════════════════════════
-          COLUMNA IZQUIERDA (EN PC) / CABECERA (EN CELULAR):
-          RELOJ DE 120 DÍAS + RESUMEN RÁPIDO EN PC
+          COLUMNA IZQUIERDA (EN PC) / CABECERA PRINCIPAL (EN CELULAR):
+          RELOJ DE 120 DÍAS + CONTROL HORIZONTE + CO-PILOTO IA
          ═════════════════════════════════════════════════════════ */}
       <div className="lg:col-span-5 space-y-4">
         {/* 1. EL RELOJ DE 120 DÍAS (HORIZONTE DE TRANSFORMACIÓN) */}
-        <section className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 shadow-xl relative overflow-hidden">
-          {/* Sutil halo ambiental */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+        <section className="rounded-3xl bg-[#0b0e14] border border-white/[0.08] p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+          {/* Sutil halo ambiental cyan/sky */}
+          <div className="absolute top-0 right-0 w-56 h-56 bg-sky-500/[0.04] rounded-full blur-3xl pointer-events-none" />
+
+          {/* Barra superior de la tarjeta: Fecha + Co-Piloto IA */}
+          <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10 border-b border-white/[0.05] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
+                {formattedToday}
+              </span>
+            </div>
+
+            {/* Acceso directo al Co-Piloto IA integrado en la cabecera del atleta */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-xs font-semibold transition active:scale-95 shadow-sm cursor-pointer"
+              title="Consultar al Co-Piloto Clínico & Nutricional IA"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Co-Piloto IA</span>
+            </button>
+          </div>
 
           <div className="flex items-start justify-between gap-3 relative z-10">
             <div>
@@ -532,7 +606,7 @@ export function ClientDashboardView() {
                   Semana {clockStats.weekNumber} de {clockStats.totalWeeks}
                 </span>
                 <span className="inline-block w-1 h-1 rounded-full bg-neutral-600" />
-                <span className="text-xs text-sky-400 font-medium">
+                <span className="text-xs text-cyan-400 font-medium">
                   {clockStats.phaseName}
                 </span>
               </div>
@@ -551,7 +625,7 @@ export function ClientDashboardView() {
                     type="button"
                     onClick={() => setUnit(u)}
                     className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-semibold uppercase transition active:scale-95",
+                      "px-2.5 py-1 rounded-lg text-xs font-semibold uppercase transition active:scale-95 cursor-pointer",
                       unit === u
                         ? "bg-white text-black font-bold shadow-sm"
                         : "text-neutral-400 hover:text-white"
@@ -564,18 +638,45 @@ export function ClientDashboardView() {
             </div>
           </div>
 
-          {/* Barra de Progreso de los 4 Meses */}
-          <div className="mt-4 space-y-1.5 relative z-10">
-            <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-sky-400 via-teal-400 to-emerald-400 transition-all duration-500"
-                style={{ width: `${Math.max(4, clockStats.pct)}%` }}
-              />
+          {/* ── BARRA SEGMENTADA DE LOS 4 MESOCICLOS (ROADMAP) ── */}
+          <div className="mt-4 space-y-2 relative z-10">
+            <div className="grid grid-cols-4 gap-1.5">
+              {mesocycles.map((m) => (
+                <div key={m.num} className="space-y-1">
+                  <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        m.isCompleted
+                          ? "bg-emerald-400"
+                          : m.isCurrent
+                            ? "bg-gradient-to-r from-sky-400 to-cyan-300 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                            : "bg-transparent"
+                      )}
+                      style={{ width: `${m.pct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[9px] font-mono">
+                    <span
+                      className={cn(
+                        "truncate",
+                        m.isCurrent
+                          ? "text-cyan-300 font-bold"
+                          : m.isCompleted
+                            ? "text-emerald-400 font-medium"
+                            : "text-neutral-500"
+                      )}
+                    >
+                      M{m.num}: {m.title}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-between text-[11px] font-mono text-neutral-400 tabular-nums">
-              <span>Día 1</span>
+
+            <div className="flex justify-between text-[11px] font-mono text-neutral-400 tabular-nums pt-0.5">
+              <span className="text-cyan-300 font-medium">{clockStats.phaseName}</span>
               <span className="text-neutral-300 font-medium">{clockStats.pct}% completado</span>
-              <span>Meta: Día {clockStats.totalDays}</span>
             </div>
           </div>
 
@@ -583,7 +684,7 @@ export function ClientDashboardView() {
           <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-3 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-300">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-300">
                   <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                   <span>Racha: {dailyVictory.streakDays} día{dailyVictory.streakDays === 1 ? '' : 's'}</span>
                 </span>
@@ -596,7 +697,7 @@ export function ClientDashboardView() {
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div
                 className={cn(
-                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
+                  "rounded-xl px-3 py-2.5 border flex items-center gap-2 font-medium transition",
                   dailyVictory.waterDone
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
                     : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
@@ -608,7 +709,7 @@ export function ClientDashboardView() {
 
               <div
                 className={cn(
-                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
+                  "rounded-xl px-3 py-2.5 border flex items-center gap-2 font-medium transition",
                   dailyVictory.nutritionDone
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
                     : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
@@ -620,7 +721,7 @@ export function ClientDashboardView() {
 
               <div
                 className={cn(
-                  "rounded-xl px-3 py-2 border flex items-center gap-2 font-medium transition",
+                  "rounded-xl px-3 py-2.5 border flex items-center gap-2 font-medium transition",
                   dailyVictory.sleepDone
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
                     : "bg-white/[0.03] border-white/[0.06] text-neutral-400"
@@ -639,7 +740,7 @@ export function ClientDashboardView() {
             className="w-full mt-4 p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 text-white transition-all group cursor-pointer active:scale-[0.98] shadow-sm flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition shrink-0">
                 <Layers className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -655,17 +756,17 @@ export function ClientDashboardView() {
           </button>
         </section>
 
-        {/* TARJETA EXCLUSIVA PARA PC: VISTA RÁPIDA DE TUS 4 METAS SIEMPRE VISIBLE */}
-        <section className="hidden lg:block rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-3">
+        {/* TARJETA EXCLUSIVA PARA PC: VISTA RÁPIDA DE TUS 4 METAS */}
+        <section className="hidden lg:block rounded-3xl bg-[#0b0e14] border border-white/[0.08] p-5 space-y-3 shadow-xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
-              <Target className="w-4 h-4 text-sky-400" />
+              <Target className="w-4 h-4 text-cyan-400" />
               Tus 4 Metas del Programa
             </span>
             <button
               type="button"
               onClick={() => setHorizon('month')}
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300"
+              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 cursor-pointer"
             >
               Ver detalle →
             </button>
@@ -727,8 +828,8 @@ export function ClientDashboardView() {
           COLUMNA DERECHA (EN PC) / CUERPO PRINCIPAL (EN CELULAR)
          ═════════════════════════════════════════════════════════ */}
       <div className="lg:col-span-7 space-y-4">
-        {/* BARRA ÚNICA DE NAVEGACIÓN */}
-        <div className="grid grid-cols-3 p-1 rounded-2xl bg-[#0e1017] border border-white/[0.08]">
+        {/* BARRA ÚNICA DE NAVEGACIÓN SEGMENTADA */}
+        <div className="grid grid-cols-3 p-1 rounded-2xl bg-[#0b0e14] border border-white/[0.08] shadow-lg">
           {[
             { id: 'today', label: 'Hoy' },
             { id: 'week', label: 'Mi Semana' },
@@ -739,9 +840,9 @@ export function ClientDashboardView() {
               type="button"
               onClick={() => setHorizon(tab.id as HorizonTab)}
               className={cn(
-                "py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition active:scale-95",
+                "py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition active:scale-95 cursor-pointer",
                 horizon === tab.id
-                  ? "bg-white text-black font-bold shadow-sm"
+                  ? "bg-white text-black font-bold shadow-md"
                   : "text-neutral-400 hover:text-white"
               )}
             >
@@ -751,33 +852,28 @@ export function ClientDashboardView() {
         </div>
 
         {/* ═════════════════════════════════════════════════════════
-            VISTA 1: HOY (LOS 3 HÁBITOS DEL DÍA)
+            VISTA 1: HOY (LOS 3 HÁBITOS DEL DÍA + ENTRENAMIENTO)
            ═════════════════════════════════════════════════════════ */}
         {horizon === 'today' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* 1. TU ENTRENAMIENTO DE HOY */}
-            <div className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-4">
-              <div className="flex items-center justify-between gap-3">
+            {/* 1. TU ENTRENAMIENTO DE HOY (HERO CARD) */}
+            <div className="rounded-3xl bg-[#0b0e14] border border-cyan-500/25 p-5 space-y-4 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-44 h-44 bg-cyan-500/[0.04] rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between gap-3 relative z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 shadow-sm">
                     <Dumbbell className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 block">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 block">
                       Entrenamiento de Hoy
                     </span>
-                    <h2 className="text-base font-bold text-white">
+                    <h2 className="text-base sm:text-lg font-bold text-white">
                       {data?.activeRoutine?.name || "Mi Rutina Activa"}
                     </h2>
                   </div>
                 </div>
-                <Link
-                  href="/routines"
-                  className="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition shrink-0"
-                >
-                  <span>Ir a Entrenar</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
               </div>
 
               {/* El Porqué en 1 frase clara */}
@@ -789,91 +885,119 @@ export function ClientDashboardView() {
                   {objectives.strength.exerciseName}
                 </strong>{' '}
                 y dominar{' '}
-                <strong className="text-sky-300 font-semibold">
+                <strong className="text-cyan-300 font-semibold">
                   {objectives.bodyMastery.skillName}
                 </strong>
                 .
               </div>
+
+              {/* Gran Botón Primario para Mobile (52px de altura ergonómica) */}
+              <Link
+                href="/routines"
+                className="w-full h-13 rounded-2xl bg-white hover:bg-neutral-100 text-black text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition cursor-pointer"
+              >
+                <Dumbbell className="w-4 h-4" />
+                <span>Empezar Sesión de Hoy</span>
+                <ChevronRight className="w-4 h-4 ml-0.5" />
+              </Link>
             </div>
 
-            {/* 2. AGUA (HIDRATACIÓN) */}
-            <div className="rounded-3xl bg-[#0a121c] border border-sky-500/20 p-5 space-y-3.5">
+            {/* 2. AGUA (HIDRATACIÓN DIARIA) */}
+            <div className="rounded-3xl bg-[#091018] border border-sky-500/20 p-5 space-y-4 shadow-xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
                     <Droplets className="w-5 h-5" />
                   </div>
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 block">
                       Hidratación Diaria
                     </span>
-                    <p className="text-lg font-bold text-white tabular-nums">
+                    <p className="text-lg sm:text-xl font-bold text-white tabular-nums">
                       {currentWaterLiters} L{' '}
                       <span className="text-xs font-normal text-neutral-400">
-                        de {targetWaterLiters} Litros ({waterPct}%)
+                        de {targetWaterLiters} Litros
                       </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleWaterDelta(-1)}
-                    className="w-10 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95 transition"
-                    aria-label="Restar 250ml"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleWaterDelta(1)}
-                    className="h-10 px-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs flex items-center gap-1 active:scale-95 transition shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>250ml</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleWaterDelta(2)}
-                    className="h-10 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-200 font-bold text-xs active:scale-95 transition"
-                  >
-                    +500ml
-                  </button>
-                </div>
+                <span
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-bold tabular-nums border",
+                    waterPct >= 100
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                      : "bg-sky-500/15 border-sky-500/30 text-sky-300"
+                  )}
+                >
+                  {waterPct}% meta
+                </span>
               </div>
 
-              <div className="h-2 w-full rounded-full bg-black/40 overflow-hidden">
+              {/* Barra de progreso de hidratación */}
+              <div className="h-2.5 w-full rounded-full bg-black/50 overflow-hidden p-0.5 border border-sky-500/10">
                 <div
-                  className="h-full rounded-full bg-sky-400 transition-all duration-300"
-                  style={{ width: `${waterPct}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-all duration-300"
+                  style={{ width: `${Math.min(100, waterPct)}%` }}
                 />
               </div>
-              <p className="text-xs text-sky-200/80">
+
+              {/* Botones de acción táctiles para celular (48px de alto) */}
+              <div className="grid grid-cols-12 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleWaterDelta(-1)}
+                  disabled={waterGlasses <= 0 || updatingWater}
+                  className="col-span-3 h-12 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 flex items-center justify-center text-neutral-300 active:scale-95 transition disabled:opacity-30 cursor-pointer"
+                  aria-label="Restar 250ml"
+                >
+                  <Minus className="w-4 h-4 mr-1" />
+                  <span className="text-xs font-semibold">250ml</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleWaterDelta(1)}
+                  disabled={updatingWater}
+                  className="col-span-5 h-12 rounded-2xl bg-sky-400 hover:bg-sky-300 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+250 ml</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleWaterDelta(2)}
+                  disabled={updatingWater}
+                  className="col-span-4 h-12 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-200 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95 transition cursor-pointer"
+                >
+                  <span>+500 ml</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-sky-200/80 leading-relaxed pt-1">
                 💧 La hidratación adecuada preserva hasta un 15% de tu capacidad de fuerza y retrasa la fatiga del sistema nervioso central.
               </p>
             </div>
 
             {/* 3. ALIMENTACIÓN Y MACROS */}
-            <div className="rounded-3xl bg-[#0e1017] border border-white/[0.08] p-5 space-y-4">
+            <div className="rounded-3xl bg-[#0b0e14] border border-white/[0.08] p-5 space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
                     Nutrición y Macros
                   </span>
-                  <h3 className="text-lg font-bold text-white tabular-nums">
+                  <h3 className="text-lg sm:text-xl font-bold text-white tabular-nums">
                     {caloriesToday.toLocaleString('es')}{' '}
                     <span className="text-xs font-normal text-neutral-400">
                       / {targets.calories.toLocaleString('es')} kcal
                     </span>
                   </h3>
                 </div>
-                <Link
-                  href="/meals"
-                  className="px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 active:scale-95 transition"
-                >
-                  <span>+ Anotar Comida</span>
-                </Link>
+
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 text-xs font-semibold text-neutral-300 tabular-nums">
+                  {Math.max(0, targets.calories - caloriesToday).toLocaleString('es')} kcal restantes
+                </span>
               </div>
 
               {/* Barras de Macros con números tabulares */}
@@ -883,28 +1007,25 @@ export function ClientDashboardView() {
                     label: 'Proteína',
                     val: proteinToday,
                     goal: targets.protein,
-                    role: 'Músculo & Recuperación',
+                    role: 'Músculo',
                     color: 'bg-sky-400',
                   },
                   {
                     label: 'Carbos',
                     val: carbsToday,
                     goal: targets.carbs,
-                    role: 'Energía y Rendimiento',
+                    role: 'Energía',
                     color: 'bg-amber-400',
                   },
                   {
                     label: 'Grasas',
                     val: fatToday,
                     goal: targets.fat,
-                    role: 'Salud Hormonal',
-                    color: 'bg-rose-400',
+                    role: 'Hormonas',
+                    color: 'bg-emerald-400',
                   },
                 ].map((m) => {
-                  const pct = Math.min(
-                    100,
-                    Math.round((m.val / Math.max(m.goal, 1)) * 100),
-                  );
+                  const pct = Math.min(100, Math.round((m.val / Math.max(m.goal, 1)) * 100));
                   return (
                     <div
                       key={m.label}
@@ -925,12 +1046,20 @@ export function ClientDashboardView() {
                         />
                       </div>
                       <span className="block text-[10px] text-neutral-400 truncate">
-                        {m.role}
+                        {m.role} ({pct}%)
                       </span>
                     </div>
                   );
                 })}
               </div>
+
+              <Link
+                href="/meals"
+                className="w-full h-11 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-bold uppercase tracking-wider text-white flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ Registrar Comida en Nutrición</span>
+              </Link>
 
               <p className="text-xs text-neutral-300 leading-relaxed bg-white/[0.02] p-3 rounded-2xl border border-white/[0.06]">
                 <strong className="text-white">Fundamento: </strong>{' '}
@@ -940,10 +1069,10 @@ export function ClientDashboardView() {
             </div>
 
             {/* 4. DESCANSO (REGULARIDAD CIRCADIANA ±1h) */}
-            <div className="rounded-3xl bg-[#0e1017] border border-indigo-500/25 p-5 space-y-4">
+            <div className="rounded-3xl bg-[#0b0e14] border border-indigo-500/25 p-5 space-y-4 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
                     <Moon className="w-5 h-5" />
                   </div>
                   <div>
@@ -964,10 +1093,10 @@ export function ClientDashboardView() {
                 {todaySleepLog && (
                   <span
                     className={cn(
-                      "px-3 py-1 rounded-full text-xs font-semibold shrink-0",
+                      "px-3 py-1 rounded-full text-xs font-semibold shrink-0 border",
                       todaySleepLog.withinOneHourWindow
-                        ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                        : "bg-amber-500/15 text-amber-300 border-amber-500/30",
                     )}
                   >
                     {todaySleepLog.withinOneHourWindow
