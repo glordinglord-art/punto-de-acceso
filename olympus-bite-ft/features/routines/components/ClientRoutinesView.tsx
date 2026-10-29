@@ -9,7 +9,7 @@ import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
 import { EvolutionLayersView } from "./EvolutionLayersView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers, Sparkles } from "lucide-react";
 
 interface ClientRoutinesViewProps {
   /** Rutina a abrir de entrada en vez de la activa (coach entrenando su propia rutina). */
@@ -62,12 +62,28 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       const res = await routinesService.getByClient(user.id);
       const data = res.data ?? [];
       setRoutines(data);
+      // Auto-cálculo de la semana activa según el pacto de 120 días
+      const heroPact = user?.anamnesisData?.heroPact;
+      const startStr =
+        heroPact?.startDate ||
+        user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) ||
+        (user as any)?.createdAt?.slice(0, 10);
+      let calculatedWeek = 1;
+      if (startStr) {
+        const diffDays = Math.max(
+          1,
+          Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        );
+        calculatedWeek = Math.max(1, Math.ceil(diffDays / 7));
+      }
       const active =
         data.find((r) => r.id === initialRoutineId) ??
         data.find((r) => r.isActive) ??
         data[0];
       if (active) {
         setSelectedRoutine(active);
+        const boundedWeek = Math.min(active.weekCount || 4, calculatedWeek);
+        setCurrentWeek(boundedWeek);
         await refreshLogs(data);
       }
     } finally {
@@ -270,8 +286,17 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             )}
             <button
               type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
+              className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+              title="Consultar al Co-Piloto IA sobre ejercicios o sobrecargas"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Co-Piloto IA</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setView("evolution")}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600/30 to-amber-600/30 hover:from-red-600/40 hover:to-amber-600/40 border border-red-500/40 text-amber-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
             >
               <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
               <span>Mi Progreso</span>
@@ -284,7 +309,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
                   onClick={() => setWeightUnit(u)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
                     weightUnit === u
-                      ? "bg-red-600 text-white shadow"
+                      ? "bg-white text-black font-bold shadow-sm"
                       : "text-neutral-400 hover:text-white"
                   }`}
                 >
@@ -297,10 +322,10 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       />
 
       {/* RESUMEN DE AVANCE (DIARIO • SEMANAL • MENSUAL) Y EL PORQUÉ DEL CICLO */}
-      <div className="mb-5 rounded-3xl bg-gradient-to-br from-[#141720] via-[#0e1017] to-[#1a0b0e] border border-white/10 p-4 sm:p-5 space-y-4">
+      <div className="mb-5 rounded-3xl bg-[#0b0e14] border border-white/[0.08] shadow-xl p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-red-400 block">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">
               💡 ¿Por qué entrenas este ciclo?
             </span>
             <p className="text-xs sm:text-sm text-neutral-200 mt-0.5 leading-relaxed">
@@ -322,12 +347,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
 
         {/* 3 Tarjetas de Avance: Hoy | Semana | Acumulado del Mes */}
         <div className="grid grid-cols-3 gap-2.5">
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400">
               <CalendarCheck className="w-3.5 h-3.5" />
               <span>Hoy</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.setsToday}{" "}
               <span className="text-xs font-normal text-neutral-400">
                 series
@@ -338,12 +363,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Semana {currentWeek}</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.weekPct}%
             </p>
             <span className="text-[10px] text-neutral-400 block">
@@ -352,12 +377,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-sky-400">
               <Flame className="w-3.5 h-3.5" />
               <span>Este Mes</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.totalSetsMonth}{" "}
               <span className="text-xs font-normal text-neutral-400">
                 series
@@ -376,6 +401,13 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
         logs={logs}
         logsLoading={logsLoading}
         currentWeek={currentWeek}
+        autoCurrentWeek={(() => {
+          const heroPact = user?.anamnesisData?.heroPact;
+          const startStr = heroPact?.startDate || user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) || (user as any)?.createdAt?.slice(0, 10);
+          if (!startStr) return 1;
+          const diffDays = Math.max(1, Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+          return Math.min(selectedRoutine?.weekCount || 4, Math.max(1, Math.ceil(diffDays / 7)));
+        })()}
         savingLog={savingLog}
         userId={user?.id ?? ""}
         weightUnit={weightUnit}

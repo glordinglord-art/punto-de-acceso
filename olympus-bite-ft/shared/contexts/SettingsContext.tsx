@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type ColorPreset = "red" | "emerald" | "blue" | "purple" | "orange";
+export type ColorPreset = "cyan" | "emerald" | "blue" | "purple" | "orange" | "red";
 export type LayoutType = "vertical" | "mini";
 export type FontFamily = "geist" | "inter" | "roboto";
 
@@ -20,18 +20,18 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 const PRESETS: Record<ColorPreset, Record<string, string>> = {
-  red: {
-    "color-p50": "#fef2f2",
-    "color-p100": "#fee2e2",
-    "color-p200": "#fecaca",
-    "color-p300": "#fca5a5",
-    "color-p400": "#f87171",
-    "color-p500": "#ef4444",
-    "color-p600": "#dc2626",
-    "color-p700": "#b91c1c",
-    "color-p800": "#991b1b",
-    "color-p900": "#7f1d1d",
-    "color-p950": "#450a0a",
+  cyan: {
+    "color-p50": "#f0f9ff",
+    "color-p100": "#e0f2fe",
+    "color-p200": "#bae6fd",
+    "color-p300": "#7dd3fc",
+    "color-p400": "#38bdf8",
+    "color-p500": "#0ea5e9",
+    "color-p600": "#0284c7",
+    "color-p700": "#0369a1",
+    "color-p800": "#075985",
+    "color-p900": "#0c4a6e",
+    "color-p950": "#082f49",
   },
   emerald: {
     "color-p50": "#ecfdf5",
@@ -85,10 +85,23 @@ const PRESETS: Record<ColorPreset, Record<string, string>> = {
     "color-p900": "#7c2d12",
     "color-p950": "#431407",
   },
+  red: {
+    "color-p50": "#fef2f2",
+    "color-p100": "#fee2e2",
+    "color-p200": "#fecaca",
+    "color-p300": "#fca5a5",
+    "color-p400": "#f87171",
+    "color-p500": "#ef4444",
+    "color-p600": "#dc2626",
+    "color-p700": "#b91c1c",
+    "color-p800": "#991b1b",
+    "color-p900": "#7f1d1d",
+    "color-p950": "#450a0a",
+  },
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [colorPreset, setColorPreset] = useState<ColorPreset>("red");
+  const [colorPreset, setColorPreset] = useState<ColorPreset>("cyan");
   const [layout, setLayout] = useState<LayoutType>("vertical");
   const [fontFamily, setFontFamily] = useState<FontFamily>("geist");
   const [isMounted, setIsMounted] = useState(false);
@@ -101,7 +114,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const savedLayout = localStorage.getItem("ob-layout") as LayoutType;
     const savedFont = localStorage.getItem("ob-font") as FontFamily;
 
-    if (savedColor && PRESETS[savedColor]) setColorPreset(savedColor);
+    // Reset from old "red" default to new calming "cyan"
+    if (savedColor && PRESETS[savedColor] && savedColor !== "red") {
+      setColorPreset(savedColor);
+    } else {
+      setColorPreset("cyan");
+    }
     if (savedLayout) setLayout(savedLayout);
     if (savedFont) setFontFamily(savedFont);
   }, []);
@@ -115,7 +133,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("ob-font", fontFamily);
 
     // Apply color CSS variables
-    const presetColors = PRESETS[colorPreset];
+    const presetColors = PRESETS[colorPreset] || PRESETS.cyan;
     const root = document.documentElement;
     Object.entries(presetColors).forEach(([key, value]) => {
       root.style.setProperty(`--${key}`, value);

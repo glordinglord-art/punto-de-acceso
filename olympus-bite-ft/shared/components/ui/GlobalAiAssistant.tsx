@@ -228,27 +228,28 @@ export function GlobalAiAssistant() {
 
   return (
     <>
-      {/* Floating Action Button (FAB) */}
+      {/* Desktop-only sleek obsidian capsule (hidden on mobile) */}
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-24 right-4 lg:bottom-6 lg:right-20 z-40",
-          "flex items-center gap-2.5 p-3.5 sm:p-4 rounded-full text-white",
-          "transition-all duration-300 group hover:scale-105 active:scale-95 shadow-2xl backdrop-blur-xl border border-white/20",
-          isClinical
-            ? "bg-gradient-to-r from-cyan-600 via-teal-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-[0_10px_30px_rgba(6,182,212,0.35)]"
-            : "bg-gradient-to-r from-primary-600 via-rose-600 to-primary-500 hover:from-primary-500 hover:to-rose-500 shadow-[0_10px_30px_rgba(239,68,68,0.35)]"
+          "hidden lg:flex fixed bottom-6 right-6 z-40",
+          "items-center gap-2.5 px-4 py-2.5 rounded-full text-white",
+          "transition-all duration-200 group hover:scale-[1.02] active:scale-95 shadow-2xl backdrop-blur-2xl border",
+          "bg-[#0e1118]/95 hover:bg-[#141924] border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-white"
         )}
-        aria-label={isClinical ? "Consultar Director Clínico IA" : "Consultar Nutrición IA"}
+        aria-label={isClinical ? "Consultar Director Clínico IA" : "Consultar Co-Piloto IA"}
       >
-        {isClinical ? (
-          <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform shrink-0 text-cyan-200" />
-        ) : (
-          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 group-hover:animate-pulse shrink-0 text-rose-100" />
-        )}
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out font-black text-xs uppercase tracking-wider whitespace-nowrap">
-          {isClinical ? "Director Clínico IA" : "Nutrición IA"}
+        <div className="w-5 h-5 rounded-full bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+          {isClinical ? (
+            <Stethoscope className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+          ) : (
+            <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+          )}
+        </div>
+        <span className="font-semibold text-xs tracking-wide text-slate-200 group-hover:text-white">
+          {isClinical ? "Director Clínico IA" : "Co-Piloto IA"}
         </span>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
       </button>
 
       {/* Backdrop */}
@@ -287,7 +288,7 @@ export function GlobalAiAssistant() {
                 "w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md",
                 isClinical
                   ? "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/20"
-                  : "bg-gradient-to-br from-primary-500 to-primary-300 shadow-primary-500/20"
+                  : "bg-gradient-to-br from-sky-500 to-cyan-600 shadow-cyan-500/20"
               )}
             >
               {isClinical ? <Stethoscope className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
@@ -547,7 +548,7 @@ export function GlobalAiAssistant() {
                 "absolute right-2 flex items-center justify-center w-10 h-10 text-white rounded-xl transition-all shadow-sm active:scale-95 disabled:pointer-events-none",
                 isClinical
                   ? "bg-gradient-to-br from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-200 disabled:to-slate-200 dark:disabled:from-neutral-800 dark:disabled:to-neutral-800"
-                  : "bg-gradient-to-br from-primary-600 to-primary-400 hover:from-primary-500 hover:to-primary-300 disabled:from-slate-200 disabled:to-slate-200 dark:disabled:from-neutral-800 dark:disabled:to-neutral-800"
+                  : "bg-gradient-to-br from-sky-500 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-black font-bold disabled:from-slate-200 disabled:to-slate-200 dark:disabled:from-neutral-800 dark:disabled:to-neutral-800"
               )}
             >
               <Send className="w-4 h-4 ml-0.5" />

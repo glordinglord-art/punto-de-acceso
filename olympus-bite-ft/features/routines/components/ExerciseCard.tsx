@@ -12,6 +12,32 @@ import { Info, CheckCircle, Sparkles } from "lucide-react";
 import type { ExerciseAutoregulationInsight } from "../utils/vital-fit-labs-engine";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
+function cleanCoachNotes(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let s = raw.trim();
+  while (
+    (s.startsWith("[") && s.endsWith("]")) ||
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          s = String(parsed[0]);
+          continue;
+        }
+      } catch {
+        // fallback
+      }
+      s = s.slice(1, -1).trim();
+    } else {
+      s = s.slice(1, -1).trim();
+    }
+  }
+  return s.trim() || null;
+}
+
 export function ExerciseCard({
   exercise,
   activeSetIndex,
@@ -51,6 +77,7 @@ export function ExerciseCard({
   const allDone = completedSetCount >= exercise.sets;
   const [showGuide, setShowGuide] = useState(false);
   const [gifLoaded, setGifLoaded] = useState(false);
+  const [showMissionDetails, setShowMissionDetails] = useState(false);
 
   // Las series pueden completarse en desorden, asi que el estado se lee del log
   // real y no de un contador secuencial.
@@ -72,7 +99,7 @@ export function ExerciseCard({
           <div className="relative w-[180px] h-[180px] rounded-3xl overflow-hidden bg-[#141620] border border-white/12 shadow-2xl p-2 shrink-0 group">
             {!gifLoaded && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl">
-                <div className="h-7 w-7 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+                <div className="h-7 w-7 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
               </div>
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -96,7 +123,7 @@ export function ExerciseCard({
           <div className="w-[180px] h-[180px] rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 shadow-2xl flex flex-col items-center justify-center p-4 text-center space-y-2 shrink-0">
             <span className="text-5xl">{muscleInfo?.icon || "🏋️"}</span>
             <div>
-              <p className="text-xs font-black uppercase tracking-wider text-red-400">
+              <p className="text-xs font-black uppercase tracking-wider text-cyan-300">
                 {muscleInfo?.label || exercise.muscleGroup}
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5">Técnica recomendada</p>
@@ -129,87 +156,103 @@ export function ExerciseCard({
           )}
         </div>
 
-        {/* Goal metadata pills */}
-        <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider flex-wrap">
-          <span className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-slate-200">
+        {/* Goal metadata pills (Clean Obsidian / Cyan, No alarming red) */}
+        <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider flex-wrap">
+          <span className="px-2.5 py-1 rounded-xl bg-white/[0.05] border border-white/10 text-white font-bold">
             {exercise.sets} Series
           </span>
           <span>·</span>
-          <span className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-slate-200">
+          <span className="px-2.5 py-1 rounded-xl bg-white/[0.05] border border-white/10 text-cyan-300 font-bold">
             {exercise.reps} Reps
           </span>
           <span>·</span>
-          <span className="px-2.5 py-0.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 font-black">
-            🔒 {exercise.targetWeight && exercise.targetWeight > 0 ? `${exercise.targetWeight} kg` : "Peso Corporal"}
+          <span className="px-2.5 py-1 rounded-xl bg-white/[0.05] border border-white/10 text-amber-300 font-bold">
+            🔒 {exercise.targetWeight && exercise.targetWeight > 0 ? (userUnit === "lbs" ? `${Math.round(exercise.targetWeight * 2.20462 * 2) / 2} lbs` : `${exercise.targetWeight} kg`) : "Peso Corporal"}
           </span>
         </div>
 
-        {exercise.observations && (
-          <p className="text-xs text-slate-400 italic">
-            &quot;{exercise.observations}&quot;
-          </p>
-        )}
+        {(() => {
+          const cleanNotes = cleanCoachNotes(exercise.observations);
+          if (!cleanNotes) return null;
+          return (
+            <p className="text-xs text-amber-200/90 italic font-medium px-4 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 max-w-sm mx-auto">
+              💬 &quot;{cleanNotes}&quot;
+            </p>
+          );
+        })()}
 
         {hasGuide && (
           <div className="pt-0.5">
             <button
               type="button"
               onClick={() => setShowGuide(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/15 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-red-400 border border-red-500/25 hover:bg-red-500/25 active:scale-95 transition-all shadow-md shadow-red-500/10 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-cyan-500/10 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 active:scale-95 transition-all shadow-md shadow-cyan-500/10 cursor-pointer"
             >
               <Info className="w-3.5 h-3.5" />
-              ¿Cómo hacerlo? (Guía Técnica)
+              <span>¿Cómo hacerlo? (Guía Técnica 3D)</span>
             </button>
           </div>
         )}
       </div>
 
 
-      {/* Tarjeta de Misión Vital Fit Labs (4-State Autoregulation & Dopamine Engine) */}
+      {/* Tarjeta de Misión Vital Fit Labs (Compacta & Desplegable en Móvil) */}
       {insight && (
         <div
           className={cn(
-            "rounded-2xl p-3.5 border transition-all space-y-1.5",
+            "rounded-2xl p-3 border transition-all space-y-1.5 backdrop-blur-xl",
             insight.tone === "emerald"
-              ? "bg-emerald-500/10 border-emerald-500/35 shadow-[0_0_20px_rgba(16,185,129,0.12)]"
+              ? "bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
               : insight.tone === "cyan"
-                ? "bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+                ? "bg-cyan-500/10 border-cyan-500/35 shadow-[0_0_20px_rgba(6,182,212,0.12)]"
                 : insight.tone === "amber"
-                  ? "bg-amber-500/10 border-amber-500/35"
-                  : insight.tone === "rose"
-                    ? "bg-rose-500/10 border-rose-500/35"
-                    : "bg-white/[0.04] border-white/10"
+                  ? "bg-amber-500/10 border-amber-500/30"
+                  : "bg-white/[0.04] border-white/10"
           )}
         >
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-400">
-              <Sparkles className="w-3.5 h-3.5" />
-              Misión de Hoy · Vital Fit Labs
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-300">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Misión · Vital Fit Labs
             </span>
-            <span
-              className={cn(
-                "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
-                insight.tone === "emerald" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-                insight.tone === "cyan" && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-                insight.tone === "amber" && "bg-amber-500/20 text-amber-300 border-amber-500/30",
-                insight.tone === "rose" && "bg-rose-500/20 text-rose-300 border-rose-500/30",
-                insight.tone === "slate" && "bg-white/10 text-slate-300 border-white/15"
-              )}
-            >
-              {insight.badgeLabel}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                  insight.tone === "emerald" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                  insight.tone === "cyan" && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+                  insight.tone === "amber" && "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                  insight.tone === "rose" && "bg-rose-500/20 text-rose-300 border-rose-500/30",
+                  insight.tone === "slate" && "bg-white/10 text-slate-300 border-white/15"
+                )}
+              >
+                {insight.badgeLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMissionDetails(!showMissionDetails)}
+                className="text-[10px] font-bold text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition cursor-pointer"
+                title={showMissionDetails ? "Ocultar detalles" : "Ver detalles de la misión"}
+              >
+                {showMissionDetails ? "▲ Menos" : "▼ Info"}
+              </button>
+            </div>
           </div>
-          <p className="text-xs font-black text-white leading-snug">
+          <p className="text-xs font-bold text-white leading-snug">
             {insight.missionText}
           </p>
-          <div className="flex items-center justify-between text-[11px] pt-0.5 border-t border-white/5 gap-2 flex-wrap">
-            <span className="font-bold text-slate-400">
-              Historial: <strong className="text-slate-200">{insight.historyChainText}</strong>
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            {insight.whyText}
-          </p>
+          {showMissionDetails && (
+            <div className="pt-2 border-t border-white/8 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              <p className="text-[11px] font-medium text-slate-300">
+                Historial: <strong className="text-slate-100">{insight.historyChainText}</strong>
+              </p>
+              {insight.whyText && (
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {insight.whyText}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -238,7 +281,7 @@ export function ExerciseCard({
                     done
                       ? "w-8 bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]"
                       : active
-                        ? "w-8 bg-gradient-to-r from-red-600 to-amber-500 shadow-[0_0_12px_rgba(239,68,68,0.8)] animate-pulse"
+                        ? "w-8 bg-white text-black shadow-[0_0_14px_rgba(255,255,255,0.7)] font-black"
                         : "w-4 bg-white/10 border border-white/10 group-hover:bg-white/25",
                     active &&
                       done &&

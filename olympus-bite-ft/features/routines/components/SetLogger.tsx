@@ -273,7 +273,7 @@ export function SetLogger({
             className={cn(
               "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
               unit === "kg"
-                ? "bg-red-500 text-white shadow-sm"
+                ? "bg-white text-black font-black shadow-sm"
                 : "text-slate-400 hover:text-white"
             )}
           >
@@ -285,7 +285,7 @@ export function SetLogger({
             className={cn(
               "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
               unit === "lbs"
-                ? "bg-red-500 text-white shadow-sm"
+                ? "bg-white text-black font-black shadow-sm"
                 : "text-slate-400 hover:text-white"
             )}
           >
@@ -415,7 +415,7 @@ export function SetLogger({
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? -2.5 : -5)}
               disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
               aria-label="Restar peso"
             >
               <Minus className="w-4 h-4 stroke-[3]" />
@@ -434,7 +434,7 @@ export function SetLogger({
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? 2.5 : 5)}
               disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
               aria-label="Sumar peso"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -486,7 +486,7 @@ export function SetLogger({
               type="button"
               onClick={() => adjustReps(-1)}
               disabled={disabled}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
               aria-label="Restar reps"
             >
               <Minus className="w-4 h-4 stroke-[3]" />
@@ -500,7 +500,7 @@ export function SetLogger({
               type="button"
               onClick={() => adjustReps(1)}
               disabled={disabled}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
               aria-label="Sumar reps"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -605,14 +605,14 @@ export function SetLogger({
         onClick={handleComplete}
         disabled={disabled}
         className={cn(
-          "w-full py-4 px-4 rounded-2xl text-white font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer",
+          "w-full py-4 px-5 rounded-2xl font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-xl",
           isLogged
-            ? "bg-gradient-to-r from-amber-600 to-red-600 shadow-lg shadow-amber-950/40 hover:brightness-110"
+            ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25"
             : isNewPR
-              ? "bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_40px_rgba(245,158,11,0.7)]"
+              ? "bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 text-slate-950 shadow-amber-500/35"
               : isShieldMode
-                ? "bg-gradient-to-r from-cyan-600 via-sky-500 to-indigo-600 shadow-[0_0_25px_rgba(6,182,212,0.45)]"
-                : "bg-gradient-to-r from-red-600 to-primary-500 shadow-lg shadow-red-950/50 hover:brightness-110"
+                ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25"
+                : "bg-white hover:bg-neutral-100 text-black shadow-[0_4px_28px_rgba(255,255,255,0.18)]"
         )}
       >
         {isLogged ? (

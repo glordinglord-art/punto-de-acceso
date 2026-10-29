@@ -707,9 +707,9 @@ export default function ProfilePage() {
                 )}
                 {displayUser.targetCalories != null && (
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/5 dark:bg-[#1a1a1a] dark:shadow-none">
-                    <Flame className="w-5 h-5 text-red-500 mx-auto mb-2" />
+                    <Flame className="w-5 h-5 text-amber-500 mx-auto mb-2" />
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest font-condensed mb-1">Calorías Meta</p>
-                    <p className="text-xl font-bold text-red-500 font-condensed dark:text-red-400">
+                    <p className="text-xl font-bold text-amber-400 font-condensed">
                       {displayUser.targetCalories} <span className="text-sm text-neutral-500 font-mono">kcal</span>
                     </p>
                   </div>
