@@ -241,7 +241,7 @@ function ExerciseTrackingCard({
         className={cn(
           "rounded-2xl transition-all overflow-hidden",
           expanded
-            ? "border border-primary-500/30 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:bg-[#1a1c23] dark:shadow-[0_0_20px_rgba(234,88,12,0.1)]"
+            ? "border border-primary-500/30 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:bg-[#1a1c23] dark:shadow-[0_0_20px_rgba(56,189,248,0.1)]"
             : "border border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
         )}
       >
@@ -571,6 +571,8 @@ export function RoutineListView({
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date | null>(null);
   const [routineView, setRoutineView] = useState<"cards" | "calendar">("cards");
+  const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
+  const [dayViewMode, setDayViewMode] = useState<"focused" | "all">("focused");
   const [showInfo, setShowInfo] = useState(false);
   const [showWeekDropdown, setShowWeekDropdown] = useState(false);
   const [showRoutineDropdown, setShowRoutineDropdown] = useState(false);
@@ -889,6 +891,7 @@ export function RoutineListView({
       (d) => d.dayNumber === todayDayNumber,
     );
     const todayIsTraining = todayDay && !todayDay.isRestDay;
+    const activeDayNumber = selectedDayNumber ?? (todayDay?.dayNumber ?? selectedRoutine.days.find((d) => !d.isRestDay)?.dayNumber ?? selectedRoutine.days[0]?.dayNumber ?? 1);
 
     // Today's exercises completion for current week
     const todayLogged = todayDay
@@ -1272,29 +1275,60 @@ export function RoutineListView({
                 {/* Right: Primary Action CTA */}
                 <div className="shrink-0 flex items-center gap-2">
                   {todayIsTraining && todayDay ? (
-                    <button
-                      type="button"
-                      onClick={() => onStartSession(todayDay)}
-                      className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-neutral-100 text-black font-bold uppercase tracking-wider text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <span className="text-base">⚡</span>
-                      <span>Entrenar Hoy ({DAY_NAMES[todayDay.dayNumber]})</span>
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDayNumber(todayDay.dayNumber);
+                          setDayViewMode("focused");
+                        }}
+                        className="px-4 py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
+                        title="Ver detalle del entrenamiento de hoy sin iniciar"
+                      >
+                        👁️ Ver Rutina
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onStartSession(todayDay)}
+                        className="px-5 py-3 rounded-2xl bg-white hover:bg-neutral-100 text-black font-bold uppercase tracking-wider text-xs shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span className="text-base">⚡</span>
+                        <span>Entrenar Hoy</span>
+                      </button>
+                    </div>
                   ) : todayDay?.isRestDay ? (
-                    <div className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider">
-                      <span>🧘</span>
-                      <span>Día de Descanso</span>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider">
+                        <span>🧘</span>
+                        <span>Descanso Hoy</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstTraining = selectedRoutine.days.find(d => !d.isRestDay);
+                          if (firstTraining) {
+                            setSelectedDayNumber(firstTraining.dayNumber);
+                            setDayViewMode("focused");
+                          }
+                        }}
+                        className="px-4 py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
+                      >
+                        👁️ Ver Rutina
+                      </button>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => {
                         const firstTraining = selectedRoutine.days.find(d => !d.isRestDay);
-                        if (firstTraining) onStartSession(firstTraining);
+                        if (firstTraining) {
+                          setSelectedDayNumber(firstTraining.dayNumber);
+                          setDayViewMode("focused");
+                        }
                       }}
-                      className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                      className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
                     >
-                      Ver Rutina
+                      👁️ Ver Rutina
                     </button>
                   )}
                 </div>
@@ -1643,9 +1677,94 @@ export function RoutineListView({
                 )}
               </div>
             ) : (
-              /* Days Cards List View */
-              <div className="space-y-3">
+              <>
+              {/* Tira ergonómica de días con puntitos de estado */}
+            <div className="mb-4 space-y-2">
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>📅</span>
+                  <span>Seleccionar Día (toca un puntito para ver sin comenzar)</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDayViewMode(dayViewMode === "focused" ? "all" : "focused")}
+                    className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 px-2.5 py-1 rounded-xl bg-cyan-500/10 border border-cyan-500/20 transition cursor-pointer active:scale-95"
+                  >
+                    {dayViewMode === "focused" ? "Ver todos los días" : "Ver día por día"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                 {selectedRoutine.days.map((day) => {
+                  const isSelected = activeDayNumber === day.dayNumber;
+                  const isToday = day.dayNumber === todayDayNumber;
+                  const isDone = !day.isRestDay && day.exercises.length > 0 && day.exercises.every(ex =>
+                    activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
+                  );
+                  const hasTraining = !day.isRestDay;
+
+                  return (
+                    <button
+                      key={day.dayNumber}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDayNumber(day.dayNumber);
+                        setDayViewMode("focused");
+                      }}
+                      className={cn(
+                        "py-2.5 px-1 sm:px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 active:scale-95",
+                        isSelected && dayViewMode === "focused"
+                          ? "bg-white text-black border-white shadow-lg font-bold scale-[1.03]"
+                          : isToday
+                            ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300 ring-1 ring-cyan-500/40"
+                            : "bg-[#0b0e14] border-white/[0.08] text-slate-400 hover:text-white hover:border-white/20"
+                      )}
+                      title={`Ver ${DAY_NAMES[day.dayNumber]} (${hasTraining ? day.focusArea || "Entreno" : "Descanso"})`}
+                    >
+                      <span className="text-[10px] font-mono uppercase tracking-wider">
+                        {DAY_NAMES[day.dayNumber]?.slice(0, 3) || `D${day.dayNumber}`}
+                      </span>
+
+                      {/* El Puntito de Estado */}
+                      <div className="flex items-center justify-center h-2.5">
+                        {isDone ? (
+                          <span className={cn("text-[10px] font-bold leading-none", isSelected && dayViewMode === "focused" ? "text-emerald-700" : "text-emerald-400")}>
+                            ✓
+                          </span>
+                        ) : hasTraining ? (
+                          <span
+                            className={cn(
+                              "w-2 h-2 rounded-full transition-all",
+                              isSelected && dayViewMode === "focused"
+                                ? "bg-cyan-600"
+                                : "bg-cyan-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]"
+                            )}
+                          />
+                        ) : (
+                          <span
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              isSelected && dayViewMode === "focused" ? "bg-neutral-400" : "bg-neutral-600"
+                            )}
+                          />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Days Cards List View */}
+            <div className="space-y-3">
+              {(dayViewMode === "focused"
+                ? (selectedRoutine.days.filter((d) => d.dayNumber === activeDayNumber).length > 0
+                    ? selectedRoutine.days.filter((d) => d.dayNumber === activeDayNumber)
+                    : selectedRoutine.days.slice(0, 1))
+                : selectedRoutine.days
+              ).map((day) => {
                   const isToday = day.dayNumber === todayDayNumber;
                   const isDayCompleted = !day.isRestDay && day.exercises.length > 0 && day.exercises.every(ex =>
                     activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
@@ -1657,7 +1776,7 @@ export function RoutineListView({
                       className={cn(
                         "rounded-3xl border transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl relative overflow-hidden",
                         isToday
-                          ? "bg-gradient-to-b from-primary-500/[0.08] to-white/[0.02] border-primary-500/40 shadow-[0_0_30px_rgba(234,88,12,0.12)]"
+                          ? "bg-gradient-to-b from-primary-500/[0.08] to-white/[0.02] border-primary-500/40 shadow-[0_0_30px_rgba(56,189,248,0.12)]"
                           : isDayCompleted
                             ? "bg-gradient-to-b from-emerald-500/[0.06] to-white/[0.02] border-emerald-500/30"
                             : "bg-white/[0.03] border-white/10 hover:border-white/20"
@@ -1834,6 +1953,7 @@ export function RoutineListView({
                   );
                 })}
               </div>
+              </>
             )}
           </>
         ) : (

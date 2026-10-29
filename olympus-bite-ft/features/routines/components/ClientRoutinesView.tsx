@@ -9,7 +9,7 @@ import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
 import { EvolutionLayersView } from "./EvolutionLayersView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers } from "lucide-react";
+import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers, Sparkles } from "lucide-react";
 
 interface ClientRoutinesViewProps {
   /** Rutina a abrir de entrada en vez de la activa (coach entrenando su propia rutina). */
@@ -270,6 +270,15 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             )}
             <button
               type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
+              className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+              title="Consultar al Co-Piloto IA sobre ejercicios o sobrecargas"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Co-Piloto IA</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setView("evolution")}
               className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
             >
@@ -297,7 +306,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       />
 
       {/* RESUMEN DE AVANCE (DIARIO • SEMANAL • MENSUAL) Y EL PORQUÉ DEL CICLO */}
-      <div className="mb-5 rounded-3xl bg-[#0e1017] border border-white/[0.08] p-4 sm:p-5 space-y-4">
+      <div className="mb-5 rounded-3xl bg-[#0b0e14] border border-white/[0.08] shadow-xl p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">
@@ -322,12 +331,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
 
         {/* 3 Tarjetas de Avance: Hoy | Semana | Acumulado del Mes */}
         <div className="grid grid-cols-3 gap-2.5">
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400">
               <CalendarCheck className="w-3.5 h-3.5" />
               <span>Hoy</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.setsToday}{" "}
               <span className="text-xs font-normal text-neutral-400">
                 series
@@ -338,12 +347,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Semana {currentWeek}</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.weekPct}%
             </p>
             <span className="text-[10px] text-neutral-400 block">
@@ -352,12 +361,12 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-sky-400">
               <Flame className="w-3.5 h-3.5" />
               <span>Este Mes</span>
             </div>
-            <p className="text-lg sm:text-xl font-black text-white mt-1">
+            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
               {trainingSummary.totalSetsMonth}{" "}
               <span className="text-xs font-normal text-neutral-400">
                 series
