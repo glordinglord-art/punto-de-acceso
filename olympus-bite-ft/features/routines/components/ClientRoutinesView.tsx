@@ -62,12 +62,28 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       const res = await routinesService.getByClient(user.id);
       const data = res.data ?? [];
       setRoutines(data);
+      // Auto-cálculo de la semana activa según el pacto de 120 días
+      const heroPact = user?.anamnesisData?.heroPact;
+      const startStr =
+        heroPact?.startDate ||
+        user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) ||
+        (user as any)?.createdAt?.slice(0, 10);
+      let calculatedWeek = 1;
+      if (startStr) {
+        const diffDays = Math.max(
+          1,
+          Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        );
+        calculatedWeek = Math.max(1, Math.ceil(diffDays / 7));
+      }
       const active =
         data.find((r) => r.id === initialRoutineId) ??
         data.find((r) => r.isActive) ??
         data[0];
       if (active) {
         setSelectedRoutine(active);
+        const boundedWeek = Math.min(active.weekCount || 4, calculatedWeek);
+        setCurrentWeek(boundedWeek);
         await refreshLogs(data);
       }
     } finally {
@@ -385,6 +401,13 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
         logs={logs}
         logsLoading={logsLoading}
         currentWeek={currentWeek}
+        autoCurrentWeek={(() => {
+          const heroPact = user?.anamnesisData?.heroPact;
+          const startStr = heroPact?.startDate || user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) || (user as any)?.createdAt?.slice(0, 10);
+          if (!startStr) return 1;
+          const diffDays = Math.max(1, Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+          return Math.min(selectedRoutine?.weekCount || 4, Math.max(1, Math.ceil(diffDays / 7)));
+        })()}
         savingLog={savingLog}
         userId={user?.id ?? ""}
         weightUnit={weightUnit}
