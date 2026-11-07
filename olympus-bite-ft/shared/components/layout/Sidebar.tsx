@@ -68,39 +68,25 @@ const navGroups: NavGroup[] = [
         href: "/clinical-agent",
         label: "Asistente IA",
         icon: (
-          <svg className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+          <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
           </svg>
         ),
       },
     ],
   },
   {
-    title: "Principal",
+    title: "Mi Ecosistema",
     items: [
       {
         href: "/dashboard",
-        label: "Hoy",
+        label: "Plan de Hoy",
         icon: (
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
         ),
       },
-      {
-        href: "/profile",
-        label: "Mi Perfil",
-        icon: (
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        ),
-      },
-    ],
-  },
-  {
-    title: "Mi Plan",
-    items: [
       {
         href: "/routines",
         label: "Mi Rutina",
@@ -111,11 +97,29 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
+        href: "/progress",
+        label: "Mi Progreso",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        ),
+      },
+      {
         href: "/meals",
         label: "Agua y Comidas",
         icon: (
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        ),
+      },
+      {
+        href: "/profile",
+        label: "Mi Perfil & Coach",
+        icon: (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         ),
       },
@@ -165,8 +169,8 @@ const navGroups: NavGroup[] = [
         href: "/clinical-agent",
         label: "Co-Piloto IA",
         icon: (
-          <svg className="h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+          <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
           </svg>
         ),
       },
@@ -174,7 +178,15 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: string; layout: string }) {
+function SidebarGroup({
+  group,
+  pathname,
+  layout,
+}: {
+  group: NavGroup;
+  pathname: string;
+  layout: string;
+}) {
   const [isOpen, setIsOpen] = useState(true);
 
   if (layout === "mini") {
@@ -190,8 +202,8 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               className={cn(
                 "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500/12 text-primary-600 border-primary-500/25 shadow-sm shadow-primary-500/20 dark:text-primary-400 dark:border-primary-500/20 dark:shadow-md dark:shadow-primary-500/20"
-                  : "bg-slate-900/5 text-slate-600 border-slate-200/80 hover:bg-slate-900/10 hover:text-slate-950 dark:bg-white/5 dark:text-slate-400 dark:border-white/5 dark:hover:bg-white/10 dark:hover:text-white"
+                  ? "bg-cyan-400/12 text-cyan-400 border-cyan-400/30 shadow-sm"
+                  : "bg-white/[0.03] text-neutral-400 border-white/[0.06] hover:bg-white/[0.08] hover:text-white",
               )}
             >
               <div className="w-5 h-5">{item.icon}</div>
@@ -206,23 +218,31 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
     <div className="mb-6 last:mb-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-slate-950 dark:hover:text-white"
+        className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-neutral-500 transition-colors hover:text-white cursor-pointer"
       >
         <span>{group.title}</span>
         <svg
-          className={cn("h-4 w-4 transition-transform duration-200", isOpen ? "rotate-180" : "")}
+          className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            isOpen ? "rotate-180" : "",
+          )}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
-      
+
       <div
         className={cn(
           "space-y-1 overflow-hidden transition-all duration-300 origin-top",
-          isOpen ? "max-h-[500px] opacity-100 mt-2" : "max-h-0 opacity-0"
+          isOpen ? "max-h-[500px] opacity-100 mt-1.5" : "max-h-0 opacity-0",
         )}
       >
         {group.items.map((item) => {
@@ -232,13 +252,15 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-200 border",
+                "flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 border",
                 isActive
-                  ? "bg-primary-500/12 text-primary-600 border-primary-500/25 shadow-sm shadow-primary-500/20 dark:text-primary-400 dark:border-primary-500/20 dark:shadow-md dark:shadow-primary-500/20"
-                  : "bg-transparent text-slate-600 border-transparent hover:bg-slate-900/5 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+                  ? "bg-cyan-400/12 text-cyan-300 border-cyan-400/30 shadow-[0_0_20px_rgba(0,240,255,0.12)]"
+                  : "bg-transparent text-neutral-400 border-transparent hover:bg-white/[0.04] hover:text-white",
               )}
             >
-              <div className="w-5 h-5">{item.icon}</div>
+              <div className={cn("w-5 h-5", isActive && "text-cyan-400")}>
+                {item.icon}
+              </div>
               {item.label}
             </Link>
           );
@@ -250,22 +272,30 @@ function SidebarGroup({ group, pathname, layout }: { group: NavGroup; pathname: 
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { logout, user, activeMode, setActiveMode, availableModes, isSuperAdmin, isTrainer } = useAuth();
+  const {
+    logout,
+    user,
+    activeMode,
+    setActiveMode,
+    availableModes,
+    isSuperAdmin,
+    isTrainer,
+  } = useAuth();
   const { layout } = useSettings();
 
   const filteredGroups = navGroups
     .filter((group) => {
-      if (group.superAdminOnly) return activeMode === 'superadmin';
-      if (group.trainerOnly) return activeMode === 'trainer';
-      if (group.title === 'Mi Plan' && activeMode === 'superadmin') return false;
+      if (group.superAdminOnly) return activeMode === "superadmin";
+      if (group.trainerOnly) return activeMode === "trainer";
+      if (group.title === "Mi Ecosistema" && activeMode === "superadmin")
+        return false;
       return true;
     })
     .map((group) => ({
       ...group,
-      title: group.title === 'Mi Plan' && activeMode === 'trainer' ? 'Planes & Dietas' : group.title,
       items: group.items.filter((item) => {
-        if (item.superAdminOnly) return activeMode === 'superadmin';
-        if (item.trainerOnly) return activeMode === 'trainer';
+        if (item.superAdminOnly) return activeMode === "superadmin";
+        if (item.trainerOnly) return activeMode === "trainer";
         return true;
       }),
     }))
@@ -274,20 +304,20 @@ export function Sidebar() {
   const getRoleBadge = () => {
     if (isSuperAdmin) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-500 dark:text-amber-400">
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-400">
           👑 Super Admin
         </span>
       );
     }
     if (isTrainer) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-primary-500/15 border border-primary-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary-600 dark:text-primary-400">
+        <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-cyan-400">
           🏋️ Entrenador
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-500 dark:text-blue-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
         ⚡ Atleta
       </span>
     );
@@ -296,10 +326,10 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:bg-white/90 lg:text-slate-950 lg:backdrop-blur-xl lg:transition-all lg:z-30 lg:flex dark:lg:bg-[#0f1115] dark:lg:text-white",
+        "hidden lg:bg-[#090b10] lg:text-white lg:backdrop-blur-xl lg:transition-all lg:z-30 lg:flex",
         layout === "mini"
-          ? "flex-row items-center fixed top-0 left-0 w-full h-20 px-6 border-b border-slate-200/80 dark:border-white/5"
-          : "flex-col w-72 fixed inset-y-0 border-r border-slate-200/80 dark:border-white/5"
+          ? "flex-row items-center fixed top-0 left-0 w-full h-20 px-6 border-b border-white/[0.06]"
+          : "flex-col w-72 fixed inset-y-0 border-r border-white/[0.06]",
       )}
     >
       {/* Logo */}
@@ -307,12 +337,19 @@ export function Sidebar() {
         className={cn(
           "flex items-center",
           layout === "mini"
-            ? "h-full border-none pr-6 border-r border-slate-200/80 dark:border-white/5"
-            : "h-24 px-6 border-b border-slate-200/80 dark:border-white/5 justify-start"
+            ? "h-full border-none pr-6 border-r border-white/[0.06]"
+            : "h-22 px-6 border-b border-white/[0.06] justify-start",
         )}
       >
-        <Link href="/dashboard" className="flex items-center group transition-transform hover:scale-[1.02]">
-          <VitalFitLogo size={layout === "mini" ? "sm" : "md"} showGlow={true} glowIntensity="medium" />
+        <Link
+          href="/dashboard"
+          className="flex items-center group transition-transform hover:scale-[1.02]"
+        >
+          <VitalFitLogo
+            size={layout === "mini" ? "sm" : "md"}
+            showGlow={true}
+            glowIntensity="medium"
+          />
         </Link>
       </div>
 
@@ -321,7 +358,7 @@ export function Sidebar() {
         className={cn(
           layout === "mini"
             ? "flex-1 flex items-center gap-6 px-8"
-            : "flex-1 px-4 py-6 overflow-y-auto scrollbar-hide"
+            : "flex-1 px-4 py-5 overflow-y-auto scrollbar-hide",
         )}
       >
         {filteredGroups.map((group) => (
@@ -337,35 +374,42 @@ export function Sidebar() {
       {/* Bottom */}
       <div
         className={cn(
-          "flex items-center gap-4",
+          "flex items-center gap-3",
           layout === "mini"
-            ? "pr-6 border-l border-slate-200/80 pl-8 dark:border-white/5"
-            : "border-t border-slate-200/80 p-6 flex-col dark:border-white/5"
+            ? "pr-6 border-l border-white/[0.06] pl-8"
+            : "border-t border-white/[0.06] p-5 flex-col",
         )}
       >
         {user && layout !== "mini" && (
-          <div className="mb-2 px-2 w-full text-center">
-            <div className="mb-2 flex justify-center">{getRoleBadge()}</div>
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-900 truncate dark:text-white">
+          <div className="mb-1 px-1 w-full text-center">
+            <div className="mb-1.5 flex justify-center">{getRoleBadge()}</div>
+            <p className="text-sm font-bold uppercase tracking-wider text-white truncate">
               {user.name}
             </p>
-            <p className="text-xs font-semibold text-slate-500 truncate mt-0.5">{user.email}</p>
-            
+            <p className="text-xs font-medium text-neutral-500 truncate mt-0.5">
+              {user.email}
+            </p>
+
             {/* Mode Switcher */}
             {availableModes.length > 1 && (
-              <div className="mt-4 flex flex-col gap-1">
-                {availableModes.map(mode => (
+              <div className="mt-3.5 flex flex-col gap-1.5">
+                {availableModes.map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setActiveMode(mode, true)}
                     className={cn(
-                      "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all",
+                      "text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all cursor-pointer",
                       activeMode === mode
-                        ? "bg-primary-500/10 text-primary-500 border-primary-500/20"
-                        : "bg-transparent text-slate-400 border-transparent hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-slate-300"
+                        ? "bg-cyan-400/15 text-cyan-300 border-cyan-400/35 shadow-xs"
+                        : "bg-white/[0.02] text-neutral-400 border-white/[0.05] hover:bg-white/[0.06] hover:text-white",
                     )}
                   >
-                    Modo {mode === 'client' ? 'Atleta' : mode === 'trainer' ? 'Entrenador' : 'Super Admin'}
+                    Modo{" "}
+                    {mode === "client"
+                      ? "Atleta"
+                      : mode === "trainer"
+                        ? "Entrenador"
+                        : "Super Admin"}
                   </button>
                 ))}
               </div>
@@ -374,37 +418,57 @@ export function Sidebar() {
         )}
         <button
           className={cn(
-            "flex items-center justify-center gap-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border mb-1.5",
+            "flex items-center justify-center gap-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border cursor-pointer",
             layout === "mini"
-              ? "p-3 text-slate-400 bg-slate-900/5 border-slate-200/80 hover:bg-white/5 hover:text-white dark:border-white/5"
-              : "w-full py-2.5 text-slate-400 bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.06] hover:text-white"
+              ? "p-3 text-neutral-400 bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.08] hover:text-white"
+              : "w-full py-2.5 text-neutral-400 bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.08] hover:text-white",
           )}
           onClick={() => window.dispatchEvent(new CustomEvent("open-settings"))}
           title="Ajustes de Tema y Color"
         >
-          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <svg
+            className="w-4 h-4 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </svg>
           {layout !== "mini" && "Ajustes Visuales"}
         </button>
         <button
           className={cn(
-            "flex items-center justify-center gap-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all border",
+            "flex items-center justify-center gap-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer",
             layout === "mini"
-              ? "p-3 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
-              : "w-full py-3 text-slate-500 bg-slate-900/5 border-slate-200/80 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 dark:text-slate-400 dark:bg-white/5 dark:border-white/5 dark:hover:text-red-400"
+              ? "p-3 text-neutral-400 bg-white/[0.03] border-white/[0.06] hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20"
+              : "w-full py-2.5 text-neutral-400 bg-white/[0.03] border-white/[0.06] hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20",
           )}
           onClick={logout}
           title="Cerrar sesión"
         >
           <svg
-            className="h-5 w-5"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
           </svg>
           {layout !== "mini" && "Cerrar sesión"}
         </button>

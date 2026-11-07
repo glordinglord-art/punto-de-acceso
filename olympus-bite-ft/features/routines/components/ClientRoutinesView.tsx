@@ -2,14 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { Header } from "@/shared/components/layout/Header";
-import { Button } from "@/shared/components/ui/Button";
 import { routinesService } from "@/features/routines/services/routines.service";
 import { GuidedSessionView } from "./GuidedSessionView";
 import { RoutineListView } from "./RoutineListView";
 import { EvolutionLayersView } from "./EvolutionLayersView";
 import type { Exercise, Routine, RoutineDay, WorkoutLog } from "../types/routines.types";
-import { Dumbbell, Flame, TrendingUp, CalendarCheck, Layers, Sparkles } from "lucide-react";
 
 interface ClientRoutinesViewProps {
   /** Rutina a abrir de entrada en vez de la activa (coach entrenando su propia rutina). */
@@ -67,7 +64,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       const startStr =
         heroPact?.startDate ||
         user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) ||
-        (user as any)?.createdAt?.slice(0, 10);
+        (user as unknown as { createdAt?: string })?.createdAt?.slice(0, 10);
       let calculatedWeek = 1;
       if (startStr) {
         const diffDays = Math.max(
@@ -167,7 +164,6 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
     [user],
   );
 
-  // Métricas limpias de Avance (Hoy, Esta Semana, Este Mes) y El Porqué del Ciclo
   const trainingSummary = useMemo(() => {
     const heroPact = user?.anamnesisData?.heroPact;
     const strengthGoal = heroPact?.objectives?.strength;
@@ -199,7 +195,6 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
       });
     });
 
-    // Total de series programadas en la semana de la rutina activa
     const plannedSetsWeek = selectedRoutine
       ? selectedRoutine.days
           .filter((d) => !d.isRestDay)
@@ -235,10 +230,24 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
     };
   }, [user, logs, currentWeek, selectedRoutine, weightUnit]);
 
+  const autoCurrentWeek = useMemo(() => {
+    const heroPact = user?.anamnesisData?.heroPact;
+    const startStr =
+      heroPact?.startDate ||
+      user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) ||
+      (user as unknown as { createdAt?: string })?.createdAt?.slice(0, 10);
+    if (!startStr) return 1;
+    const diffDays = Math.max(
+      1,
+      Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1,
+    );
+    return Math.min(selectedRoutine?.weekCount || 4, Math.max(1, Math.ceil(diffDays / 7)));
+  }, [user, selectedRoutine]);
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-[#07080b]">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
       </div>
     );
   }
@@ -260,7 +269,7 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
 
   if (view === "evolution" && user) {
     return (
-      <div className="space-y-4">
+      <div className="min-h-screen bg-[#07080b] text-white pb-28 pt-3 px-4 max-w-3xl mx-auto">
         <EvolutionLayersView
           user={user}
           routine={selectedRoutine}
@@ -273,154 +282,29 @@ export function ClientRoutinesView({ initialRoutineId, onBack }: ClientRoutinesV
   }
 
   return (
-    <>
-      <Header
-        title={onBack ? "Rutina" : "Mi Rutina"}
-        subtitle="Cada sesión tiene un propósito conectado a tus metas de 4 meses"
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            {onBack && (
-              <Button variant="ghost" size="md" onClick={onBack}>
-                ← Volver
-              </Button>
-            )}
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent("open-ai-assistant"))}
-              className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
-              title="Consultar al Co-Piloto IA sobre ejercicios o sobrecargas"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Co-Piloto IA</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("evolution")}
-              className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-              <span>Mi Progreso</span>
-            </button>
-            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-              {(["kg", "lbs"] as const).map((u) => (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() => setWeightUnit(u)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition ${
-                    weightUnit === u
-                      ? "bg-white text-black font-bold shadow-sm"
-                      : "text-neutral-400 hover:text-white"
-                  }`}
-                >
-                  {u}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-      />
-
-      {/* RESUMEN DE AVANCE (DIARIO • SEMANAL • MENSUAL) Y EL PORQUÉ DEL CICLO */}
-      <div className="mb-5 rounded-3xl bg-[#0b0e14] border border-white/[0.08] shadow-xl p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">
-              💡 ¿Por qué entrenas este ciclo?
-            </span>
-            <p className="text-xs sm:text-sm text-neutral-200 mt-0.5 leading-relaxed">
-              Esta rutina está diseñada para llevarte a{" "}
-              <strong className="text-amber-300">
-                {trainingSummary.strengthTitle}{" "}
-                {trainingSummary.strengthTarget
-                  ? `(${trainingSummary.strengthTarget})`
-                  : ""}
-              </strong>{" "}
-              y lograr{" "}
-              <strong className="text-sky-300">
-                {trainingSummary.masteryTitle}
-              </strong>
-              .
-            </p>
-          </div>
-        </div>
-
-        {/* 3 Tarjetas de Avance: Hoy | Semana | Acumulado del Mes */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400">
-              <CalendarCheck className="w-3.5 h-3.5" />
-              <span>Hoy</span>
-            </div>
-            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
-              {trainingSummary.setsToday}{" "}
-              <span className="text-xs font-normal text-neutral-400">
-                series
-              </span>
-            </p>
-            <span className="text-[10px] text-neutral-400 block">
-              Completadas hoy
-            </span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>Semana {currentWeek}</span>
-            </div>
-            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
-              {trainingSummary.weekPct}%
-            </p>
-            <span className="text-[10px] text-neutral-400 block">
-              {trainingSummary.setsThisWeek}/{trainingSummary.plannedSetsWeek || "—"}{" "}
-              series hechas
-            </span>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-sky-400">
-              <Flame className="w-3.5 h-3.5" />
-              <span>Este Mes</span>
-            </div>
-            <p className="text-lg sm:text-xl font-bold text-white mt-1 tabular-nums">
-              {trainingSummary.totalSetsMonth}{" "}
-              <span className="text-xs font-normal text-neutral-400">
-                series
-              </span>
-            </p>
-            <span className="text-[10px] text-neutral-400 block truncate">
-              {trainingSummary.displayVolume.toLocaleString("es")} {weightUnit}{" "}
-              movidos
-            </span>
-          </div>
-        </div>
-      </div>
-      <RoutineListView
-        routines={routines}
-        selectedRoutine={selectedRoutine}
-        logs={logs}
-        logsLoading={logsLoading}
-        currentWeek={currentWeek}
-        autoCurrentWeek={(() => {
-          const heroPact = user?.anamnesisData?.heroPact;
-          const startStr = heroPact?.startDate || user?.anamnesisData?.discoveryCompletedAt?.slice(0, 10) || (user as any)?.createdAt?.slice(0, 10);
-          if (!startStr) return 1;
-          const diffDays = Math.max(1, Math.floor((Date.now() - new Date(startStr).getTime()) / (1000 * 60 * 60 * 24)) + 1);
-          return Math.min(selectedRoutine?.weekCount || 4, Math.max(1, Math.ceil(diffDays / 7)));
-        })()}
-        savingLog={savingLog}
-        userId={user?.id ?? ""}
-        weightUnit={weightUnit}
-        onSelectRoutine={setSelectedRoutine}
-        onActivateRoutine={handleActivateRoutine}
-        onStartSession={(day) => {
-          setSessionDay(day);
-          setView("session");
-        }}
-        onWeekChange={setCurrentWeek}
-        onSaveLog={handleSaveSet}
-        onRemoveLog={handleRemoveLog}
-      />
-    </>
+    <RoutineListView
+      routines={routines}
+      selectedRoutine={selectedRoutine}
+      logs={logs}
+      logsLoading={logsLoading}
+      currentWeek={currentWeek}
+      autoCurrentWeek={autoCurrentWeek}
+      savingLog={savingLog}
+      userId={user?.id ?? ""}
+      weightUnit={weightUnit}
+      onWeightUnitChange={setWeightUnit}
+      onOpenEvolution={() => setView("evolution")}
+      onBack={onBack}
+      trainingSummary={trainingSummary}
+      onSelectRoutine={setSelectedRoutine}
+      onActivateRoutine={handleActivateRoutine}
+      onStartSession={(day) => {
+        setSessionDay(day);
+        setView("session");
+      }}
+      onWeekChange={setCurrentWeek}
+      onSaveLog={handleSaveSet}
+      onRemoveLog={handleRemoveLog}
+    />
   );
 }

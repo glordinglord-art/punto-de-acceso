@@ -8,6 +8,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -23,7 +24,7 @@ const sizeStyles = {
   '2xl': 'max-w-6xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', className, noPadding = false }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, footer, size = 'md', className, noPadding = false }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,9 +78,16 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
 
         {title && (
           <div className="shrink-0 px-4 sm:px-7 pt-3 sm:pt-6 pb-3.5 flex items-center justify-between border-b border-slate-200/60 dark:border-white/8">
-            <h2 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate pr-2">
-              {title}
-            </h2>
+            <div className="min-w-0 pr-2">
+              <h2 className="text-lg sm:text-xl font-condensed font-bold uppercase tracking-wide text-neutral-900 dark:text-white truncate">
+                {title}
+              </h2>
+              {description && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                  {description}
+                </p>
+              )}
+            </div>
             <button
               onClick={onClose}
               aria-label="Cerrar modal"

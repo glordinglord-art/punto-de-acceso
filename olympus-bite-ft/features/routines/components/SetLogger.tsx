@@ -13,12 +13,12 @@ import {
   ShieldCheck,
   Activity,
   HeartCrack,
-  Pencil,
   RefreshCw,
   SkipForward,
   Trophy,
 } from "lucide-react";
 import type { ExerciseAutoregulationInsight } from "../utils/vital-fit-labs-engine";
+import type { SetLogData } from "../types/routines.types";
 import { cn } from "@/shared/lib/utils";
 
 interface SetLoggerProps {
@@ -27,19 +27,17 @@ interface SetLoggerProps {
   targetWeight?: number | null;
   targetReps?: string;
   intensity?: "relax" | "medium" | "failure" | string | null;
-  /** Peso ya guardado para ESTA serie (null si aun no se registra) */
   loggedWeight?: number | null;
-  /** Reps ya guardadas para ESTA serie (null si aun no se registra) */
   loggedReps?: number | null;
-  /** True si la serie ya quedo registrada: el boton pasa a modo correccion */
   isLogged?: boolean;
+  loggedSets?: SetLogData[];
+  onSelectSet?: (setIdx: number) => void;
   defaultUnit?: "kg" | "lbs";
   previousWeight?: number | null;
   previousReps?: number | null;
   insight?: ExerciseAutoregulationInsight | null;
   disabled: boolean;
   onComplete: (weight: number | null, reps: number | null) => void;
-  /** Avanza sin registrar nada (saltar serie) */
   onSkip?: () => void;
 }
 
@@ -54,15 +52,14 @@ export function SetLogger({
   loggedWeight = null,
   loggedReps = null,
   isLogged = false,
+  loggedSets = [],
+  onSelectSet,
   defaultUnit = "kg",
-  previousWeight,
-  previousReps,
   insight,
   disabled,
   onComplete,
   onSkip,
 }: SetLoggerProps) {
-  // Parse target reps from string (e.g. "10-12" -> 12, "10" -> 10)
   const defaultTargetReps = (() => {
     if (!targetReps) return 10;
     const matches = targetReps.match(/\d+/g);
@@ -71,19 +68,14 @@ export function SetLogger({
   })();
 
   const suggestedWeightKg = targetWeight ?? null;
-
-  // Al corregir una serie ya registrada se parte del dato real del usuario,
-  // no de la sugerencia del coach: si no, se pierde lo que realmente levanto.
   const startingWeightKg = loggedWeight ?? suggestedWeightKg;
 
-  // Unit toggle state: 'kg' vs 'lbs'
   const [unit, setUnit] = useState<"kg" | "lbs">(defaultUnit);
 
-  // Conversion helpers
   const toDisplay = (kg: number | null): number | null => {
     if (kg === null || kg === undefined) return null;
     if (unit === "kg") return kg;
-    return Math.round(kg * LBS_FACTOR * 2) / 2; // step of 0.5 lbs
+    return Math.round(kg * LBS_FACTOR * 2) / 2;
   };
 
   const toKg = (val: number | null): number | null => {
@@ -92,17 +84,13 @@ export function SetLogger({
     return Math.round((val / LBS_FACTOR) * 10) / 10;
   };
 
-  // State: Actual Weight Lifted (stored in current display unit)
   const [actualWeight, setActualWeight] = useState<number | null>(
-    toDisplay(startingWeightKg)
+    toDisplay(startingWeightKg),
   );
   const [reps, setReps] = useState<number>(loggedReps ?? defaultTargetReps);
-  const [rir, setRir] = useState<number>(2); // Default RIR 2 (safe standard)
-
-  // Reason selector for yellow deviation
+  const [rir, setRir] = useState<number>(2);
   const [adjustmentReason, setAdjustmentReason] = useState<string | null>(null);
 
-  // Detect live PR (Personal Record) or Smart Shield completion from Vital Fit Labs
   const currentKg = toKg(actualWeight) ?? 0;
   const currentE1Rm = currentKg > 0 ? currentKg * (1 + reps / 30) : reps;
   const isShieldMode = insight?.state === "fatigue_shield_2w";
@@ -113,12 +101,11 @@ export function SetLogger({
     insight.state !== "fatigue_shield_2w" &&
     currentE1Rm > insight.bestE1RmKg + 0.05;
 
-
-  // Joint pain reporter
   const [showJointPicker, setShowJointPicker] = useState<boolean>(false);
-  const [selectedJointPain, setSelectedJointPain] = useState<string | null>(null);
+  const [selectedJointPain, setSelectedJointPain] = useState<string | null>(
+    null,
+  );
 
-  // Key tracking for set changes
   const [prevKey, setPrevKey] = useState({
     setNumber,
     loggedWeight,
@@ -139,7 +126,6 @@ export function SetLogger({
     setShowJointPicker(false);
   }
 
-  // Unit switch handler with conversion
   const handleToggleUnit = (newUnit: "kg" | "lbs") => {
     if (newUnit === unit) return;
     if (actualWeight !== null) {
@@ -153,14 +139,15 @@ export function SetLogger({
   };
 
   const adjustWeight = (delta: number) => {
-    setActualWeight((prev) => Math.max(0, Math.round(((prev ?? 0) + delta) * 2) / 2));
+    setActualWeight((prev) =>
+      Math.max(0, Math.round(((prev ?? 0) + delta) * 2) / 2),
+    );
   };
 
   const adjustReps = (delta: number) => {
     setReps((prev) => Math.max(1, prev + delta));
   };
 
-  // Evaluate Semaphore Status
   const suggestedDisplay = toDisplay(suggestedWeightKg);
   const isBodyweight = !suggestedWeightKg || suggestedWeightKg <= 0;
 
@@ -169,28 +156,32 @@ export function SetLogger({
       return {
         status: "red" as const,
         label: `Alerta: Molestia en ${selectedJointPain}`,
-        colorClass: "bg-rose-500/20 text-rose-300 border-rose-500/40",
-        message: "Se ha registrado dolor articular. Se notificará al coach para descarga preventiva.",
+        colorClass: "bg-rose-500/15 text-rose-300 border-rose-500/35",
+        message:
+          "Se ha registrado dolor articular. Se notificará al coach para descarga preventiva.",
       };
     }
 
     if (isBodyweight || !suggestedDisplay || !actualWeight) {
       return {
         status: "green" as const,
-        label: "Zona Óptima / Carga Libre",
-        colorClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-        message: "Carga dentro del rango biomecánico seguro.",
+        label: "Zona Óptima · Carga Segura",
+        colorClass: "bg-emerald-500/12 text-emerald-300 border-emerald-500/25",
+        message: "Dentro del rango biomecánico.",
       };
     }
 
-    const diffPercent = ((actualWeight - suggestedDisplay) / suggestedDisplay) * 100;
+    const diffPercent =
+      ((actualWeight - suggestedDisplay) / suggestedDisplay) * 100;
 
     if (diffPercent > 20) {
       return {
         status: "red" as const,
         label: `Sobrecarga Crítica (+${Math.round(diffPercent)}%)`,
-        colorClass: "bg-rose-500/25 text-rose-300 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.2)]",
-        message: "Salto de carga >20%. Peligro de ego lifting y sobrecarga articular.",
+        colorClass:
+          "bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.15)]",
+        message:
+          "Salto de carga >20%. Peligro de sobrecarga articular.",
       };
     }
 
@@ -198,16 +189,17 @@ export function SetLogger({
       return {
         status: "yellow" as const,
         label: `Ajuste Moderado (${diffPercent > 0 ? "+" : ""}${Math.round(diffPercent)}%)`,
-        colorClass: "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.15)]",
-        message: "Desviación del 10%-20%. Por favor indica el motivo del ajuste.",
+        colorClass: "bg-amber-500/15 text-amber-300 border-amber-500/35",
+        message:
+          "Desviación del 10%-20%. Indica el motivo del ajuste.",
       };
     }
 
     return {
       status: "green" as const,
-      label: "Zona Óptima / Prescripción Cumplida",
-      colorClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]",
-      message: "Carga precisa según el plan metodológico del coach.",
+      label: "Zona Óptima · Prescripción Cumplida",
+      colorClass: "bg-emerald-500/12 text-emerald-300 border-emerald-500/25",
+      message: "Carga precisa según el plan del coach.",
     };
   })();
 
@@ -216,7 +208,6 @@ export function SetLogger({
     onComplete(finalKg, reps);
   };
 
-  // Intensity configuration
   const intensityConfig = (() => {
     switch (intensity) {
       case "relax":
@@ -224,14 +215,14 @@ export function SetLogger({
           label: "Modo Relax",
           rpe: "RPE 5-6",
           emoji: "🟢",
-          icon: <Smile className="w-4 h-4 text-emerald-400" />,
+          icon: <Smile className="w-3.5 h-3.5 text-emerald-400" />,
         };
       case "failure":
         return {
           label: "Fallo Muscular",
           rpe: "RPE 9-10",
           emoji: "🔴",
-          icon: <Flame className="w-4 h-4 text-red-400 animate-pulse" />,
+          icon: <Flame className="w-3.5 h-3.5 text-rose-400" />,
         };
       case "medium":
       default:
@@ -239,42 +230,63 @@ export function SetLogger({
           label: "Intensidad Media",
           rpe: "RPE 7-8",
           emoji: "🟡",
-          icon: <Zap className="w-4 h-4 text-amber-400" />,
+          icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
         };
     }
   })();
 
   return (
-    <div className="flex flex-col gap-3.5 p-4 sm:p-5 bg-gradient-to-b from-white/[0.08] via-white/[0.04] to-black/70 rounded-3xl border border-white/12 backdrop-blur-2xl shadow-2xl animate-in slide-in-from-bottom-3 duration-300">
-      {/* Header: Set Number & Unit Selector Switch */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border",
-              isLogged
-                ? "bg-white/10 text-slate-200 border-white/20"
-                : "bg-white/5 text-slate-300 border-white/10"
-            )}
-          >
-            {isLogged && <Pencil className="w-3 h-3 shrink-0" />}
-            Serie {setNumber} de {totalSets}
-          </span>
-          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+    <div className="flex flex-col gap-3 p-4 bg-[#12141a] rounded-[26px] border border-white/[0.06] shadow-[0_14px_34px_rgba(0,0,0,0.45)] animate-in slide-in-from-bottom-2 duration-200">
+      {/* ── Top Row: Integrated Set Pills + RPE + KG/LBS Toggle ── */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {Array.from({ length: totalSets }, (_, i) => {
+            const sNum = i + 1;
+            const done = loggedSets.some((s) => s.set === sNum && s.completed);
+            const active = sNum === setNumber;
+            return (
+              <button
+                key={sNum}
+                type="button"
+                onClick={() => onSelectSet?.(i)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 border",
+                  active
+                    ? "bg-white text-black border-white font-black shadow-xs"
+                    : done
+                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                      : "bg-[#090b10] text-neutral-400 border-white/[0.06] hover:text-white",
+                )}
+              >
+                {done && (
+                  <span
+                    className={cn(
+                      "text-[10px] font-black",
+                      active ? "text-emerald-700" : "text-emerald-400",
+                    )}
+                  >
+                    ✓
+                  </span>
+                )}
+                <span>Serie {sNum}</span>
+              </button>
+            );
+          })}
+          <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1 ml-1 shrink-0">
             {intensityConfig.emoji} {intensityConfig.rpe}
           </span>
         </div>
 
-        {/* Dynamic Unit Switch [ KG | LBS ] */}
-        <div className="flex items-center bg-black/60 border border-white/10 rounded-xl p-0.5 shadow-inner">
+        {/* KG / LBS Pill Switch */}
+        <div className="flex items-center bg-[#090b10] border border-white/[0.08] rounded-full p-0.5 shrink-0">
           <button
             type="button"
             onClick={() => handleToggleUnit("kg")}
             className={cn(
-              "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+              "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
               unit === "kg"
-                ? "bg-white text-black font-black shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-black font-black"
+                : "text-neutral-400 hover:text-white",
             )}
           >
             KG
@@ -283,10 +295,10 @@ export function SetLogger({
             type="button"
             onClick={() => handleToggleUnit("lbs")}
             className={cn(
-              "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+              "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
               unit === "lbs"
-                ? "bg-white text-black font-black shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-white text-black font-black"
+                : "text-neutral-400 hover:text-white",
             )}
           >
             LBS
@@ -294,138 +306,138 @@ export function SetLogger({
         </div>
       </div>
 
-      {/* Semáforo Visual Card in Real-Time */}
+      {/* ── Sleek Semáforo Status Bar (Compact when Green, Expandable when Yellow/Red) ── */}
       <div
         className={cn(
-          "rounded-2xl p-3 border transition-all flex flex-col gap-1.5",
-          semaphore.colorClass
+          "rounded-2xl px-3.5 py-2.5 border transition-all flex flex-col gap-1",
+          semaphore.colorClass,
         )}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {semaphore.status === "green" && (
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
             )}
             {semaphore.status === "yellow" && (
-              <Activity className="w-4 h-4 text-amber-400" />
+              <Activity className="w-4 h-4 text-amber-400 shrink-0" />
             )}
             {semaphore.status === "red" && (
-              <AlertTriangle className="w-4 h-4 text-rose-400 animate-bounce" />
+              <AlertTriangle className="w-4 h-4 text-rose-400 animate-bounce shrink-0" />
             )}
-            <span className="text-xs font-black uppercase tracking-wider">
+            <span className="text-xs font-bold truncate">
               {semaphore.label}
             </span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/40 border border-white/10">
+          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
             Semáforo
           </span>
         </div>
-        <p className="text-[11px] opacity-90 leading-relaxed font-medium">
-          {semaphore.message}
-        </p>
 
-        {/* Micro-Selector for Yellow Adjustment Reason */}
+        {semaphore.status !== "green" && (
+          <p className="text-[11px] opacity-90 leading-snug">
+            {semaphore.message}
+          </p>
+        )}
+
         {semaphore.status === "yellow" && (
-          <div className="mt-2 pt-2 border-t border-amber-500/30 flex flex-col gap-1.5 animate-in fade-in duration-200">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200">
-              ¿A qué se debió el ajuste de carga?
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "Polea / Máquina con diferente ratio",
-                "Mancuernas en otro incremento",
-                "Fatiga acumulada / Readiness",
-                "Mayor fuerza en el día",
-              ].map((reason) => (
-                <button
-                  key={reason}
-                  type="button"
-                  onClick={() => setAdjustmentReason(reason)}
-                  className={cn(
-                    "px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border",
-                    adjustmentReason === reason
-                      ? "bg-amber-400 text-slate-950 border-amber-300 font-extrabold"
-                      : "bg-black/40 text-amber-200 border-amber-500/20 hover:bg-black/60"
-                  )}
-                >
-                  {reason}
-                </button>
-              ))}
-            </div>
+          <div className="mt-1.5 pt-2 border-t border-amber-500/25 flex flex-wrap gap-1.5">
+            {[
+              "Máquina con otro ratio",
+              "Otro salto de mancuerna",
+              "Fatiga / Readiness",
+              "Más fuerza hoy",
+            ].map((reason) => (
+              <button
+                key={reason}
+                type="button"
+                onClick={() => setAdjustmentReason(reason)}
+                className={cn(
+                  "px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border",
+                  adjustmentReason === reason
+                    ? "bg-amber-400 text-slate-950 border-amber-300 font-black"
+                    : "bg-black/40 text-amber-200 border-amber-500/20 hover:bg-black/60",
+                )}
+              >
+                {reason}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Dual Columns: Carga Sugerida (Coach / Lectura) vs Carga Real (Input Interactivo) */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pilar 1: Carga Sugerida (Coach / Solo Lectura) */}
-        <div className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-black/60 border border-white/10 relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-              <Scale className="w-3 h-3 text-slate-500" /> Carga Sugerida
+      {/* ── Row 1: Carga Sugerida vs Carga Real ── */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {/* Carga Sugerida */}
+        <div className="flex flex-col justify-between p-3.5 rounded-2xl bg-[#090b10] border border-white/[0.06]">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              <Scale className="w-3 h-3 text-neutral-500" /> Sugerida
             </span>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-              Lectura
+            <span className="text-[9px] font-bold text-neutral-500 uppercase">
+              Meta: {targetReps}
             </span>
           </div>
 
           <div className="py-2 text-center">
             {isBodyweight ? (
               <div>
-                <span className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <span className="text-xl font-display font-black text-white">
                   Corporal
                 </span>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                <p className="text-[10px] font-medium text-neutral-500 mt-0.5">
                   Autocarga
                 </p>
               </div>
             ) : (
-              <div>
-                <span className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
+              <div className="flex items-baseline justify-center">
+                <span className="text-3xl font-display font-black text-white tabular-nums">
                   {suggestedDisplay}
                 </span>
-                <span className="text-sm font-extrabold text-slate-400 ml-1">
+                <span className="text-xs font-bold text-neutral-400 ml-1">
                   {unit}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="text-center pt-1.5 border-t border-white/5">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-              Meta: {targetReps} reps
-            </p>
+          <div className="flex justify-center items-center gap-1 pt-1 border-t border-white/[0.05]">
+            <button
+              type="button"
+              onClick={() => setActualWeight(suggestedDisplay)}
+              className="px-2.5 py-0.5 rounded-md bg-white/[0.06] text-[9px] font-bold text-neutral-300 hover:text-white transition cursor-pointer"
+            >
+              Igualar a Meta
+            </button>
           </div>
         </div>
 
-        {/* Pilar 2: Carga Real Levantada (Interactivo con Stepper) */}
-        <div className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-white/[0.06] border border-white/15 relative">
-          <div className="flex items-center justify-between text-slate-300">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-200">
+        {/* Carga Real Editable */}
+        <div className="flex flex-col justify-between p-3.5 rounded-2xl bg-[#161922] border border-white/10">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white">
               🏋️ Carga Real
             </span>
-            <span className="text-[9px] font-bold text-primary-400 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-cyan-400 uppercase">
               Editable
             </span>
           </div>
 
-          {/* Stepper for weight */}
           <div className="flex items-center justify-between gap-1 py-1">
             <button
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? -2.5 : -5)}
               disabled={disabled}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition cursor-pointer"
               aria-label="Restar peso"
             >
-              <Minus className="w-4 h-4 stroke-[3]" />
+              <Minus className="w-3.5 h-3.5 stroke-[3]" />
             </button>
 
             <div className="flex items-baseline justify-center">
-              <span className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
+              <span className="text-3xl font-display font-black text-white tabular-nums">
                 {actualWeight ?? 0}
               </span>
-              <span className="text-xs font-bold text-slate-400 ml-1">
+              <span className="text-xs font-bold text-neutral-400 ml-0.5">
                 {unit}
               </span>
             </div>
@@ -434,33 +446,25 @@ export function SetLogger({
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? 2.5 : 5)}
               disabled={disabled}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition cursor-pointer"
               aria-label="Sumar peso"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
             </button>
           </div>
 
-          {/* Quick shortcuts for weight */}
-          <div className="flex justify-center items-center gap-1 pt-1 border-t border-white/5">
-            <button
-              type="button"
-              onClick={() => setActualWeight(suggestedDisplay)}
-              className="px-2 py-0.5 rounded bg-white/10 text-[9px] font-black text-slate-200 hover:bg-white/20 transition-colors uppercase tracking-wider cursor-pointer"
-            >
-              = Meta
-            </button>
+          <div className="flex justify-center items-center gap-1.5 pt-1 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? 1 : 2.5)}
-              className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] font-bold text-slate-300 hover:bg-white/10 transition-colors cursor-pointer"
+              className="px-2 py-0.5 rounded-md bg-white/[0.06] text-[9px] font-bold text-neutral-300 hover:bg-white/15 transition cursor-pointer"
             >
               +{unit === "kg" ? "1" : "2.5"}
             </button>
             <button
               type="button"
               onClick={() => adjustWeight(unit === "kg" ? 2.5 : 5)}
-              className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] font-bold text-slate-300 hover:bg-white/10 transition-colors cursor-pointer"
+              className="px-2 py-0.5 rounded-md bg-white/[0.06] text-[9px] font-bold text-neutral-300 hover:bg-white/15 transition cursor-pointer"
             >
               +{unit === "kg" ? "2.5" : "5"}
             </button>
@@ -468,31 +472,30 @@ export function SetLogger({
         </div>
       </div>
 
-      {/* Row 2: Reps Logradas & RIR Selector */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Reps Stepper */}
-        <div className="flex flex-col justify-between p-3 rounded-2xl bg-black/60 border border-white/10">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
+      {/* ── Row 2: Reps Logradas & RIR Percibido ── */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col justify-between p-3 rounded-2xl bg-[#090b10] border border-white/[0.06]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
               🔄 Reps Logradas
             </span>
-            <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+            <span className="text-[10px] font-semibold text-neutral-500 tabular-nums">
               Meta: {defaultTargetReps}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-1 py-1">
+          <div className="flex items-center justify-between gap-1 py-0.5">
             <button
               type="button"
               onClick={() => adjustReps(-1)}
               disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition cursor-pointer"
               aria-label="Restar reps"
             >
-              <Minus className="w-4 h-4 stroke-[3]" />
+              <Minus className="w-3.5 h-3.5 stroke-[3]" />
             </button>
 
-            <span className="text-2xl sm:text-3xl font-black text-white tabular-nums tracking-tight">
+            <span className="text-2xl sm:text-3xl font-display font-black text-white tabular-nums">
               {reps}
             </span>
 
@@ -500,63 +503,62 @@ export function SetLogger({
               type="button"
               onClick={() => adjustReps(1)}
               disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-white hover:bg-white/[0.15] border border-white/10 active:scale-95 transition cursor-pointer"
               aria-label="Sumar reps"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
             </button>
           </div>
         </div>
 
-        {/* RIR (Reps in Reserve) Selector */}
-        <div className="flex flex-col justify-between p-3 rounded-2xl bg-black/60 border border-white/10">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
-              🎯 RIR Percibido
+        <div className="flex flex-col justify-between p-3 rounded-2xl bg-[#090b10] border border-white/[0.06]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
+              🎯 RIR
             </span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase">
-              {rir === 0 ? "Fallo" : `${rir} en recámara`}
+            <span className="text-[9px] font-semibold text-neutral-500 uppercase">
+              {rir === 0 ? "Al Fallo" : `${rir} reserva`}
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-1 py-1">
+          <div className="grid grid-cols-4 gap-1 py-0.5">
             {[0, 1, 2, 3].map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setRir(val)}
                 className={cn(
-                  "py-2 rounded-xl text-xs font-black transition-all cursor-pointer border",
+                  "py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border",
                   rir === val
                     ? val === 0
-                      ? "bg-rose-500 text-white border-rose-400"
-                      : "bg-white text-slate-950 border-white"
-                    : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
+                      ? "bg-rose-500 text-white border-rose-400 font-black"
+                      : "bg-white text-slate-950 border-white font-black"
+                    : "bg-white/[0.04] text-neutral-400 border-white/[0.08] hover:text-white",
                 )}
               >
-                {val === 0 ? "Fallo" : val === 3 ? "3+" : val}
+                {val === 0 ? "0" : val === 3 ? "3+" : val}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Joint Pain Notification Quick Button */}
-      <div className="pt-0.5">
+      {/* ── Joint Pain Reporter ── */}
+      <div>
         {!showJointPicker ? (
           <button
             type="button"
             onClick={() => setShowJointPicker(true)}
-            className="w-full py-2 px-3 rounded-xl border border-white/10 bg-white/[0.03] hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 text-slate-400 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl border border-white/[0.06] bg-[#090b10] hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 text-neutral-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
           >
             <HeartCrack className="w-3.5 h-3.5 text-rose-400" />
-            <span>+ Notificar molestia o dolor articular en esta serie</span>
+            <span>Notificar molestia articular en esta serie</span>
           </button>
         ) : (
           <div className="p-3 rounded-2xl border border-rose-500/30 bg-rose-950/30 flex flex-col gap-2 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-rose-300 flex items-center gap-1">
-                <HeartCrack className="w-3 h-3 text-rose-400" /> Selecciona la articulación afectada:
+                <HeartCrack className="w-3 h-3 text-rose-400" /> Articulación con molestia:
               </span>
               <button
                 type="button"
@@ -564,7 +566,7 @@ export function SetLogger({
                   setSelectedJointPain(null);
                   setShowJointPicker(false);
                 }}
-                className="text-[10px] text-slate-400 hover:text-white"
+                className="text-[10px] text-neutral-400 hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
@@ -587,8 +589,8 @@ export function SetLogger({
                   className={cn(
                     "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border",
                     selectedJointPain === joint
-                      ? "bg-rose-500 text-white border-rose-400 font-black shadow-md shadow-rose-500/30"
-                      : "bg-black/50 text-rose-200 border-rose-500/20 hover:bg-rose-500/20"
+                      ? "bg-rose-500 text-white border-rose-400 font-black"
+                      : "bg-black/50 text-rose-200 border-rose-500/20 hover:bg-rose-500/20",
                   )}
                 >
                   {joint}
@@ -599,46 +601,44 @@ export function SetLogger({
         )}
       </div>
 
-      {/* Main Submit Action Button */}
+      {/* ── Primary Submit CTA (Vital Fit Labs Electric Cyan) ── */}
       <button
         type="button"
         onClick={handleComplete}
         disabled={disabled}
         className={cn(
-          "w-full py-4 px-5 rounded-2xl font-black uppercase tracking-wider text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-xl",
+          "w-full py-3.5 px-5 rounded-2xl font-display font-black uppercase tracking-wider text-xs sm:text-sm active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer",
           isLogged
-            ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25"
+            ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
             : isNewPR
-              ? "bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 text-slate-950 shadow-amber-500/35"
-              : isShieldMode
-                ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25"
-                : "bg-white hover:bg-neutral-100 text-black shadow-[0_4px_28px_rgba(255,255,255,0.18)]"
+              ? "bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 text-slate-950 shadow-[0_0_24px_rgba(245,158,11,0.35)]"
+              : "bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_24px_rgba(0,240,255,0.35)]",
         )}
       >
         {isLogged ? (
           <>
-            <RefreshCw className="w-5 h-5 stroke-[3]" />
+            <RefreshCw className="w-4 h-4 stroke-[3]" />
             <span>
               Actualizar Serie {setNumber} ({actualWeight ?? 0} {unit} · {reps} Reps)
             </span>
           </>
         ) : isNewPR ? (
           <>
-            <Trophy className="w-5 h-5 stroke-[2.5]" />
+            <Trophy className="w-4 h-4 stroke-[2.5]" />
             <span>
-              ¡Completar Serie {setNumber} con Récord Personal ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)!
+              ¡Completar Serie {setNumber} · Nuevo PR ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)!
             </span>
           </>
         ) : isShieldMode ? (
           <>
-            <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+            <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
             <span>
-              Completar Serie {setNumber} · Recuperación Inteligente ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)
+              Completar Serie {setNumber} · Descarga ({actualWeight ? `${actualWeight} ${unit} × ` : ""}{reps} Reps)
             </span>
           </>
         ) : (
           <>
-            <Check className="w-5 h-5 stroke-[3]" />
+            <Check className="w-4 h-4 stroke-[3]" />
             <span>
               Completar Serie {setNumber} ({actualWeight ?? 0} {unit} · {reps} Reps)
             </span>
@@ -646,15 +646,16 @@ export function SetLogger({
         )}
       </button>
 
-      {/* Saltar sin registrar: se puede volver luego desde las pildoras de serie */}
       {onSkip && (
         <button
           type="button"
           onClick={onSkip}
-          className="w-full -mt-1 py-1.5 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="w-full py-1 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer"
         >
           <SkipForward className="w-3.5 h-3.5" />
-          {isLogged ? "Ir a la siguiente serie" : "Saltar esta serie sin registrar"}
+          {isLogged
+            ? "Ir a la siguiente serie"
+            : "Saltar esta serie sin registrar"}
         </button>
       )}
     </div>

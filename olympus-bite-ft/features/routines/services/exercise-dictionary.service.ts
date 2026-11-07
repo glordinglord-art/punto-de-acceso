@@ -44,12 +44,56 @@ export interface SearchExercisesResult {
   offset: number;
 }
 
+let memoryCache: ExerciseDict[] | null = null;
+let inflightPromise: Promise<ExerciseDict[]> | null = null;
+const STORAGE_KEY = "ob_exercise_dict_cache_v1";
+
 export const exerciseDictionaryService = {
   getAll: async (): Promise<ExerciseDict[]> => {
-    const data = await api.get<{ success: boolean; data: ExerciseDict[] }>(
-      "/exercise-dictionary",
-    );
-    return data.data;
+    if (memoryCache && memoryCache.length > 0) {
+      return memoryCache;
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as ExerciseDict[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            memoryCache = parsed;
+            return parsed;
+          }
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    }
+
+    if (inflightPromise) {
+      return inflightPromise;
+    }
+
+    inflightPromise = api
+      .get<{ success: boolean; data: ExerciseDict[] }>("/exercise-dictionary")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (list.length > 0) {
+          memoryCache = list;
+          if (typeof window !== "undefined") {
+            try {
+              sessionStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            } catch {
+              // Ignore quota errors
+            }
+          }
+        }
+        return list;
+      })
+      .finally(() => {
+        inflightPromise = null;
+      });
+
+    return inflightPromise;
   },
 
   search: async (params: SearchExercisesParams): Promise<SearchExercisesResult> => {
@@ -83,10 +127,18 @@ export const exerciseDictionaryService = {
       "/exercise-dictionary",
       payload,
     );
+    memoryCache = null;
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
     return data.data;
   },
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/exercise-dictionary/${id}`);
+    memoryCache = null;
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
   },
 };

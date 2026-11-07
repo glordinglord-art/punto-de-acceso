@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CinematicHero } from "@/shared/components/ui/cinematic-landing-hero";
 import { VitalFitLogo } from "@/shared/components/ui/VitalFitLogo";
 
@@ -68,6 +69,34 @@ const Navbar = () => {
 };
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("ob_token");
+      const user = localStorage.getItem("ob_user");
+      if (token && user) {
+        const parsed = JSON.parse(user);
+        const mode = localStorage.getItem("ob_mode");
+        const isTrainer = mode === "trainer" || mode === "superadmin" || parsed?.role === "trainer" || parsed?.role === "superadmin";
+        router.replace(isTrainer ? "/clients" : "/dashboard");
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsCheckingSession(false);
+  }, [router]);
+
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-[#07080B] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-[#050505] selection:bg-red-500/30 selection:text-red-100 overflow-x-hidden font-sans">
       <Navbar />

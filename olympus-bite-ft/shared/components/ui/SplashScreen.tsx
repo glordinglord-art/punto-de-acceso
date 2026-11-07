@@ -25,6 +25,10 @@ export function SplashScreen({
       return () => clearTimeout(timer);
     }
     try {
+      // Si el atleta ya tiene sesión activa en el celular, no le mostramos splash bloqueante
+      const hasToken = localStorage.getItem("ob_token");
+      if (hasToken) return;
+
       const hasShown = sessionStorage.getItem("vf_splash_shown");
       if (!hasShown) {
         const timer = setTimeout(() => setVisible(true), 0);
@@ -110,7 +114,7 @@ export function SplashScreen({
 
       {/* Main Logo Container with Entrance Animation */}
       <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-90 duration-700">
-        <VitalFitLogo size="xl" showGlow={true} showGrid={true} glowIntensity="high" />
+        <VitalFitLogo size="xl" showGlow={true} glowIntensity="high" />
 
         <p className="mt-8 text-xs font-condensed uppercase tracking-[0.35em] text-white/50 animate-pulse">
           Plataforma de Alto Rendimiento

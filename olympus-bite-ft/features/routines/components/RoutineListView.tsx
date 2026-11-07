@@ -1,13 +1,28 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { exerciseDictionaryService, type ExerciseDict } from "../services/exercise-dictionary.service";
+import {
+  exerciseDictionaryService,
+  type ExerciseDict,
+} from "../services/exercise-dictionary.service";
 import { findPreciseDictEntry } from "../utils/exercise-matching";
 import { ExercisePreviewModal } from "./ExercisePreviewModal";
-import { Eye } from "lucide-react";
-import { Card } from "@/shared/components/ui/Card";
-import { Badge } from "@/shared/components/ui/Badge";
-import { Button } from "@/shared/components/ui/Button";
+import {
+  Eye,
+  Sparkles,
+  TrendingUp,
+  ChevronDown,
+  Check,
+  Zap,
+  Calendar as CalendarIcon,
+  History,
+  Dumbbell,
+  Trophy,
+  Info,
+  ArrowLeft,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 import { cn, formatRest } from "@/shared/lib/utils";
 import { MUSCLE_GROUPS } from "@/shared/lib/constants";
 import { analyzeExerciseProgression } from "../utils/vital-fit-labs-engine";
@@ -30,17 +45,19 @@ const DAY_NAMES = [
   "Domingo",
 ];
 
+const SHORT_DAY_LETTERS = ["", "L", "M", "M", "J", "V", "S", "D"];
+
 const MUSCLE_LABELS: Record<string, string> = {
   chest: "Pecho",
   back: "Espalda",
   shoulders: "Hombros",
-  biceps: "Biceps",
-  triceps: "Triceps",
+  biceps: "Bíceps",
+  triceps: "Tríceps",
   legs: "Piernas",
-  glutes: "Gluteos",
+  glutes: "Glúteos",
   abs: "Abdomen",
   cardio: "Cardio",
-  full_body: "Full body",
+  full_body: "Full Body",
   other: "General",
 };
 
@@ -80,8 +97,22 @@ function isSameDay(a: Date, b: Date) {
   );
 }
 
-/* ── ExerciseTrackingCard ── */
-function ExerciseTrackingCard({
+/** Calcula el número de día del mes para cada día (1=Lun..7=Dom) de la semana actual */
+function getCurrentWeekDates(): Record<number, number> {
+  const now = new Date();
+  const jsDay = now.getDay();
+  const currentIsoDay = jsDay === 0 ? 7 : jsDay; // 1..7
+  const result: Record<number, number> = {};
+  for (let d = 1; d <= 7; d++) {
+    const dt = new Date(now);
+    dt.setDate(now.getDate() + (d - currentIsoDay));
+    result[d] = dt.getDate();
+  }
+  return result;
+}
+
+/* ── Inline Quick Set Editor inside Exercise Card ── */
+function InlineSetDrawer({
   exercise,
   weekNumber,
   log,
@@ -89,45 +120,40 @@ function ExerciseTrackingCard({
   weightUnit = "kg",
   onSave,
   onRemove,
+  onClose,
 }: {
   exercise: Exercise;
   weekNumber: number;
   log: WorkoutLog | undefined;
   isSaving: boolean;
   weightUnit?: "kg" | "lbs";
-  onSave: (setsData: SetLogData[], observations: string) => void;
+  onSave: (setsData: SetLogData[]) => Promise<void>;
   onRemove: () => void;
+  onClose: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const isLogged = !!log;
-
-  // Build initial sets from log or empty
   const buildInitialSets = (): SetLogData[] => {
     if (log?.setsData && log.setsData.length > 0) {
       return log.setsData;
     }
     return Array.from({ length: exercise.sets }, (_, i) => ({
       set: i + 1,
-      weight: null,
-      reps: null,
-      rest: null,
+      weight: exercise.targetWeight ?? null,
+      reps: parseInt(exercise.reps?.match(/\d+/)?.[0] || "10", 10),
+      rest: exercise.restSeconds ?? 90,
       completed: false,
     }));
   };
 
   const [sets, setSets] = useState<SetLogData[]>(buildInitialSets);
-  const [obs, setObs] = useState(log?.observations ?? "");
 
-  // Reset when week/exercise changes
   useEffect(() => {
     setSets(buildInitialSets());
-    setObs(log?.observations ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekNumber, exercise.id, log?.id]);
 
   const updateSet = (
     index: number,
-    field: "weight" | "reps" | "rest",
+    field: "weight" | "reps",
     value: string,
   ) => {
     setSets((prev) =>
@@ -140,8 +166,7 @@ function ExerciseTrackingCard({
               ? parseInt(value, 10)
               : parseFloat(value);
         const updated = { ...s, [field]: parsed };
-        updated.completed =
-          updated.weight !== null || updated.reps !== null;
+        updated.completed = updated.weight !== null || updated.reps !== null;
         return updated;
       }),
     );
@@ -149,389 +174,164 @@ function ExerciseTrackingCard({
 
   const toggleSetComplete = (index: number) => {
     setSets((prev) =>
-      prev.map((s, i) =>
-        i === index ? { ...s, completed: !s.completed } : s,
-      ),
+      prev.map((s, i) => (i === index ? { ...s, completed: !s.completed } : s)),
     );
   };
 
-  const handleSave = () => {
-    // Mark sets with any data as completed
+  const handleSave = async () => {
     const finalSets = sets.map((s) => ({
       ...s,
       completed: s.completed || s.weight !== null || s.reps !== null,
     }));
-    onSave(finalSets, obs);
-    setExpanded(false);
+    await onSave(finalSets);
+    onClose();
   };
 
-  // Collapsed logged view — shows summary
-  if (isLogged && !expanded) {
-    return (
-      <div
-        className="group rounded-2xl bg-primary-500/10 border border-primary-500/20 px-4 py-4 transition-all hover:bg-primary-500/20 cursor-pointer"
-        onClick={() => setExpanded(true)}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-primary-500 bg-primary-500 text-white">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold uppercase tracking-wider text-primary-400">
-              {exercise.name}
-            </p>
-            {log.setsData && log.setsData.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {log.setsData
-                  .filter((s) => s.completed || s.weight || s.reps)
-                  .map((s) => (
-                    <span
-                      key={s.set}
-                      className="inline-flex items-center gap-1 rounded-md bg-primary-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-300 border border-primary-500/10"
-                    >
-                      S{s.set}:{" "}
-                      {s.weight != null
-                        ? weightUnit === "lbs"
-                          ? `${Math.round(s.weight * 2.20462 * 2) / 2}lbs`
-                          : `${s.weight}kg`
-                        : "—"}{" "}
-                      × {s.reps ?? "—"}
-                      {s.rest != null && (
-                        <span className="text-primary-500"> · {formatRest(s.rest)}</span>
-                      )}
-                    </span>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-xs text-primary-500/70 dark:text-primary-400/50">
-                {log.repsDone ?? "Completado"}
-              </p>
-            )}
-          </div>
-          <svg
-            className="h-4 w-4 text-primary-400 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="mt-3 pt-3 border-t border-white/[0.08] space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200"
+    >
+      <div className="flex items-center justify-between text-[11px] font-bold text-neutral-400 px-1">
+        <span className="uppercase tracking-wider text-cyan-400">
+          Registro Rápido · Semana {weekNumber}
+        </span>
+        <span>Unidad: {weightUnit.toUpperCase()}</span>
       </div>
-    );
-  }
 
-  // Expanded view — form to log sets
-  if (expanded || !isLogged) {
-    return (
-      <div
-        className={cn(
-          "rounded-2xl transition-all overflow-hidden",
-          expanded
-            ? "border border-primary-500/30 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:bg-[#1a1c23] dark:shadow-[0_0_20px_rgba(56,189,248,0.1)]"
-            : "border border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
-        )}
-      >
-        {/* Header - clickable to expand/collapse */}
-        <div
-          className="flex items-center gap-3 px-3 py-3 cursor-pointer"
-          onClick={() => {
-            if (!isLogged) setExpanded(!expanded);
-            else setExpanded(!expanded);
-          }}
-        >
-          <button
-            type="button"
-            disabled={isSaving}
-            className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-              isLogged
-                ? "border-primary-500 bg-primary-500 text-white"
-                : "border-neutral-300 dark:border-neutral-600",
-            )}
-          >
-            {isSaving ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
-            ) : isLogged ? (
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={3}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            ) : null}
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-900 dark:text-white">
-              {exercise.name}
-            </p>
-            <p className="text-xs text-neutral-400">
-              {exercise.sets}×{exercise.reps} · {formatRest(exercise.restSeconds)} desc.
-            </p>
-          </div>
-          {exercise.observations && (
-            <span
-              className="text-[10px] text-neutral-400 max-w-20 truncate"
-              title={exercise.observations}
+      <div className="space-y-1.5">
+        {sets.map((s, i) => {
+          const isDone = s.completed || s.weight !== null || s.reps !== null;
+          return (
+            <div
+              key={s.set}
+              className={cn(
+                "grid grid-cols-12 items-center gap-2 rounded-2xl px-3 py-2 border transition-colors",
+                isDone
+                  ? "bg-emerald-500/[0.07] border-emerald-500/25"
+                  : "bg-[#0b0d12] border-white/[0.06]",
+              )}
             >
-              💡 {exercise.observations}
-            </span>
-          )}
-          <svg
-            className={cn(
-              "h-4 w-4 text-neutral-400 shrink-0 transition-transform",
-              expanded && "rotate-180",
-            )}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
+              <div className="col-span-3 flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-white/[0.06] text-[10px] font-black text-neutral-300 flex items-center justify-center">
+                  {s.set}
+                </span>
+                <span className="text-xs font-bold text-neutral-300">
+                  Serie {s.set}
+                </span>
+              </div>
 
-        {/* Expanded form */}
-        {expanded && (
-          <div className="px-3 pb-3 space-y-3">
-            {/* Sets */}
-            <div className="space-y-2">
-              {sets.map((s, i) => (
-                <div
-                  key={s.set}
-                  className={cn(
-                    "rounded-xl p-2.5 space-y-2 transition-colors",
-                    s.completed || s.weight !== null || s.reps !== null
-                      ? "bg-primary-50 dark:bg-primary-900/15"
-                      : "bg-neutral-50 dark:bg-neutral-800/40",
-                  )}
-                >
-                  {/* Set number + check */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={cn(
-                        "text-xs font-bold",
-                        s.completed || s.weight !== null || s.reps !== null
-                          ? "text-primary-600 dark:text-primary-400"
-                          : "text-neutral-400",
-                      )}
-                    >
-                      Serie {s.set}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleSetComplete(i)}
-                      className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all",
-                        s.completed
-                          ? "border-primary-500 bg-primary-500 text-white"
-                          : "border-neutral-200 dark:border-neutral-700 hover:border-primary-400",
-                      )}
-                    >
-                      {s.completed && (
-                        <svg
-                          className="h-3 w-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  {/* Inputs row */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[9px] font-semibold uppercase tracking-wider text-neutral-400 mb-1 text-center">
-                        🏋️ Peso
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          placeholder="—"
-                          value={
-                            s.weight == null
-                              ? ""
-                              : weightUnit === "lbs"
-                                ? Math.round(s.weight * 2.20462 * 2) / 2
-                                : s.weight
-                          }
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === "") {
-                              updateSet(i, "weight", "");
-                            } else {
-                              const num = parseFloat(raw);
-                              const kgVal =
-                                weightUnit === "lbs"
-                                  ? Math.round((num / 2.20462) * 2) / 2
-                                  : num;
-                              updateSet(i, "weight", String(kgVal));
-                            }
-                          }}
-                          className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-center font-medium dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-neutral-400 pointer-events-none">
-                          {weightUnit}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-semibold uppercase tracking-wider text-neutral-400 mb-1 text-center">
-                        🔄 Reps
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="—"
-                        value={s.reps ?? ""}
-                        onChange={(e) => updateSet(i, "reps", e.target.value)}
-                        className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-center font-medium dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-semibold uppercase tracking-wider text-neutral-400 mb-1 text-center">
-                        ⏱️ Descanso
-                      </label>
-                      <div className="flex items-center gap-1">
-                        <div className="relative flex-1">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            placeholder={String(Math.floor(exercise.restSeconds / 60))}
-                            value={s.rest != null && Math.floor(s.rest / 60) > 0 ? Math.floor(s.rest / 60) : ""}
-                            onChange={(e) => {
-                              const raw = e.target.value.replace(/\D/g, "");
-                              if (raw === "") {
-                                const currentSecs = s.rest != null ? s.rest % 60 : 0;
-                                updateSet(i, "rest", String(currentSecs));
-                                return;
-                              }
-                              const mins = parseInt(raw, 10);
-                              const currentSecs = s.rest != null ? s.rest % 60 : 0;
-                              updateSet(i, "rest", String(mins * 60 + currentSecs));
-                            }}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-1.5 py-1.5 text-sm text-center font-medium dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          />
-                          <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-neutral-400 pointer-events-none">
-                            m
-                          </span>
-                        </div>
-                        <span className="text-neutral-400 text-xs font-bold">:</span>
-                        <div className="relative flex-1">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            placeholder={String(exercise.restSeconds % 60)}
-                            value={s.rest != null && s.rest % 60 > 0 ? s.rest % 60 : ""}
-                            onChange={(e) => {
-                              const raw = e.target.value.replace(/\D/g, "");
-                              if (raw === "") {
-                                const currentMins = s.rest != null ? Math.floor(s.rest / 60) : 0;
-                                updateSet(i, "rest", String(currentMins * 60));
-                                return;
-                              }
-                              const secs = Math.min(59, parseInt(raw, 10));
-                              const currentMins = s.rest != null ? Math.floor(s.rest / 60) : 0;
-                              updateSet(i, "rest", String(currentMins * 60 + secs));
-                            }}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-1.5 py-1.5 text-sm text-center font-medium dark:border-neutral-700 dark:bg-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          />
-                          <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-neutral-400 pointer-events-none">
-                            s
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+              <div className="col-span-4 relative">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.5"
+                  placeholder="0"
+                  value={
+                    s.weight == null
+                      ? ""
+                      : weightUnit === "lbs"
+                        ? Math.round(s.weight * 2.20462 * 2) / 2
+                        : s.weight
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      updateSet(i, "weight", "");
+                    } else {
+                      const num = parseFloat(raw);
+                      const kgVal =
+                        weightUnit === "lbs"
+                          ? Math.round((num / 2.20462) * 2) / 2
+                          : num;
+                      updateSet(i, "weight", String(kgVal));
+                    }
+                  }}
+                  className="w-full rounded-xl bg-[#161922] border border-white/10 px-2.5 py-1.5 text-xs text-center font-bold text-white focus:border-cyan-400 outline-none"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-neutral-500 pointer-events-none">
+                  {weightUnit}
+                </span>
+              </div>
 
-            {/* Observations */}
-            <input
-              type="text"
-              placeholder="Notas (opcional)..."
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-            />
+              <div className="col-span-3 relative">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="10"
+                  value={s.reps ?? ""}
+                  onChange={(e) => updateSet(i, "reps", e.target.value)}
+                  className="w-full rounded-xl bg-[#161922] border border-white/10 px-2 py-1.5 text-xs text-center font-bold text-white focus:border-cyan-400 outline-none"
+                />
+                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-neutral-500 pointer-events-none">
+                  reps
+                </span>
+              </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex-1 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:opacity-50"
-              >
-                {isSaving ? "Guardando..." : isLogged ? "Actualizar" : "Guardar"}
-              </button>
-              {isLogged && (
+              <div className="col-span-2 flex justify-end">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove();
-                    setExpanded(false);
-                  }}
-                  disabled={isSaving}
-                  className="rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors dark:border-red-800 dark:hover:bg-red-900/20 disabled:opacity-50"
+                  onClick={() => toggleSetComplete(i)}
+                  className={cn(
+                    "w-7 h-7 rounded-xl flex items-center justify-center border transition-all cursor-pointer",
+                    s.completed
+                      ? "bg-emerald-500 border-emerald-400 text-slate-950 font-black"
+                      : "bg-white/[0.04] border-white/10 text-neutral-500 hover:text-white",
+                  )}
                 >
-                  Quitar
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm font-medium text-neutral-500 hover:bg-neutral-50 transition-colors dark:border-neutral-700 dark:hover:bg-neutral-800"
-              >
-                Cerrar
-              </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
       </div>
-    );
-  }
 
-  return null;
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex-1 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs uppercase tracking-wider transition active:scale-98 cursor-pointer disabled:opacity-50"
+        >
+          {isSaving ? "Guardando..." : "Guardar Series"}
+        </button>
+        {log && (
+          <button
+            type="button"
+            onClick={() => {
+              onRemove();
+              onClose();
+            }}
+            disabled={isSaving}
+            className="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 transition cursor-pointer"
+            title="Borrar registro de esta semana"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-bold text-neutral-300 transition cursor-pointer"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface TrainingSummaryData {
+  strengthTitle: string;
+  strengthTarget: string;
+  masteryTitle: string;
+  setsToday: number;
+  setsThisWeek: number;
+  plannedSetsWeek: number;
+  weekPct: number;
+  totalSetsMonth: number;
+  displayVolume: number;
 }
 
 interface RoutineListViewProps {
@@ -544,6 +344,10 @@ interface RoutineListViewProps {
   savingLog: string | null;
   userId: string;
   weightUnit?: "kg" | "lbs";
+  onWeightUnitChange?: (unit: "kg" | "lbs") => void;
+  onOpenEvolution?: () => void;
+  onBack?: () => void;
+  trainingSummary?: TrainingSummaryData;
   onSelectRoutine: (routine: Routine) => void;
   onActivateRoutine: (routineId: string) => Promise<void>;
   onStartSession: (day: RoutineDay) => void;
@@ -565,6 +369,10 @@ export function RoutineListView({
   autoCurrentWeek,
   savingLog,
   weightUnit = "kg",
+  onWeightUnitChange,
+  onOpenEvolution,
+  onBack,
+  trainingSummary,
   onSelectRoutine,
   onActivateRoutine,
   onStartSession,
@@ -572,22 +380,32 @@ export function RoutineListView({
   onSaveLog,
   onRemoveLog,
 }: RoutineListViewProps) {
-  const [view, setView] = useState<"list" | "detail" | "tracking">("detail");
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date | null>(null);
-  const [routineView, setRoutineView] = useState<"cards" | "calendar">("cards");
+  const [activeTab, setActiveTab] = useState<"routine" | "calendar" | "history">("routine");
   const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
   const [dayViewMode, setDayViewMode] = useState<"focused" | "all">("focused");
   const [showInfo, setShowInfo] = useState(false);
   const [showRoutineDropdown, setShowRoutineDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState<"routine" | "history">("routine");
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historyRoutineFilter, setHistoryRoutineFilter] = useState("all");
   const [historyWeekFilter, setHistoryWeekFilter] = useState("all");
   const [showPrsModal, setShowPrsModal] = useState(false);
   const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [dictionary, setDictionary] = useState<ExerciseDict[]>([]);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Detect scroll for Fitia-style frosted sticky bar
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 135);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     exerciseDictionaryService
@@ -609,15 +427,18 @@ export function RoutineListView({
     [dictByName, dictionary],
   );
 
-  const findExerciseById = (exerciseId: string) => {
-    for (const r of routines) {
-      for (const day of r.days) {
-        const ex = day.exercises.find((e) => e.id === exerciseId);
-        if (ex) return ex;
+  const findExerciseById = useCallback(
+    (exerciseId: string) => {
+      for (const r of routines) {
+        for (const day of r.days) {
+          const ex = day.exercises.find((e) => e.id === exerciseId);
+          if (ex) return ex;
+        }
       }
-    }
-    return null;
-  };
+      return null;
+    },
+    [routines],
+  );
 
   const personalRecords = useMemo(() => {
     const prMap: Record<
@@ -672,8 +493,7 @@ export function RoutineListView({
     });
 
     return Object.values(prMap).sort((a, b) => b.maxWeight - a.maxWeight);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logs, routines]);
+  }, [logs, findExerciseById]);
 
   const groupedSessions = useMemo(() => {
     let filtered = logs;
@@ -682,13 +502,15 @@ export function RoutineListView({
       const targetRoutine = routines.find((r) => r.id === historyRoutineFilter);
       const exerciseIds = new Set<string>();
       targetRoutine?.days.forEach((day) =>
-        day.exercises.forEach((ex) => exerciseIds.add(ex.id))
+        day.exercises.forEach((ex) => exerciseIds.add(ex.id)),
       );
       filtered = filtered.filter((l) => exerciseIds.has(l.exerciseId));
     }
 
     if (historyWeekFilter !== "all") {
-      filtered = filtered.filter((l) => l.weekNumber === Number(historyWeekFilter));
+      filtered = filtered.filter(
+        (l) => l.weekNumber === Number(historyWeekFilter),
+      );
     }
 
     if (historySearchQuery.trim() !== "") {
@@ -714,11 +536,13 @@ export function RoutineListView({
       if (!dateVal) return;
       const d = new Date(dateVal);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-        d.getDate()
+        d.getDate(),
       ).padStart(2, "0")}`;
 
       const r = routines.find((routine) =>
-        routine.days.some((day) => day.exercises.some((ex) => ex.id === log.exerciseId))
+        routine.days.some((day) =>
+          day.exercises.some((ex) => ex.id === log.exerciseId),
+        ),
       );
       const routineName = r ? r.name : "Rutina";
 
@@ -733,14 +557,24 @@ export function RoutineListView({
       groups[key].logs.push(log);
     });
 
-    return Object.values(groups).sort((a, b) => b.date.getTime() - a.date.getTime());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logs, historyRoutineFilter, historyWeekFilter, historySearchQuery, routines]);
+    return Object.values(groups).sort(
+      (a, b) => b.date.getTime() - a.date.getTime(),
+    );
+  }, [
+    logs,
+    historyRoutineFilter,
+    historyWeekFilter,
+    historySearchQuery,
+    routines,
+    findExerciseById,
+  ]);
 
   const activeRoutineExerciseIds = useMemo(() => {
     if (!selectedRoutine) return new Set<string>();
     const ids = new Set<string>();
-    selectedRoutine.days.forEach((d) => d.exercises.forEach((ex) => ids.add(ex.id)));
+    selectedRoutine.days.forEach((d) =>
+      d.exercises.forEach((ex) => ids.add(ex.id)),
+    );
     return ids;
   }, [selectedRoutine]);
 
@@ -748,22 +582,16 @@ export function RoutineListView({
     return logs.filter((l) => activeRoutineExerciseIds.has(l.exerciseId));
   }, [logs, activeRoutineExerciseIds]);
 
-  const isExerciseLogged = (exerciseId: string, weekNumber: number) => {
-    return logs.some(
-      (l) => l.exerciseId === exerciseId && l.weekNumber === weekNumber,
-    );
-  };
   const getExerciseLog = (exerciseId: string, weekNumber: number) => {
     return logs.find(
       (l) => l.exerciseId === exerciseId && l.weekNumber === weekNumber,
     );
   };
 
-  // Adapt the batch tracking-card save to the per-set onSaveLog prop.
-  // ponytail: parent owns the actual logWorkout; here we fan out completed
-  // sets to onSaveLog. Observations are not in the prop contract so they are
-  // dropped in the tracking view — upgrade the prop signature if notes matter.
-  const handleTrackingSave = async (exercise: Exercise, setsData: SetLogData[]) => {
+  const handleTrackingSave = async (
+    exercise: Exercise,
+    setsData: SetLogData[],
+  ) => {
     for (const s of setsData) {
       if (s.completed || s.weight !== null || s.reps !== null) {
         await onSaveLog(exercise, s.set, s.weight, s.reps);
@@ -771,1506 +599,1433 @@ export function RoutineListView({
     }
   };
 
-  // Day of week number (1=Mon, 7=Sun)
   const todayDayNumber = new Date().getDay() === 0 ? 7 : new Date().getDay();
+  const weekDates = useMemo(() => getCurrentWeekDates(), []);
 
-  /* ── Tracking view ── */
-  if (view === "tracking" && selectedRoutine) {
-    const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
-    const weekLogs = activeRoutineLogs.filter((l) => l.weekNumber === currentWeek);
-    const totalExThisWeek = trainingDays.reduce(
-      (s, d) => s + d.exercises.length,
-      0,
-    );
-    const completedThisWeek = weekLogs.length;
-    const weekProgress =
-      totalExThisWeek > 0
-        ? Math.round((completedThisWeek / totalExThisWeek) * 100)
-        : 0;
-
+  if (!selectedRoutine) {
     return (
-      <>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-950 dark:text-white">
-              Seguimiento
-            </h1>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400/80 mt-0.5">
-              {selectedRoutine.name} · Semana {currentWeek} de {selectedRoutine.weekCount}
-            </p>
-          </div>
-          <Button variant="ghost" size="md" onClick={() => setView("detail")}>
-            ← Volver
-          </Button>
+      <div className="min-h-screen bg-[#07080b] text-white pb-32 pt-6 px-4 max-w-md mx-auto flex flex-col items-center justify-center text-center">
+        <div className="w-16 h-16 rounded-3xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center mb-4">
+          <Dumbbell className="w-8 h-8 text-cyan-400" />
         </div>
-
-        {/* Week selector */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          {Array.from(
-            { length: selectedRoutine.weekCount },
-            (_, i) => i + 1,
-          ).map((w) => {
-            const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
-            const wTotal = trainingDays.reduce(
-              (s, d) => s + d.exercises.length,
-              0,
-            );
-            const wDone = wLogs.length;
-            return (
-              <button
-                key={w}
-                onClick={() => onWeekChange(w)}
-                className={`relative rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                  currentWeek === w
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"
-                }`}
-              >
-                Sem. {w}
-                {wDone > 0 && (
-                  <span
-                    className={`ml-1.5 text-[10px] ${
-                      currentWeek === w
-                        ? "text-neutral-300 dark:text-neutral-600"
-                        : "text-neutral-400"
-                    }`}
-                  >
-                    {wDone}/{wTotal}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Week progress bar */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              Progreso semana {currentWeek}
-            </span>
-            <span className="text-xs font-bold text-neutral-900 dark:text-white">
-              {weekProgress}%
-            </span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-neutral-100 dark:bg-neutral-800">
-            <div
-              className="h-full rounded-full bg-linear-to-r from-primary-500 to-primary-400 transition-all duration-500"
-              style={{ width: `${weekProgress}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {trainingDays.map((day) => (
-            <Card key={day.dayNumber} padding="sm">
-              <div className="px-2 pt-2 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                    {DAY_NAMES[day.dayNumber]}
-                  </span>
-                  <Badge variant="info">{day.focusArea}</Badge>
-                  <span className="ml-auto text-xs text-neutral-400">
-                    {
-                      day.exercises.filter((ex) =>
-                        isExerciseLogged(ex.id, currentWeek),
-                      ).length
-                    }
-                    /{day.exercises.length}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2 mt-1">
-                {day.exercises.map((ex) => (
-                  <ExerciseTrackingCard
-                    key={ex.id}
-                    exercise={ex}
-                    weekNumber={currentWeek}
-                    log={getExerciseLog(ex.id, currentWeek)}
-                    isSaving={savingLog === ex.id}
-                    weightUnit={weightUnit}
-                    onSave={(setsData) => handleTrackingSave(ex, setsData)}
-                    onRemove={() => onRemoveLog(ex.id)}
-                  />
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </>
+        <h2 className="text-xl font-display font-black text-white">
+          Aún no tienes una rutina asignada
+        </h2>
+        <p className="text-sm text-neutral-400 mt-1.5 max-w-xs">
+          Tu coach de Vital Fit Labs está diseñando tu programación biomecánica personalizada.
+        </p>
+      </div>
     );
   }
 
-  /* ── Detail view ── */
-  if (view === "detail" && selectedRoutine) {
-    const totalExercises = selectedRoutine.days.reduce(
-      (s, d) => s + d.exercises.length,
-      0,
-    );
-    const totalLogs = totalExercises * selectedRoutine.weekCount;
-    const completedLogs = activeRoutineLogs.length;
-    const progress =
-      totalLogs > 0 ? Math.round((completedLogs / totalLogs) * 100) : 0;
+  const totalExercises = selectedRoutine.days.reduce(
+    (s, d) => s + d.exercises.length,
+    0,
+  );
+  const totalLogs = totalExercises * selectedRoutine.weekCount;
+  const completedLogs = activeRoutineLogs.length;
+  const cycleProgress =
+    totalLogs > 0 ? Math.round((completedLogs / totalLogs) * 100) : 0;
 
-    // Today's workout info
-    const todayDay = selectedRoutine.days.find(
-      (d) => d.dayNumber === todayDayNumber,
-    );
-    const activeDayNumber = selectedDayNumber ?? (todayDay?.dayNumber ?? selectedRoutine.days.find((d) => !d.isRestDay)?.dayNumber ?? selectedRoutine.days[0]?.dayNumber ?? 1);
+  const todayDay = selectedRoutine.days.find(
+    (d) => d.dayNumber === todayDayNumber,
+  );
+  const activeDayNumber =
+    selectedDayNumber ??
+    todayDay?.dayNumber ??
+    selectedRoutine.days.find((d) => !d.isRestDay)?.dayNumber ??
+    selectedRoutine.days[0]?.dayNumber ??
+    1;
 
+  const activeDay =
+    selectedRoutine.days.find((d) => d.dayNumber === activeDayNumber) ||
+    todayDay ||
+    selectedRoutine.days[0];
 
-    // Calendar variables
-    const calDays = getCalendarDays(calYear, calMonth);
-    const todayDate = new Date();
+  const isSelectedDayTraining = activeDay && !activeDay.isRestDay;
+  const dayExercisesDone = activeDay
+    ? activeDay.exercises.filter((ex) =>
+        activeRoutineLogs.some(
+          (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
+        ),
+      ).length
+    : 0;
+  const dayExercisesTotal = activeDay?.exercises.length || 0;
+  const dayProgressPct =
+    dayExercisesTotal > 0
+      ? Math.round((dayExercisesDone / dayExercisesTotal) * 100)
+      : 0;
+  const isSelectedDayCompleted =
+    !!isSelectedDayTraining &&
+    dayExercisesTotal > 0 &&
+    dayExercisesDone === dayExercisesTotal;
+  const isTodaySelected = activeDay?.dayNumber === todayDayNumber;
 
-    const getRoutineDayForDate = (date: Date) => {
-      const jsDay = date.getDay();
-      const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-      return selectedRoutine.days.find((d) => d.dayNumber === dayOfWeek);
-    };
+  // Sets metrics for the selected day
+  const plannedSetsActiveDay = activeDay
+    ? activeDay.exercises.reduce((sum, ex) => sum + (ex.sets || 0), 0)
+    : 0;
+  const completedSetsActiveDay = activeDay
+    ? activeDay.exercises.reduce((sum, ex) => {
+        const log = getExerciseLog(ex.id, currentWeek);
+        const count =
+          log?.setsData?.filter((s) => s.completed || s.weight || s.reps)
+            .length ?? (log ? ex.sets : 0);
+        return sum + count;
+      }, 0)
+    : 0;
 
-    const selectedDayInfo = calSelectedDate
-      ? getRoutineDayForDate(calSelectedDate)
-      : null;
+  const calDays = getCalendarDays(calYear, calMonth);
+  const todayDate = new Date();
 
-    const formatSessionDate = (dateStr: string) => {
-      try {
-        const date = new Date(dateStr + "T00:00:00");
-        const formatted = date.toLocaleDateString("es-ES", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-        return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-      } catch {
-        return dateStr;
-      }
-    };
+  const getRoutineDayForDate = (date: Date) => {
+    const jsDay = date.getDay();
+    const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+    return selectedRoutine.days.find((d) => d.dayNumber === dayOfWeek);
+  };
 
-    const formatPrDate = (dateStr: string) => {
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString("es-ES", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      } catch {
-        return dateStr;
-      }
-    };
+  const selectedDayInfo = calSelectedDate
+    ? getRoutineDayForDate(calSelectedDate)
+    : null;
 
-    return (
-      <>
-        {/* Compact unified header block */}
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-white/8 pb-4">
-          <div className="flex items-center gap-3">
-            {routines.length > 1 && (
+  const formatSessionDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr + "T00:00:00");
+      const formatted = date.toLocaleDateString("es-ES", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatPrDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#07080b] text-white pb-32 pt-2">
+      {/* ── FLOATING COLLAPSED STICKY HEADER ON SCROLL (Fitia Style) ── */}
+      {isScrolled && activeTab === "routine" && (
+        <div className="fixed top-0 left-0 lg:left-72 right-0 z-40 bg-[#090b10]/95 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_14px_34px_rgba(0,0,0,0.75)] rounded-b-[26px] animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="max-w-md lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 pt-2.5 pb-3">
+            {/* Compact 7-Day Strip */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {selectedRoutine.days.map((day) => {
+                const isSelected =
+                  activeDayNumber === day.dayNumber && dayViewMode === "focused";
+                const isDone =
+                  !day.isRestDay &&
+                  day.exercises.length > 0 &&
+                  day.exercises.every((ex) =>
+                    activeRoutineLogs.some(
+                      (l) =>
+                        l.exerciseId === ex.id && l.weekNumber === currentWeek,
+                    ),
+                  );
+                const hasTraining = !day.isRestDay;
+
+                return (
+                  <button
+                    key={day.dayNumber}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDayNumber(day.dayNumber);
+                      setDayViewMode("focused");
+                    }}
+                    className="flex flex-col items-center py-0.5 cursor-pointer group"
+                  >
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all",
+                        isSelected
+                          ? "bg-white text-black font-black shadow-sm"
+                          : "text-neutral-400 group-hover:text-white",
+                      )}
+                    >
+                      {SHORT_DAY_LETTERS[day.dayNumber] || `D${day.dayNumber}`}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs font-bold mt-0.5 tabular-nums",
+                        isSelected ? "text-cyan-400 font-black" : "text-neutral-300",
+                      )}
+                    >
+                      {weekDates[day.dayNumber] ?? day.dayNumber}
+                    </span>
+                    <div className="h-2 flex items-center justify-center mt-0.5">
+                      {isDone ? (
+                        <span className="text-[9px] font-black text-emerald-400 leading-none">
+                          ✓
+                        </span>
+                      ) : hasTraining ? (
+                        <span
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            isSelected ? "bg-cyan-400" : "bg-cyan-400/60",
+                          )}
+                        />
+                      ) : (
+                        <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Compact Workout Summary + Instant Start CTA */}
+            <div className="flex items-center justify-between gap-3 mt-2.5 pt-2 border-t border-white/[0.06]">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
+                    Sem {currentWeek} · {DAY_NAMES[activeDay?.dayNumber || 1]}
+                  </span>
+                  <span className="text-[10px] text-neutral-500">•</span>
+                  <span className="text-[10px] font-bold text-neutral-400 tabular-nums">
+                    {dayExercisesDone}/{dayExercisesTotal} ej.
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-white truncate">
+                  {activeDay?.isRestDay
+                    ? "🧘 Día de Descanso Activo"
+                    : activeDay?.focusArea || "Entrenamiento"}
+                </p>
+              </div>
+
+              {isSelectedDayTraining && activeDay && (
+                <button
+                  type="button"
+                  onClick={() => onStartSession(activeDay)}
+                  className="px-3.5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-display font-black text-[11px] uppercase tracking-wider shadow-[0_0_15px_rgba(0,240,255,0.3)] flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                  <span>{isSelectedDayCompleted ? "Repetir" : "Entrenar"}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-md lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 space-y-4">
+        {/* ── 1. TOP FITIA HEADER BAR ── */}
+        <div className="flex items-center justify-between pt-2 pb-1">
+          <div className="flex items-center gap-2 min-w-0">
+            {onBack && (
               <button
                 type="button"
-                onClick={() => setView("list")}
-                className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white cursor-pointer transition-colors"
-                title="Ver todas las rutinas"
+                onClick={onBack}
+                className="w-9 h-9 rounded-full bg-[#14171f] border border-white/10 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer shrink-0"
+                title="Volver"
               >
-                ←
+                <ArrowLeft className="w-4 h-4" />
               </button>
             )}
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-black uppercase tracking-tight text-white">
-                  Mi Rutina
-                </h1>
+
+            {/* Interactive Routine Selector Title */}
+            <div className="relative min-w-0">
+              <button
+                type="button"
+                onClick={() => setShowRoutineDropdown(!showRoutineDropdown)}
+                className="flex items-center gap-1.5 text-left group cursor-pointer max-w-full"
+              >
+                <span className="text-xl sm:text-2xl font-display font-bold tracking-tight text-white truncate max-w-[190px] sm:max-w-[280px]">
+                  {selectedRoutine.name}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "w-5 h-5 text-neutral-400 group-hover:text-white transition-transform shrink-0",
+                    showRoutineDropdown && "rotate-180 text-cyan-400",
+                  )}
+                />
+              </button>
+
+              <div className="flex items-center gap-2 mt-0.5">
                 {selectedRoutine.isActive ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black text-emerald-400 uppercase tracking-wider shadow-sm shadow-emerald-500/20">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Activa
+                    Rutina Activa
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => onActivateRoutine(selectedRoutine.id)}
-                    className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 px-2.5 py-0.5 text-[10px] font-black text-amber-400 cursor-pointer transition-colors uppercase tracking-wider animate-pulse"
-                    title="Establecer como activa"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-bold text-amber-300 hover:bg-amber-500/25 transition cursor-pointer"
                   >
-                    ⚠️ Activar
+                    ⚠️ Activar esta rutina
                   </button>
                 )}
-                {selectedRoutine.isFavorable !== undefined &&
-                  selectedRoutine.isFavorable !== null && (
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold border uppercase tracking-wider",
-                        selectedRoutine.isFavorable
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : "bg-rose-500/10 border-rose-500/20 text-rose-450"
-                      )}
-                    >
-                      {selectedRoutine.isFavorable ? "👍 Favorable" : "👎 Desfavor."}
-                    </span>
-                  )}
-              </div>
-            </div>
-          </div>
-
-          {/* Tab Selector Segmented Control */}
-          <div className="flex p-1 bg-black/40 rounded-2xl border border-white/10 self-start md:self-auto backdrop-blur-xl">
-            <button
-              type="button"
-              onClick={() => setActiveTab("routine")}
-              className={cn(
-                "rounded-xl px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-                activeTab === "routine"
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              📋 Rutina
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("history")}
-              className={cn(
-                "rounded-xl px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-                activeTab === "history"
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              📊 Historial
-            </button>
-          </div>
-        </div>
-
-        {activeTab === "routine" ? (
-          <>
-            {/* Control Bar — Routine Selector, Modes & Week Stepper */}
-            <div className="relative z-30 mb-4 p-3.5 bg-white/[0.03] rounded-3xl border border-white/10 backdrop-blur-xl space-y-3">
-              {/* Row 1: Routine Selector & Mode Toggle */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                {/* Routine selector */}
-                <div className="relative flex-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowRoutineDropdown(!showRoutineDropdown)}
-                    className="flex items-center gap-2 w-full rounded-2xl border border-white/12 bg-white/6 px-4 py-2.5 text-xs font-black text-white cursor-pointer hover:border-cyan-400 transition-colors"
-                  >
-                    <span className="text-sm shrink-0">💪</span>
-                    <span className="truncate flex-1">{selectedRoutine.name}</span>
-                    <svg className={cn("h-3.5 w-3.5 text-neutral-400 transition-transform shrink-0", showRoutineDropdown && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {showRoutineDropdown && (
-                    <>
-                      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs" onClick={() => setShowRoutineDropdown(false)} />
-                      <div className="absolute left-0 right-0 mt-2 max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 rounded-2xl border border-white/20 bg-[#0c0e17] p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.95)] z-50 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10 mb-1 flex items-center justify-between">
-                          <span>Seleccionar Rutina</span>
-                          <span className="text-[9px] font-bold text-slate-500">{routines.length} disponibles</span>
-                        </div>
-                        {routines.map((r) => {
-                          const isSelected = selectedRoutine.id === r.id;
-                          return (
-                            <button
-                              key={r.id}
-                              type="button"
-                              onClick={() => { onSelectRoutine(r); setShowRoutineDropdown(false); setActiveTab("routine"); }}
-                              className={cn(
-                                "flex items-center justify-between w-full rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all cursor-pointer text-left",
-                                isSelected
-                                  ? "bg-white border-white text-black font-bold shadow-sm"
-                                  : r.isActive
-                                    ? "bg-white/10 text-white hover:bg-white/15 border border-white/15"
-                                    : "text-slate-300 hover:bg-white/10 hover:text-white"
-                              )}
-                            >
-                              <span className="flex items-center gap-2 truncate">
-                                {r.isActive ? <span>⭐️</span> : <span>🏋️</span>}
-                                <span className="truncate">{r.name}</span>
-                              </span>
-                              <span className={cn(
-                                "text-[10px] font-black px-2 py-0.5 rounded-lg shrink-0 ml-2 uppercase tracking-wider",
-                                isSelected ? "bg-white/25 text-white" : "bg-white/10 text-slate-400"
-                              )}>
-                                {r.days.filter((d) => !d.isRestDay).length}d · {r.weekCount}s
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* View toggles + Guide */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-                  <div className="flex items-center gap-1 p-1 bg-black/40 rounded-2xl border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setRoutineView("cards")}
-                      className={cn(
-                        "rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-                        routineView === "cards"
-                          ? "bg-white/15 text-white border border-white/20 shadow-md font-black"
-                          : "text-slate-400 hover:text-white"
-                      )}
-                    >
-                      📋 Tarjetas
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRoutineView("calendar")}
-                      className={cn(
-                        "rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-                        routineView === "calendar"
-                          ? "bg-white/15 text-white border border-white/20 shadow-md font-black"
-                          : "text-slate-400 hover:text-white"
-                      )}
-                    >
-                      📅 Calendario
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowInfo(!showInfo)}
-                    className={cn(
-                      "flex h-8 px-3.5 items-center gap-1.5 rounded-2xl border text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-                      showInfo
-                        ? "bg-cyan-500 border-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/30"
-                        : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {showInfo ? "✕ Ocultar" : "ℹ️ Guía"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Row 2: Horizontal Week Stepper Strip (Replaces popup dropdown) */}
-              <div className="pt-2.5 border-t border-white/8">
-                <div className="flex items-center justify-between text-xs px-1 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
-                      Semana {currentWeek} de {selectedRoutine.weekCount}
-                    </span>
-                    {autoCurrentWeek && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                        Sem. {autoCurrentWeek} en curso
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400">
-                    {(() => {
-                      const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === currentWeek);
-                      const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
-                      const wTotal = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
-                      return `${wLogs.length}/${wTotal} ejercicios`;
-                    })()}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {Array.from({ length: selectedRoutine.weekCount }, (_, i) => i + 1).map((w) => {
-                    const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
-                    const trainingDays = selectedRoutine.days.filter((d) => !d.isRestDay);
-                    const wTotal = trainingDays.reduce((s, d) => s + d.exercises.length, 0);
-                    const wDone = wLogs.length;
-                    const isSelected = currentWeek === w;
-                    const isCompleted = wDone > 0 && wDone === wTotal;
-                    const isAutoActive = autoCurrentWeek === w;
-
-                    return (
-                      <button
-                        key={w}
-                        type="button"
-                        onClick={() => onWeekChange(w)}
-                        className={cn(
-                          "flex-1 min-w-[78px] py-2 px-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 active:scale-95",
-                          isSelected
-                            ? "bg-white text-black border-white shadow-lg font-black scale-[1.02]"
-                            : isAutoActive
-                              ? "bg-cyan-500/10 border-cyan-500/40 text-cyan-300 ring-1 ring-cyan-500/40"
-                              : isCompleted
-                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                                : "bg-white/[0.03] border-white/8 text-slate-400 hover:text-white hover:border-white/20"
-                        )}
-                      >
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] font-mono uppercase tracking-wider">
-                            Sem {w}
-                          </span>
-                          {isAutoActive && !isSelected && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                          )}
-                        </div>
-                        <span className={cn(
-                          "text-[9px] font-bold tabular-nums",
-                          isSelected ? "text-slate-700" : isCompleted ? "text-emerald-400" : "text-slate-500"
-                        )}>
-                          {isCompleted ? "✓ Lista" : `${wDone}/${wTotal}`}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {showInfo && (
-              <div className="mb-5 p-4 rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-3 animate-in slide-in-from-top-2 duration-300">
-                {selectedRoutine.description && (
-                  <p className="text-sm font-semibold text-slate-300">
-                    {selectedRoutine.description}
-                  </p>
-                )}
-                <div className="flex items-start gap-2.5 text-xs text-slate-400 leading-relaxed border-t border-white/8 pt-2.5">
-                  <span className="text-sm shrink-0">💡</span>
-                  <p>
-                    <strong>¿Cómo entrenar?</strong> Toca cualquier día en la tira superior para ver sus ejercicios sin iniciar. Pulsa <strong>&quot;Entrenar Hoy&quot;</strong> para arrancar la sesión interactiva guiada.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ── 7-Day Day Selector Strip (ARRIBA) ── */}
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="font-black text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                  <span>📅</span>
-                  <span>Días de la Semana</span>
-                  <span className="text-slate-500 text-[10px] font-normal hidden sm:inline">(toca para ver ejercicios sin comenzar)</span>
+                <span className="text-[10px] text-neutral-600">•</span>
+                <span className="text-[10px] font-semibold text-neutral-400">
+                  {selectedRoutine.days.filter((d) => !d.isRestDay).length} días/sem
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setDayViewMode(dayViewMode === "focused" ? "all" : "focused")}
-                  className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 px-2.5 py-1 rounded-xl bg-cyan-500/10 border border-cyan-500/20 transition cursor-pointer active:scale-95"
-                >
-                  {dayViewMode === "focused" ? "Ver todos los días" : "Ver día por día"}
-                </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                {selectedRoutine.days.map((day) => {
-                  const isSelected = activeDayNumber === day.dayNumber;
-                  const isToday = day.dayNumber === todayDayNumber;
-                  const isDone = !day.isRestDay && day.exercises.length > 0 && day.exercises.every(ex =>
-                    activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
-                  );
-                  const hasTraining = !day.isRestDay;
-
-                  return (
-                    <button
-                      key={day.dayNumber}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDayNumber(day.dayNumber);
-                        setDayViewMode("focused");
-                      }}
-                      className={cn(
-                        "py-2.5 px-1 sm:px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 active:scale-95",
-                        isSelected && dayViewMode === "focused"
-                          ? "bg-white text-black border-white shadow-lg font-black scale-[1.03]"
-                          : isToday
-                            ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300 ring-1 ring-cyan-500/40"
-                            : "bg-[#0b0e14] border-white/[0.08] text-slate-400 hover:text-white hover:border-white/20"
-                      )}
-                      title={`Ver ${DAY_NAMES[day.dayNumber]} (${hasTraining ? day.focusArea || "Entreno" : "Descanso"})`}
-                    >
-                      <span className="text-[10px] font-mono uppercase tracking-wider">
-                        {DAY_NAMES[day.dayNumber]?.slice(0, 3) || `D${day.dayNumber}`}
-                      </span>
-
-                      {/* El Puntito de Estado */}
-                      <div className="flex items-center justify-center h-2.5">
-                        {isDone ? (
-                          <span className={cn("text-[10px] font-bold leading-none", isSelected && dayViewMode === "focused" ? "text-emerald-700" : "text-emerald-400")}>
-                            ✓
-                          </span>
-                        ) : hasTraining ? (
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full transition-all",
-                              isSelected && dayViewMode === "focused"
-                                ? "bg-cyan-600"
-                                : "bg-cyan-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]"
-                            )}
-                          />
-                        ) : (
-                          <span
-                            className={cn(
-                              "w-1.5 h-1.5 rounded-full",
-                              isSelected && dayViewMode === "focused" ? "bg-neutral-400" : "bg-neutral-600"
-                            )}
-                          />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── Ultra-Premium Hero Workout Banner ── */}
-            {(() => {
-              const activeDay = selectedRoutine.days.find((d) => d.dayNumber === activeDayNumber) || todayDay;
-              const isSelectedDayTraining = activeDay && !activeDay.isRestDay;
-              const isSelectedDayCompleted =
-                isSelectedDayTraining &&
-                activeDay.exercises.length > 0 &&
-                activeDay.exercises.every((ex) =>
-                  activeRoutineLogs.some(
-                    (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
-                  ),
-                );
-              const isTodaySelected = activeDay?.dayNumber === todayDayNumber;
-
-              return (
-                <div className="relative overflow-hidden rounded-3xl p-5 mb-5 border border-white/12 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-black/70 backdrop-blur-2xl shadow-2xl">
-                  {/* Radial ambient glow */}
-                  <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
-                  <div className="absolute -left-10 -bottom-10 w-44 h-44 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-
-                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                    {/* Left: Progress ring + Stats */}
-                    <div className="flex items-center gap-4">
-                      <div className="relative flex items-center justify-center shrink-0 w-16 h-16">
-                        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="26"
-                            className="stroke-white/10 fill-none"
-                            strokeWidth="5"
-                          />
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="26"
-                            className="stroke-cyan-400 fill-none transition-all duration-700 ease-out"
-                            strokeWidth="5"
-                            strokeDasharray={163.36}
-                            strokeDashoffset={163.36 - (163.36 * progress) / 100}
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span className="absolute text-sm font-black text-white tabular-nums">
-                          {progress}%
-                        </span>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
-                            Semana {currentWeek} de {selectedRoutine.weekCount}
-                          </span>
-                          {activeDay && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
-                              {DAY_NAMES[activeDay.dayNumber]}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
-                          {activeDay?.isRestDay
-                            ? "Descanso y Recuperación Activa"
-                            : `${activeDay?.focusArea || "Entrenamiento"} (${activeDay?.exercises.length || 0} ejercicios)`}
-                        </h3>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {isSelectedDayCompleted
-                            ? "¡Sesión de este día completada con éxito! 🏆"
-                            : activeDay?.isRestDay
-                              ? "Asimilación proteica y descanso del SNC. Hidratación activa."
-                              : isTodaySelected
-                                ? `Hoy corresponde esta sesión (${activeRoutineLogs.filter(l => l.weekNumber === currentWeek && activeDay.exercises.some(e => e.id === l.exerciseId)).length}/${activeDay.exercises.length} registrados)`
-                                : `Viendo plan para el ${DAY_NAMES[activeDay?.dayNumber || 1]}`}
-                        </p>
-                      </div>
+              {/* Routine Selector Dropdown Sheet */}
+              {showRoutineDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs"
+                    onClick={() => setShowRoutineDropdown(false)}
+                  />
+                  <div className="absolute left-0 mt-2 w-72 sm:w-80 max-h-[360px] overflow-y-auto rounded-[24px] border border-white/15 bg-[#12141a] p-2.5 shadow-[0_24px_60px_rgba(0,0,0,0.95)] z-50 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-1.5 text-[10px] font-black text-neutral-400 uppercase tracking-widest border-b border-white/[0.06] flex items-center justify-between">
+                      <span>Mis Programas</span>
+                      <span>{routines.length} disponibles</span>
                     </div>
-
-                    {/* Right: Primary Action CTA */}
-                    <div className="shrink-0 flex items-center gap-2">
-                      {isSelectedDayTraining && activeDay ? (
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          {isSelectedDayCompleted ? (
-                            <button
-                              type="button"
-                              onClick={() => onStartSession(activeDay)}
-                              className="px-4 py-3 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer hover:bg-emerald-500/30 flex items-center gap-2"
-                            >
-                              <span>✓</span>
-                              <span>Entrenar de nuevo</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onStartSession(activeDay)}
-                              className="px-6 py-3.5 rounded-2xl bg-white hover:bg-neutral-100 text-black font-black uppercase tracking-wider text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                              <span className="text-base">⚡</span>
-                              <span>{isTodaySelected ? "Entrenar Hoy" : `Entrenar ${DAY_NAMES[activeDay.dayNumber]}`}</span>
-                            </button>
-                          )}
-                          {!isTodaySelected && todayDay && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedDayNumber(todayDay.dayNumber)}
-                              className="px-3.5 py-3 rounded-2xl bg-white/6 hover:bg-white/12 border border-white/10 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
-                              title="Volver a ver el día de hoy"
-                            >
-                              Ir a Hoy
-                            </button>
-                          )}
-                        </div>
-                      ) : activeDay?.isRestDay ? (
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <div className="px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider">
-                            <span>🧘</span>
-                            <span>Descanso</span>
-                          </div>
-                          {!isTodaySelected && todayDay && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedDayNumber(todayDay.dayNumber)}
-                              className="px-3.5 py-3 rounded-2xl bg-white/6 hover:bg-white/12 border border-white/10 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
-                            >
-                              Ir a Hoy
-                            </button>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {routineView === "calendar" ? (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                {/* Calendar Card */}
-                <div className="rounded-3xl border border-white/10 bg-[#0c0e17] p-5 sm:p-6 shadow-2xl backdrop-blur-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-black text-white uppercase tracking-wider">
-                        {MONTH_NAMES[calMonth]} {calYear}
-                      </h2>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalMonth(todayDate.getMonth());
-                          setCalYear(todayDate.getFullYear());
-                          setCalSelectedDate(todayDate);
-                        }}
-                        className="rounded-xl bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-black text-slate-300 border border-white/10 transition-colors cursor-pointer"
-                      >
-                        Hoy
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        title="Mes anterior"
-                        onClick={() => {
-                          if (calMonth === 0) {
-                            setCalMonth(11);
-                            setCalYear((y) => y - 1);
-                          } else {
-                            setCalMonth((m) => m - 1);
-                          }
-                          setCalSelectedDate(null);
-                        }}
-                        className="rounded-xl p-2 text-slate-400 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        title="Mes siguiente"
-                        onClick={() => {
-                          if (calMonth === 11) {
-                            setCalMonth(0);
-                            setCalYear((y) => y + 1);
-                          } else {
-                            setCalMonth((m) => m + 1);
-                          }
-                          setCalSelectedDate(null);
-                        }}
-                        className="rounded-xl p-2 text-slate-400 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Weekday headers */}
-                  <div className="grid grid-cols-7 mb-2">
-                    {WEEKDAY_LABELS.map((l) => (
-                      <div
-                        key={l}
-                        className="py-2 text-center text-xs font-black uppercase tracking-widest text-slate-400"
-                      >
-                        {l}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Calendar grid */}
-                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                    {calDays.map((date, idx) => {
-                      if (!date) return <div key={`e-${idx}`} className="p-1" />;
-
-                      const rd = getRoutineDayForDate(date);
-                      const hasTraining = rd && !rd.isRestDay;
-                      const hasRest = rd?.isRestDay;
-                      const isSelected =
-                        calSelectedDate && isSameDay(date, calSelectedDate);
-                      const isTodayDate = isSameDay(date, todayDate);
-
-                      const isDayDone =
-                        hasTraining &&
-                        rd.exercises.length > 0 &&
-                        rd.exercises.every((ex) =>
-                          activeRoutineLogs.some(
-                            (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
-                          ),
-                        );
-
+                    {routines.map((r) => {
+                      const isSelected = selectedRoutine.id === r.id;
                       return (
                         <button
-                          key={date.toISOString()}
+                          key={r.id}
                           type="button"
-                          onClick={() => setCalSelectedDate(date)}
+                          onClick={() => {
+                            onSelectRoutine(r);
+                            setShowRoutineDropdown(false);
+                          }}
                           className={cn(
-                            "relative mx-auto flex h-11 w-11 sm:h-13 sm:w-13 flex-col items-center justify-center rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer",
+                            "flex items-center justify-between w-full rounded-2xl px-3.5 py-3 text-xs font-bold transition-all cursor-pointer text-left",
                             isSelected
-                              ? "bg-white text-black shadow-sm font-bold scale-105"
-                              : isTodayDate
-                                ? "border-2 border-sky-400 bg-sky-500/10 text-white shadow-sm"
-                                : isDayDone
-                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
-                                  : hasTraining
-                                    ? "bg-white/[0.04] text-neutral-300 border border-white/10 hover:border-white/20"
-                                    : hasRest
-                                      ? "bg-white/[0.04] text-slate-400 border border-white/8 hover:bg-white/10"
-                                      : "text-slate-500 hover:bg-white/10 hover:text-white border border-transparent",
+                              ? "bg-white text-black font-black shadow-sm"
+                              : "text-neutral-300 hover:bg-white/[0.06] hover:text-white",
                           )}
                         >
-                          <span className="leading-none">{date.getDate()}</span>
-                          {/* Indicator dot */}
-                          {!isSelected && (
-                            <div className="absolute bottom-1.5 flex items-center justify-center">
-                              {isDayDone ? (
-                                <span className="text-[9px] text-emerald-400 font-extrabold leading-none">✓</span>
-                              ) : hasTraining ? (
-                                <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
-                              ) : hasRest ? (
-                                <span className="h-1.5 w-1.5 rounded-full bg-slate-500/60" />
-                              ) : null}
-                            </div>
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="truncate flex items-center gap-1.5">
+                              <span>{r.isActive ? "⚡" : "🏋️"}</span>
+                              <span className="truncate">{r.name}</span>
+                            </p>
+                            <p
+                              className={cn(
+                                "text-[10px] mt-0.5",
+                                isSelected ? "text-neutral-600" : "text-neutral-500",
+                              )}
+                            >
+                              {r.days.filter((d) => !d.isRestDay).length} días ·{" "}
+                              {r.weekCount} semanas
+                            </p>
+                          </div>
+                          {r.isActive && (
+                            <span
+                              className={cn(
+                                "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0",
+                                isSelected
+                                  ? "bg-emerald-500 text-black"
+                                  : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+                              )}
+                            >
+                              Activa
+                            </span>
                           )}
                         </button>
                       );
                     })}
                   </div>
+                </>
+              )}
+            </div>
+          </div>
 
-                  {/* Legend */}
-                  <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 border-t border-white/10 pt-3.5 flex-wrap">
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                      <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/50" />
-                      <span>Entrenamiento</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                      <span className="text-emerald-400 font-black text-xs">✓</span>
-                      <span>Completado</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                      <span className="h-2.5 w-2.5 rounded-full bg-white/10 border border-white/20" />
-                      <span>Descanso</span>
-                    </div>
+          {/* Right Quick Actions: Co-Piloto IA, Evolución, KG/LBS */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("open-ai-assistant"))
+              }
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-[11px] font-bold transition cursor-pointer active:scale-95"
+              title="Consultar al Co-Piloto IA"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">IA</span>
+            </button>
+
+            {onOpenEvolution && (
+              <button
+                type="button"
+                onClick={onOpenEvolution}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#14171f] hover:bg-white/10 border border-white/10 text-amber-300 text-[11px] font-bold transition cursor-pointer active:scale-95"
+                title="Ver Capas de Evolución de 120 Días"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Evolución</span>
+              </button>
+            )}
+
+            {onWeightUnitChange && (
+              <div className="flex items-center rounded-full bg-[#14171f] p-0.5 border border-white/10">
+                {(["kg", "lbs"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => onWeightUnitChange(u)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[10px] font-black uppercase transition cursor-pointer",
+                      weightUnit === u
+                        ? "bg-white text-black shadow-xs"
+                        : "text-neutral-400 hover:text-white",
+                    )}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── 2. FITIA 7-DAY CALENDAR STRIP ── */}
+        <div className="grid grid-cols-7 gap-1 text-center py-1">
+          {selectedRoutine.days.map((day) => {
+            const isSelected =
+              activeDayNumber === day.dayNumber &&
+              dayViewMode === "focused" &&
+              activeTab === "routine";
+            const isToday = day.dayNumber === todayDayNumber;
+            const isDone =
+              !day.isRestDay &&
+              day.exercises.length > 0 &&
+              day.exercises.every((ex) =>
+                activeRoutineLogs.some(
+                  (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
+                ),
+              );
+            const hasTraining = !day.isRestDay;
+
+            return (
+              <button
+                key={day.dayNumber}
+                type="button"
+                onClick={() => {
+                  setSelectedDayNumber(day.dayNumber);
+                  setDayViewMode("focused");
+                  if (activeTab !== "routine") setActiveTab("routine");
+                }}
+                className={cn(
+                  "flex flex-col items-center py-1.5 rounded-2xl transition-all cursor-pointer active:scale-95",
+                  isSelected
+                    ? "bg-white/[0.05] border border-white/[0.1] shadow-sm"
+                    : "hover:bg-white/[0.02] border border-transparent",
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                    isSelected
+                      ? "bg-white text-black font-black shadow-md"
+                      : isToday
+                        ? "border border-cyan-400/50 text-cyan-300"
+                        : "text-neutral-400",
+                  )}
+                >
+                  {SHORT_DAY_LETTERS[day.dayNumber] || `D${day.dayNumber}`}
+                </div>
+
+                <span
+                  className={cn(
+                    "text-sm font-bold mt-1.5 tabular-nums",
+                    isSelected
+                      ? "text-cyan-400 font-extrabold"
+                      : isToday
+                        ? "text-white"
+                        : "text-neutral-300",
+                  )}
+                >
+                  {weekDates[day.dayNumber] ?? day.dayNumber}
+                </span>
+
+                {/* Status Dot */}
+                <div className="h-2.5 flex items-center justify-center mt-1">
+                  {isDone ? (
+                    <span className="text-[10px] font-black text-emerald-400 leading-none">
+                      ✓
+                    </span>
+                  ) : hasTraining ? (
+                    <span
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-all",
+                        isSelected
+                          ? "bg-cyan-400 shadow-[0_0_6px_rgba(0,240,255,0.9)]"
+                          : "bg-cyan-400/60",
+                      )}
+                    />
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── 3. WEEK STEPPER STRIP & VIEW SWITCHER ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* Week Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {Array.from({ length: selectedRoutine.weekCount }, (_, i) => i + 1).map(
+              (w) => {
+                const wLogs = activeRoutineLogs.filter((l) => l.weekNumber === w);
+                const trainingDays = selectedRoutine.days.filter(
+                  (d) => !d.isRestDay,
+                );
+                const wTotal = trainingDays.reduce(
+                  (s, d) => s + d.exercises.length,
+                  0,
+                );
+                const wDone = wLogs.length;
+                const isSelected = currentWeek === w;
+                const isCompleted = wDone > 0 && wDone >= wTotal;
+                const isAutoActive = autoCurrentWeek === w;
+
+                return (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => onWeekChange(w)}
+                    className={cn(
+                      "px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95",
+                      isSelected
+                        ? "bg-white text-black border-white font-black shadow-sm"
+                        : isAutoActive
+                          ? "bg-cyan-500/10 border-cyan-500/35 text-cyan-300"
+                          : isCompleted
+                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
+                            : "bg-[#12141a] border-white/[0.06] text-neutral-400 hover:text-white",
+                    )}
+                  >
+                    <span>Sem {w}</span>
+                    {isAutoActive && !isSelected && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    )}
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.2 rounded-full tabular-nums",
+                        isSelected
+                          ? "bg-black/10 text-neutral-800 font-black"
+                          : isCompleted
+                            ? "text-emerald-400"
+                            : "text-neutral-500",
+                      )}
+                    >
+                      {isCompleted ? "✓" : `${wDone}/${wTotal}`}
+                    </span>
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          {/* Mode Segmented Control: Rutina | Calendario | Historial */}
+          <div className="flex items-center bg-[#12141a] p-1 rounded-2xl border border-white/[0.06] self-start sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab("routine")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1",
+                activeTab === "routine"
+                  ? "bg-white/[0.1] text-white font-black shadow-xs"
+                  : "text-neutral-400 hover:text-white",
+              )}
+            >
+              <Dumbbell className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Plan</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("calendar")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1",
+                activeTab === "calendar"
+                  ? "bg-white/[0.1] text-white font-black shadow-xs"
+                  : "text-neutral-400 hover:text-white",
+              )}
+            >
+              <CalendarIcon className="w-3.5 h-3.5 text-violet-400" />
+              <span>Mes</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("history")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1",
+                activeTab === "history"
+                  ? "bg-white/[0.1] text-white font-black shadow-xs"
+                  : "text-neutral-400 hover:text-white",
+              )}
+            >
+              <History className="w-3.5 h-3.5 text-amber-400" />
+              <span>Historial</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── TAB 1: PLAN DE RUTINA (FITIA + VITAL FIT LABS) ── */}
+        {activeTab === "routine" && (
+          <>
+            {/* ── CENTRAL WORKOUT HERO CARD (#12141a) ── */}
+            <div className="rounded-[28px] bg-[#12141a] border border-white/[0.06] p-5 shadow-[0_14px_34px_rgba(0,0,0,0.45)] relative overflow-hidden">
+              <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+
+              {/* Top Meta Row */}
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/12 border border-cyan-500/25 text-[10px] font-black uppercase tracking-wider text-cyan-300">
+                    {DAY_NAMES[activeDay?.dayNumber || 1]}
+                  </span>
+                  {isTodaySelected && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                      ● Hoy
+                    </span>
+                  )}
+                  <span className="text-[11px] font-semibold text-neutral-400">
+                    Semana {currentWeek} de {selectedRoutine.weekCount}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDayViewMode(
+                        dayViewMode === "focused" ? "all" : "focused",
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[10px] font-bold text-neutral-300 transition cursor-pointer"
+                  >
+                    {dayViewMode === "focused" ? "Ver 7 días" : "Solo este día"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInfo(!showInfo)}
+                    className={cn(
+                      "w-7 h-7 rounded-xl border flex items-center justify-center transition cursor-pointer",
+                      showInfo
+                        ? "bg-cyan-400 text-black border-cyan-400"
+                        : "bg-white/[0.04] border-white/[0.08] text-neutral-400 hover:text-white",
+                    )}
+                    title="Guía de la rutina"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Main Focus & Progress Gauge */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl sm:text-2xl font-display font-black text-white tracking-tight leading-snug">
+                    {activeDay?.isRestDay
+                      ? "Descanso y Recuperación"
+                      : activeDay?.focusArea || "Sesión de Fuerza"}
+                  </h2>
+                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                    {activeDay?.isRestDay
+                      ? activeDay.restDayNote ||
+                        "Recuperación del sistema nervioso central y síntesis proteica."
+                      : isSelectedDayCompleted
+                        ? "¡Todas las series de este día fueron completadas! 🏆"
+                        : `${dayExercisesTotal} ejercicios programados · ~${Math.max(25, dayExercisesTotal * 12)} min`}
+                  </p>
+                </div>
+
+                {/* Circular Progress Ring */}
+                <div className="relative flex items-center justify-center shrink-0 w-16 h-16">
+                  <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="26"
+                      className="stroke-white/[0.08] fill-none"
+                      strokeWidth="5.5"
+                    />
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="26"
+                      className={cn(
+                        "fill-none transition-all duration-700 ease-out",
+                        isSelectedDayCompleted
+                          ? "stroke-emerald-400"
+                          : "stroke-cyan-400",
+                      )}
+                      strokeWidth="5.5"
+                      strokeDasharray={163.36}
+                      strokeDashoffset={
+                        163.36 - (163.36 * dayProgressPct) / 100
+                      }
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-center">
+                    <span className="text-xs font-black text-white tabular-nums block">
+                      {dayProgressPct}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Fitia-Style Metric Columns with Progress Bars */}
+              <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-white/[0.06]">
+                {/* Col 1: Series del Día */}
+                <div>
+                  <span className="text-[11px] font-medium text-neutral-400 block">
+                    Series Día ›
+                  </span>
+                  <p className="text-sm font-bold text-white mt-0.5 tabular-nums">
+                    {completedSetsActiveDay} / {plannedSetsActiveDay || "—"}
+                  </p>
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.07] mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                      style={{
+                        width: `${
+                          plannedSetsActiveDay > 0
+                            ? Math.min(
+                                100,
+                                Math.round(
+                                  (completedSetsActiveDay /
+                                    plannedSetsActiveDay) *
+                                    100,
+                                ),
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    />
                   </div>
                 </div>
 
-                {/* Selected day detail */}
-                {calSelectedDate && (
-                  <div className="space-y-4 animate-in fade-in duration-300">
-                    <h3 className="text-base font-black text-white capitalize flex items-center gap-2">
-                      <span>
-                        {calSelectedDate.toLocaleDateString("es-ES", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        })}
+                {/* Col 2: Avance Semanal */}
+                <div>
+                  <span className="text-[11px] font-medium text-neutral-400 block">
+                    Semana {currentWeek} ›
+                  </span>
+                  <p className="text-sm font-bold text-white mt-0.5 tabular-nums">
+                    {trainingSummary
+                      ? `${trainingSummary.setsThisWeek} / ${trainingSummary.plannedSetsWeek || "—"}`
+                      : `${completedLogs} / ${totalLogs}`}
+                  </p>
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.07] mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-cyan-400 transition-all duration-500"
+                      style={{
+                        width: `${trainingSummary ? trainingSummary.weekPct : cycleProgress}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Col 3: Volumen / Récords */}
+                <div
+                  onClick={() => setShowPrsModal(true)}
+                  className="cursor-pointer group"
+                >
+                  <span className="text-[11px] font-medium text-neutral-400 group-hover:text-amber-300 transition block">
+                    Volumen Mes ›
+                  </span>
+                  <p className="text-sm font-bold text-white mt-0.5 tabular-nums truncate">
+                    {trainingSummary
+                      ? `${trainingSummary.displayVolume.toLocaleString("es")} ${weightUnit}`
+                      : `${personalRecords.length} PRs`}
+                  </p>
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.07] mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, Math.max(15, cycleProgress))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Collapsible Info / Cycle Goal */}
+              {showInfo && (
+                <div className="mt-4 pt-3.5 border-t border-white/[0.06] text-xs text-neutral-300 space-y-2 animate-in fade-in duration-200">
+                  {selectedRoutine.description && (
+                    <p className="font-medium text-white">
+                      {selectedRoutine.description}
+                    </p>
+                  )}
+                  {trainingSummary && (
+                    <p className="text-neutral-400 leading-relaxed">
+                      🎯 <strong>Meta del Ciclo:</strong>{" "}
+                      <span className="text-amber-300 font-semibold">
+                        {trainingSummary.strengthTitle}{" "}
+                        {trainingSummary.strengthTarget
+                          ? `(${trainingSummary.strengthTarget})`
+                          : ""}
+                      </span>{" "}
+                      +{" "}
+                      <span className="text-cyan-300 font-semibold">
+                        {trainingSummary.masteryTitle}
                       </span>
-                    </h3>
+                      .
+                    </p>
+                  )}
+                </div>
+              )}
 
-                    {selectedDayInfo ? (
-                      selectedDayInfo.isRestDay ? (
-                        <div className="rounded-3xl border border-cyan-500/30 bg-cyan-500/10 p-5 backdrop-blur-xl shadow-xl">
-                          <div className="flex items-start gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-2xl border border-cyan-500/30 shrink-0">
-                              🧘
-                            </div>
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
-                                Recuperación y Asimilación
-                              </span>
-                              <h4 className="text-base font-black text-white">
-                                Día de Descanso Activo
-                              </h4>
-                              <p className="text-xs text-slate-300 leading-relaxed">
-                                {selectedDayInfo.restDayNote ||
-                                  "El músculo crece y se repara durante el descanso. Mantén buena hidratación y descanso del SNC."}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        (() => {
-                          const isDayCompleted =
-                            !selectedDayInfo.isRestDay &&
-                            selectedDayInfo.exercises.length > 0 &&
-                            selectedDayInfo.exercises.every((ex) =>
-                              activeRoutineLogs.some(
-                                (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
-                              ),
-                            );
+              {/* Primary CTA Button (Fitia Full-Width Pill) */}
+              <div className="mt-5">
+                {isSelectedDayTraining && activeDay ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onStartSession(activeDay)}
+                      className={cn(
+                        "flex-1 py-3.5 px-5 rounded-2xl font-display font-black text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]",
+                        isSelectedDayCompleted
+                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30"
+                          : "bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_24px_rgba(0,240,255,0.35)]",
+                      )}
+                    >
+                      <Zap
+                        className={cn(
+                          "w-4 h-4",
+                          isSelectedDayCompleted
+                            ? "text-emerald-400"
+                            : "fill-slate-950 text-slate-950",
+                        )}
+                      />
+                      <span>
+                        {isSelectedDayCompleted
+                          ? "Sesión Completada · Volver a Abrir"
+                          : isTodaySelected
+                            ? "Entrenar Hoy"
+                            : `Entrenar ${DAY_NAMES[activeDay.dayNumber]}`}
+                      </span>
+                    </button>
 
-                          return (
-                            <div className="rounded-3xl border border-white/10 bg-[#0c0e17] p-5 shadow-2xl backdrop-blur-xl space-y-4">
-                              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3.5 flex-wrap">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300 border border-sky-500/25 font-black text-sm shrink-0">
-                                    D{selectedDayInfo.dayNumber}
-                                  </div>
-                                  <div>
-                                    <h4 className="text-base font-black uppercase tracking-wider text-white">
-                                      {selectedDayInfo.focusArea || "Entrenamiento"}
-                                    </h4>
-                                    <p className="text-xs font-bold text-slate-400 mt-0.5">
-                                      {selectedDayInfo.exercises.length} ejercicios programados
-                                    </p>
-                                  </div>
-                                </div>
-                                <div>
-                                  {isDayCompleted ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => onStartSession(selectedDayInfo)}
-                                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-black uppercase tracking-wider hover:bg-emerald-500/30 transition-all cursor-pointer"
-                                    >
-                                      ✓ Completado
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => onStartSession(selectedDayInfo)}
-                                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
-                                    >
-                                      ▶ Iniciar Sesión
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Exercises */}
-                              <div className="space-y-2">
-                                {selectedDayInfo.exercises.map((ex) => {
-                                  const isExLoggedCurrentWeek = activeRoutineLogs.some(
-                                    (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek,
-                                  );
-                                  const muscleInfo =
-                                    MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
-
-                                  return (
-                                    <div
-                                      key={ex.id}
-                                      onClick={() => setPreviewExercise(ex)}
-                                      className={cn(
-                                        "group flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all cursor-pointer active:scale-[0.99]",
-                                        isExLoggedCurrentWeek
-                                          ? "bg-emerald-500/[0.07] border-emerald-500/30"
-                                          : "bg-black/40 border-white/8 hover:bg-white/[0.04]",
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-base">
-                                          {muscleInfo?.icon || "🏋️"}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-sm font-black text-white truncate">
-                                            {ex.name}
-                                          </p>
-                                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
-                                            <span className="font-bold text-slate-300 tabular-nums">
-                                              {ex.sets} × {ex.reps}
-                                            </span>
-                                            <span>·</span>
-                                            <span className="font-bold text-amber-400/90 flex items-center gap-0.5">
-                                              🔒{" "}
-                                              {ex.targetWeight && ex.targetWeight > 0
-                                                ? `${ex.targetWeight} kg`
-                                                : "Corporal"}
-                                            </span>
-                                            <span>·</span>
-                                            <span>⏱️ {formatRest(ex.restSeconds)}</span>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        {ex.intensity === "failure" && (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/[0.05] text-neutral-300 border border-white/10">
-                                            🔴 Al Fallo
-                                          </span>
-                                        )}
-                                        {ex.intensity === "relax" && (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                            🟢 Relax
-                                          </span>
-                                        )}
-                                        {(!ex.intensity || ex.intensity === "medium") && (
-                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                            🟡 Media
-                                          </span>
-                                        )}
-
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPreviewExercise(ex);
-                                          }}
-                                          className="p-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer"
-                                          title="Ver técnica 3D y prescripción"
-                                        >
-                                          <Eye className="w-3.5 h-3.5 text-cyan-300" />
-                                        </button>
-
-                                        {isExLoggedCurrentWeek ? (
-                                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-xs">
-                                            ✓
-                                          </div>
-                                        ) : (
-                                          <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 text-xs">
-                                            ○
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })()
-                      )
-                    ) : (
-                      <div className="rounded-3xl border border-white/10 bg-[#0c0e17] p-6 text-center space-y-2">
-                        <span className="text-3xl">🏖️</span>
-                        <p className="text-sm font-bold text-slate-400">
-                          Sin actividad programada para este día
-                        </p>
-                      </div>
+                    {!isTodaySelected && todayDay && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDayNumber(todayDay.dayNumber)}
+                        className="py-3.5 px-4 rounded-2xl bg-[#1b1e26] hover:bg-white/10 border border-white/10 text-xs font-bold text-neutral-300 hover:text-white transition cursor-pointer shrink-0"
+                      >
+                        Ir a Hoy
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-[#181b22] border border-white/[0.05]">
+                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                      <span>🧘</span>
+                      <span>Día de Recuperación y Movilidad</span>
+                    </span>
+                    {!isTodaySelected && todayDay && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDayNumber(todayDay.dayNumber)}
+                        className="text-xs font-bold text-cyan-400 hover:underline cursor-pointer"
+                      >
+                        Ir a Hoy →
+                      </button>
                     )}
                   </div>
                 )}
               </div>
-            ) : (
-              <>
-              {/* Days Cards List View */}
-            <div className="space-y-3">
-              {(dayViewMode === "focused"
-                ? (selectedRoutine.days.filter((d) => d.dayNumber === activeDayNumber).length > 0
-                    ? selectedRoutine.days.filter((d) => d.dayNumber === activeDayNumber)
-                    : selectedRoutine.days.slice(0, 1))
-                : selectedRoutine.days
-              ).map((day) => {
-                  const isToday = day.dayNumber === todayDayNumber;
-                  const isDayCompleted = !day.isRestDay && day.exercises.length > 0 && day.exercises.every(ex =>
-                    activeRoutineLogs.some(l => l.exerciseId === ex.id && l.weekNumber === currentWeek)
-                  );
+            </div>
 
-                  return (
-                    <div
-                      key={day.dayNumber}
-                      className={cn(
-                        "rounded-3xl border transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl relative overflow-hidden",
-                        isToday
-                          ? "bg-gradient-to-b from-primary-500/[0.08] to-white/[0.02] border-primary-500/40 shadow-[0_0_30px_rgba(56,189,248,0.12)]"
-                          : isDayCompleted
-                            ? "bg-gradient-to-b from-emerald-500/[0.06] to-white/[0.02] border-emerald-500/30"
-                            : "bg-white/[0.03] border-white/10 hover:border-white/20"
-                      )}
-                    >
-                      {/* Day Card Header */}
-                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/8">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <div className={cn(
-                            "px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider",
-                            isToday ? "bg-primary-500 text-slate-950 font-extrabold" : "bg-white/10 text-white"
-                          )}>
-                            {DAY_NAMES[day.dayNumber]}
-                          </div>
-                          {day.isRestDay ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-xs font-bold uppercase tracking-wider">
-                              🧘 Descanso
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-primary-500/15 text-primary-400 border border-primary-500/30 text-xs font-black uppercase tracking-wider">
-                              {day.focusArea || "Entrenamiento"}
-                            </span>
-                          )}
-                          {isToday && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black uppercase tracking-widest animate-pulse">
-                              ● Hoy
-                            </span>
-                          )}
-                        </div>
+            {/* ── EXERCISE CARDS LIST (Fitia Individual Card Style) ── */}
+            {(dayViewMode === "focused"
+              ? [activeDay].filter(Boolean)
+              : selectedRoutine.days
+            ).map((day) => {
+              if (!day) return null;
 
-                        {!day.isRestDay && (
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-xs font-bold text-slate-400 tabular-nums">
-                              {day.exercises.length} ej.
-                            </span>
-                            {isDayCompleted ? (
-                              <button
-                                type="button"
-                                onClick={() => onStartSession(day)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-black uppercase tracking-wider hover:bg-emerald-500/30 transition-all cursor-pointer"
-                              >
-                                ✓ Completado
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => onStartSession(day)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-100 text-black text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
-                              >
-                                ▶ Iniciar
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Day Card Exercises */}
+              return (
+                <div key={day.dayNumber} className="space-y-3">
+                  {/* Section Title header when viewing all days or focused */}
+                  <div className="flex items-center justify-between px-1 pt-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-display font-bold text-white">
+                        {dayViewMode === "all"
+                          ? `${DAY_NAMES[day.dayNumber]} · ${day.isRestDay ? "Descanso" : day.focusArea}`
+                          : "Ejercicios de la Sesión"}
+                      </h3>
                       {!day.isRestDay && (
-                        <div className="mt-3 space-y-2">
-                          {day.exercises.map((ex) => {
-                            const isExLoggedCurrentWeek = activeRoutineLogs.some(
-                              (l) => l.exerciseId === ex.id && l.weekNumber === currentWeek
-                            );
-                            const muscleInfo = MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS];
-                            const exInsight = analyzeExerciseProgression(
-                              ex,
-                              activeRoutineLogs,
-                              currentWeek,
-                            );
-
-                            return (
-                              <div
-                                key={ex.id}
-                                onClick={() => setPreviewExercise(ex)}
-                                className={cn(
-                                  "group flex flex-col gap-2 p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer active:scale-[0.99]",
-                                  isExLoggedCurrentWeek
-                                    ? "bg-emerald-500/[0.07] border-emerald-500/30"
-                                    : exInsight.state === "fatigue_shield_2w"
-                                      ? "bg-cyan-500/[0.06] border-cyan-500/30"
-                                      : exInsight.state === "double_progression"
-                                        ? "bg-amber-500/[0.06] border-amber-500/30"
-                                        : "bg-black/40 border-white/8 hover:bg-white/[0.04] hover:border-white/15"
-                                )}
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  {/* Left: Icon and Name */}
-                                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-base">
-                                      {muscleInfo?.icon || "🏋️"}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-black text-white truncate">
-                                        {ex.name}
-                                      </p>
-                                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
-                                        <span className="font-bold text-slate-300 tabular-nums">
-                                          {ex.sets} × {ex.reps}
-                                        </span>
-                                        <span>·</span>
-                                        <span className="font-bold text-amber-400/90 flex items-center gap-0.5">
-                                          🏋️{" "}
-                                          {ex.targetWeight && ex.targetWeight > 0
-                                            ? weightUnit === "lbs"
-                                              ? `${Math.round(ex.targetWeight * 2.20462 * 2) / 2} lbs`
-                                              : `${ex.targetWeight} kg`
-                                            : "Corporal"}
-                                        </span>
-                                        <span>·</span>
-                                        <span>⏱️ {formatRest(ex.restSeconds)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Right: Intensity and Status Badges */}
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    {/* Semáforo badge */}
-                                    {ex.intensity === "failure" && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/[0.05] text-neutral-300 border border-white/10 shadow-sm shadow-red-500/20">
-                                        🔴 Al Fallo
-                                      </span>
-                                    )}
-                                    {ex.intensity === "relax" && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                        🟢 Relax
-                                      </span>
-                                    )}
-                                    {(!ex.intensity || ex.intensity === "medium") && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                        🟡 Media
-                                      </span>
-                                    )}
-
-                                    {/* Botón Ver Técnica */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPreviewExercise(ex);
-                                      }}
-                                      className="p-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer"
-                                      title="Ver técnica 3D y prescripción"
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-cyan-300" />
-                                    </button>
-
-                                    {/* Logged check */}
-                                    {isExLoggedCurrentWeek ? (
-                                      <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-xs">
-                                        ✓
-                                      </div>
-                                    ) : (
-                                      <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 text-xs">
-                                        ○
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Vital Fit Labs Week-over-Week Progression & Mission Bar */}
-                                {exInsight.state !== "first_week" && (
-                                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 text-[11px] flex-wrap">
-                                    <span className="text-slate-400 font-medium truncate">
-                                      Historial: <strong className="text-slate-200">{exInsight.historyChainText}</strong>
-                                    </span>
-                                    <span
-                                      className={cn(
-                                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0",
-                                        exInsight.tone === "emerald"
-                                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
-                                          : exInsight.tone === "cyan"
-                                            ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/35"
-                                            : exInsight.tone === "amber"
-                                              ? "bg-amber-500/15 text-amber-300 border-amber-500/35"
-                                              : "bg-rose-500/15 text-rose-300 border-rose-500/35"
-                                      )}
-                                    >
-                                      {exInsight.badgeLabel}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <span className="text-xs font-semibold text-neutral-500">
+                          ({day.exercises.length})
+                        </span>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {/* ── Filters Bar (High Contrast & Clear Visibility) ── */}
-            <div className="p-4 rounded-3xl bg-[#0c0e17] border border-white/12 shadow-2xl mb-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <span className="text-sm">🔍</span> Filtros de Historial
-                </span>
-                {(historySearchQuery || historyRoutineFilter !== "all" || historyWeekFilter !== "all") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHistorySearchQuery("");
-                      setHistoryRoutineFilter("all");
-                      setHistoryWeekFilter("all");
-                    }}
-                    className="text-[11px] font-black uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                  >
-                    ✕ Limpiar filtros
-                  </button>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* Search Query */}
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    🔎
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Buscar ejercicio..."
-                    value={historySearchQuery}
-                    onChange={(e) => setHistorySearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-8 py-2.5 rounded-2xl border border-white/15 bg-white/5 text-white placeholder:text-slate-400 text-xs font-bold outline-none focus:border-primary-400 focus:bg-white/10 transition-all"
-                  />
-                  {historySearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setHistorySearchQuery("")}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white text-xs cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                    {!day.isRestDay && dayViewMode === "all" && (
+                      <button
+                        type="button"
+                        onClick={() => onStartSession(day)}
+                        className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Iniciar día</span>
+                      </button>
+                    )}
+                  </div>
 
-                {/* Routine Filter */}
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    🏋️
-                  </span>
-                  <select
-                    value={historyRoutineFilter}
-                    onChange={(e) => setHistoryRoutineFilter(e.target.value)}
-                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-primary-400 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="all" className="bg-[#0c0e17] text-white py-2">Todas las rutinas</option>
-                    {routines.map((r) => (
-                      <option key={r.id} value={r.id} className="bg-[#0c0e17] text-white py-2">
-                        {r.name} {r.isActive ? "⭐️" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                    ▼
-                  </span>
-                </div>
-
-                {/* Week Filter */}
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    📅
-                  </span>
-                  <select
-                    value={historyWeekFilter}
-                    onChange={(e) => setHistoryWeekFilter(e.target.value)}
-                    className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-white/15 bg-[#121420] text-white text-xs font-bold outline-none focus:border-primary-400 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="all" className="bg-[#0c0e17] text-white py-2">Todas las semanas</option>
-                    {Array.from(
-                      { length: Math.max(...routines.map((r) => r.weekCount), 4) },
-                      (_, i) => i + 1,
-                    ).map((w) => (
-                      <option key={w} value={w} className="bg-[#0c0e17] text-white py-2">
-                        Semana {w}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                    ▼
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* ── KPI Stats Cards ── */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              {/* Total Sessions */}
-              <div className="rounded-3xl bg-white/[0.04] p-4 border border-white/10 text-center backdrop-blur-xl">
-                <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">
-                  {groupedSessions.length}
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
-                  Sesiones
-                </p>
-              </div>
-
-              {/* PRs Badge Button */}
-              <button
-                onClick={() => setShowPrsModal(true)}
-                className="rounded-3xl bg-gradient-to-b from-amber-500/15 to-white/[0.03] p-4 border border-amber-500/30 text-center backdrop-blur-xl hover:border-amber-500/60 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <span className="text-xl">🏆</span>
-                  <span className="text-2xl sm:text-3xl font-black text-amber-400 tabular-nums">
-                    {personalRecords.length}
-                  </span>
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mt-1">
-                  Ver PRs
-                </p>
-              </button>
-
-              {/* Total Logs count */}
-              <div className="rounded-3xl bg-white/[0.04] p-4 border border-white/10 text-center backdrop-blur-xl">
-                <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">
-                  {logs.length}
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
-                  Registros
-                </p>
-              </div>
-            </div>
-
-            {/* ── Timeline (with bottom safe space) ── */}
-            <div className="space-y-5 pb-32">
-              {groupedSessions.map((session) => (
-                <div key={session.dateStr} className="relative pl-6 pb-6 last:pb-0 border-l-2 border-white/10 ml-3">
-                  {/* Timeline Glowing Dot */}
-                  <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full border-2 border-sky-400 bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
-
-                  {/* Session Card */}
-                  <div className="rounded-3xl border border-white/10 bg-[#0c0e17]/90 backdrop-blur-2xl p-5 shadow-2xl hover:border-white/20 transition-all">
-                    {/* Session Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 pb-3 mb-3.5">
+                  {day.isRestDay ? (
+                    <div className="rounded-[24px] bg-[#12141a] border border-white/[0.06] p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-2xl shrink-0">
+                        🧘
+                      </div>
                       <div>
-                        <h4 className="text-sm sm:text-base font-black text-white">
-                          {formatSessionDate(session.dateStr)}
-                        </h4>
-                        <p className="text-xs font-bold text-primary-400 mt-0.5 flex items-center gap-1">
-                          <span>🏋️</span>
-                          <span>{session.routineName}</span>
+                        <p className="text-sm font-bold text-white">
+                          Recuperación Muscular y SNC
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                          {day.restDayNote ||
+                            "Aprovecha para cumplir tus pasos NEAT, hidratación (3.5L) y proteína del día."}
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider">
-                        {session.logs.length} {session.logs.length === 1 ? "ejercicio" : "ejercicios"}
-                      </span>
                     </div>
-
-                    {/* Exercises In Session */}
-                    <div className="space-y-4">
-                      {session.logs.map((log) => {
-                        const ex = findExerciseById(log.exerciseId);
-                        const muscleInfo = ex?.muscleGroup ? MUSCLE_GROUPS[ex.muscleGroup as keyof typeof MUSCLE_GROUPS] : null;
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 lg:gap-3.5 items-start">
+                      {day.exercises.map((ex, idx) => {
+                        const log = getExerciseLog(ex.id, currentWeek);
+                        const isExLogged = !!log;
+                        const dictEntry = getDictEntry(ex.name);
+                        const thumbUrl = dictEntry?.gifUrl || ex.gifUrl || null;
+                        const muscleInfo =
+                          MUSCLE_GROUPS[
+                            ex.muscleGroup as keyof typeof MUSCLE_GROUPS
+                          ];
+                        const exInsight = analyzeExerciseProgression(
+                          ex,
+                          activeRoutineLogs,
+                          currentWeek,
+                        );
+                        const isInlineOpen = expandedExerciseId === ex.id;
 
                         return (
-                          <div key={log.id} className="space-y-2 p-3 rounded-2xl bg-black/40 border border-white/6">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-base">{muscleInfo?.icon || "🏋️"}</span>
-                                <span className="text-sm font-black text-white">
-                                  {ex?.name || "Ejercicio"}
+                          <div
+                            key={ex.id}
+                            onClick={() => setPreviewExercise(ex)}
+                            className={cn(
+                              "rounded-[24px] bg-[#12141a] border p-4 transition-all cursor-pointer",
+                              isExLogged
+                                ? "border-emerald-500/30 bg-gradient-to-r from-emerald-500/[0.05] to-[#12141a]"
+                                : "border-white/[0.06] hover:border-white/15",
+                            )}
+                          >
+                            <div className="flex items-center gap-3.5">
+                              {/* 56x56 Thumbnail with 3D/GIF or Muscle Icon */}
+                              <div className="relative w-14 h-14 rounded-2xl bg-[#1b1e26] border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
+                                {thumbUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={thumbUrl}
+                                    alt={ex.name}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span className="text-2xl">
+                                    {muscleInfo?.icon || "🏋️"}
+                                  </span>
+                                )}
+                                <span className="absolute top-1 left-1 px-1.5 py-0.2 rounded-md bg-black/80 text-[9px] font-black text-cyan-400">
+                                  #{idx + 1}
                                 </span>
                               </div>
-                              {ex?.muscleGroup && (
-                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                                  {MUSCLE_LABELS[ex.muscleGroup] || "General"}
-                                </span>
-                              )}
+
+                              {/* Exercise Details */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-[15px] font-bold text-white truncate">
+                                    {ex.name}
+                                  </p>
+                                </div>
+
+                                {/* Prescription Row */}
+                                <div className="flex items-center gap-2 text-xs text-neutral-400 mt-1 flex-wrap">
+                                  <span className="font-bold text-white tabular-nums">
+                                    {ex.sets} × {ex.reps}
+                                  </span>
+                                  <span>•</span>
+                                  <span className="font-semibold text-cyan-300 tabular-nums">
+                                    {ex.targetWeight && ex.targetWeight > 0
+                                      ? weightUnit === "lbs"
+                                        ? `${Math.round(ex.targetWeight * 2.20462 * 2) / 2} lbs`
+                                        : `${ex.targetWeight} kg`
+                                      : "Corporal"}
+                                  </span>
+                                  <span>•</span>
+                                  <span>⏱️ {formatRest(ex.restSeconds)}</span>
+                                </div>
+
+                                {/* Intensity & Muscle Tags */}
+                                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-neutral-400 bg-white/[0.04] px-2 py-0.5 rounded-lg border border-white/[0.06]">
+                                    {MUSCLE_LABELS[ex.muscleGroup] || "General"}
+                                  </span>
+                                  {ex.intensity === "failure" ? (
+                                    <span className="text-[10px] font-bold text-rose-300 bg-rose-500/15 px-2 py-0.5 rounded-lg border border-rose-500/25">
+                                      🔴 Al Fallo
+                                    </span>
+                                  ) : ex.intensity === "relax" ? (
+                                    <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/25">
+                                      🟢 Relax
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-500/25">
+                                      🟡 Media
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right Actions: 3D Preview + Quick Set Log */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewExercise(ex);
+                                  }}
+                                  className="w-9 h-9 rounded-xl bg-[#1b1e26] hover:bg-white/10 border border-white/[0.08] flex items-center justify-center text-cyan-400 transition cursor-pointer"
+                                  title="Ver técnica 3D"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedExerciseId(
+                                      isInlineOpen ? null : ex.id,
+                                    );
+                                  }}
+                                  className={cn(
+                                    "w-9 h-9 rounded-xl border flex items-center justify-center transition cursor-pointer",
+                                    isExLogged
+                                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                      : isInlineOpen
+                                        ? "bg-cyan-400 border-cyan-400 text-slate-950"
+                                        : "bg-[#1b1e26] border-white/[0.08] text-neutral-400 hover:text-white",
+                                  )}
+                                  title={
+                                    isExLogged
+                                      ? "Editar series registradas"
+                                      : "Registrar series manualmente"
+                                  }
+                                >
+                                  {isExLogged ? (
+                                    <Check className="w-4 h-4 stroke-[3]" />
+                                  ) : (
+                                    <Edit3 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Sets Breakdown: Clean pills without 0 kg x 0 */}
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              {log.setsData && log.setsData.length > 0 ? (
-                                log.setsData
-                                  .filter((set) => set.completed || (set.reps && set.reps > 0))
-                                  .map((set, sIdx) => {
-                                    const isBodyweight = !set.weight || set.weight <= 0;
-                                    return (
-                                      <div
-                                        key={sIdx}
-                                        className={cn(
-                                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black border transition-all",
-                                          set.completed
-                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                                            : "bg-white/5 border-white/10 text-slate-300"
-                                        )}
+                            {/* Logged Sets Summary Pills */}
+                            {isExLogged &&
+                              log?.setsData &&
+                              log.setsData.length > 0 &&
+                              !isInlineOpen && (
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06]">
+                                  {log.setsData
+                                    .filter(
+                                      (s) => s.completed || s.weight || s.reps,
+                                    )
+                                    .map((s) => (
+                                      <span
+                                        key={s.set}
+                                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/12 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-bold text-emerald-300 tabular-nums"
                                       >
-                                        <span className="text-[10px] uppercase font-bold text-slate-400">
-                                          Serie {sIdx + 1}:
-                                        </span>
-                                        <span className="text-white">
-                                          {isBodyweight ? "Corporal" : `${set.weight} kg`}
-                                        </span>
-                                        <span className="text-slate-400">×</span>
-                                        <span className="text-amber-400">
-                                          {set.reps ?? 0} reps
-                                        </span>
-                                        {set.completed && (
-                                          <span className="text-emerald-400 text-xs ml-0.5">✓</span>
-                                        )}
-                                      </div>
-                                    );
-                                  })
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-white/5 border border-white/10 text-white">
-                                  <span>{log.weight && log.weight > 0 ? `${log.weight} kg` : "Corporal"}</span>
-                                  <span className="text-slate-400">×</span>
-                                  <span className="text-amber-400">{log.repsDone || "0 reps"}</span>
+                                        S{s.set}:{" "}
+                                        {s.weight && s.weight > 0
+                                          ? weightUnit === "lbs"
+                                            ? `${Math.round(s.weight * 2.20462 * 2) / 2}lbs`
+                                            : `${s.weight}kg`
+                                          : "Corp"}{" "}
+                                        × {s.reps ?? 0}
+                                      </span>
+                                    ))}
                                 </div>
                               )}
-                            </div>
 
-                            {/* Observations */}
-                            {log.observations && (
-                              <div className="mt-1 flex items-start gap-1.5 text-xs text-slate-300 bg-white/5 p-2 rounded-xl border border-white/5">
-                                <span className="text-slate-400">💬</span>
-                                <p className="italic">{log.observations}</p>
+                            {/* Vital Fit Labs Progression Insight Strip */}
+                            {exInsight.state !== "first_week" && !isInlineOpen && (
+                              <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-white/[0.05] text-[11px]">
+                                <span className="text-neutral-400 truncate">
+                                  Sem ant:{" "}
+                                  <strong className="text-neutral-200">
+                                    {exInsight.historyChainText}
+                                  </strong>
+                                </span>
+                                <span
+                                  className={cn(
+                                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shrink-0",
+                                    exInsight.tone === "emerald"
+                                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                      : exInsight.tone === "cyan"
+                                        ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                                        : exInsight.tone === "amber"
+                                          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                          : "bg-rose-500/15 text-rose-300 border-rose-500/30",
+                                  )}
+                                >
+                                  {exInsight.badgeLabel}
+                                </span>
                               </div>
+                            )}
+
+                            {/* Inline Quick Set Logger Drawer */}
+                            {isInlineOpen && (
+                              <InlineSetDrawer
+                                exercise={ex}
+                                weekNumber={currentWeek}
+                                log={log}
+                                isSaving={savingLog?.startsWith(ex.id) ?? false}
+                                weightUnit={weightUnit}
+                                onSave={(setsData) =>
+                                  handleTrackingSave(ex, setsData)
+                                }
+                                onRemove={() => onRemoveLog(ex.id)}
+                                onClose={() => setExpandedExerciseId(null)}
+                              />
                             )}
                           </div>
                         );
                       })}
                     </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {/* ── TAB 2: CALENDARIO MENSUAL ── */}
+        {activeTab === "calendar" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="rounded-[28px] bg-[#12141a] border border-white/[0.06] p-5 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-lg font-display font-black text-white">
+                    {MONTH_NAMES[calMonth]} {calYear}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalMonth(todayDate.getMonth());
+                      setCalYear(todayDate.getFullYear());
+                      setCalSelectedDate(todayDate);
+                    }}
+                    className="rounded-xl bg-white/[0.06] hover:bg-white/10 px-2.5 py-1 text-xs font-bold text-cyan-300 border border-white/10 transition cursor-pointer"
+                  >
+                    Hoy
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (calMonth === 0) {
+                        setCalMonth(11);
+                        setCalYear((y) => y - 1);
+                      } else {
+                        setCalMonth((m) => m - 1);
+                      }
+                      setCalSelectedDate(null);
+                    }}
+                    className="rounded-xl p-2 text-neutral-400 border border-white/10 bg-white/[0.04] hover:text-white cursor-pointer"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (calMonth === 11) {
+                        setCalMonth(0);
+                        setCalYear((y) => y + 1);
+                      } else {
+                        setCalMonth((m) => m + 1);
+                      }
+                      setCalSelectedDate(null);
+                    }}
+                    className="rounded-xl p-2 text-neutral-400 border border-white/10 bg-white/[0.04] hover:text-white cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 mb-2">
+                {WEEKDAY_LABELS.map((l) => (
+                  <div
+                    key={l}
+                    className="py-1.5 text-center text-[10px] font-black uppercase tracking-wider text-neutral-500"
+                  >
+                    {l}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1.5">
+                {calDays.map((date, idx) => {
+                  if (!date) return <div key={`e-${idx}`} className="p-1" />;
+
+                  const rd = getRoutineDayForDate(date);
+                  const hasTraining = rd && !rd.isRestDay;
+                  const isSelected =
+                    calSelectedDate && isSameDay(date, calSelectedDate);
+                  const isTodayDate = isSameDay(date, todayDate);
+                  const isDayDone =
+                    hasTraining &&
+                    rd.exercises.length > 0 &&
+                    rd.exercises.every((ex) =>
+                      activeRoutineLogs.some(
+                        (l) =>
+                          l.exerciseId === ex.id && l.weekNumber === currentWeek,
+                      ),
+                    );
+
+                  return (
+                    <button
+                      key={date.toISOString()}
+                      type="button"
+                      onClick={() => setCalSelectedDate(date)}
+                      className={cn(
+                        "relative mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-2xl text-xs font-bold transition-all cursor-pointer",
+                        isSelected
+                          ? "bg-white text-black font-black shadow-md"
+                          : isTodayDate
+                            ? "border border-cyan-400 bg-cyan-500/10 text-white"
+                            : isDayDone
+                              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                              : hasTraining
+                                ? "bg-white/[0.04] text-neutral-200 border border-white/[0.06]"
+                                : "text-neutral-500 hover:bg-white/[0.04]",
+                      )}
+                    >
+                      <span>{date.getDate()}</span>
+                      {!isSelected && (
+                        <div className="mt-0.5">
+                          {isDayDone ? (
+                            <span className="text-[8px] text-emerald-400 font-black">
+                              ✓
+                            </span>
+                          ) : hasTraining ? (
+                            <span className="block h-1 w-1 rounded-full bg-cyan-400" />
+                          ) : null}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {calSelectedDate && selectedDayInfo && (
+              <div className="rounded-[24px] bg-[#12141a] border border-white/[0.06] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-cyan-400 uppercase">
+                      {DAY_NAMES[selectedDayInfo.dayNumber]}
+                    </p>
+                    <h4 className="text-base font-bold text-white">
+                      {selectedDayInfo.isRestDay
+                        ? "Día de Descanso"
+                        : selectedDayInfo.focusArea}
+                    </h4>
+                  </div>
+                  {!selectedDayInfo.isRestDay && (
+                    <button
+                      type="button"
+                      onClick={() => onStartSession(selectedDayInfo)}
+                      className="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-wider cursor-pointer"
+                    >
+                      ⚡ Entrenar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 3: HISTORIAL Y RÉCORDS PRs ── */}
+        {activeTab === "history" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="rounded-[22px] bg-[#12141a] p-4 border border-white/[0.06] text-center">
+                <p className="text-2xl font-display font-black text-white tabular-nums">
+                  {groupedSessions.length}
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mt-0.5">
+                  Sesiones
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPrsModal(true)}
+                className="rounded-[22px] bg-gradient-to-b from-amber-500/15 to-[#12141a] p-4 border border-amber-500/30 text-center cursor-pointer hover:border-amber-400 transition"
+              >
+                <p className="text-2xl font-display font-black text-amber-400 tabular-nums">
+                  🏆 {personalRecords.length}
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mt-0.5">
+                  Récords PR
+                </p>
+              </button>
+
+              <div className="rounded-[22px] bg-[#12141a] p-4 border border-white/[0.06] text-center">
+                <p className="text-2xl font-display font-black text-white tabular-nums">
+                  {logs.length}
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mt-0.5">
+                  Registros
+                </p>
+              </div>
+            </div>
+
+            {/* Search & Filters */}
+            <div className="rounded-[24px] bg-[#12141a] border border-white/[0.06] p-3.5 space-y-2.5">
+              <input
+                type="text"
+                placeholder="🔎 Buscar ejercicio en tu historial..."
+                value={historySearchQuery}
+                onChange={(e) => setHistorySearchQuery(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0b0d12] border border-white/10 text-xs font-medium text-white placeholder:text-neutral-500 outline-none focus:border-cyan-400"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={historyRoutineFilter}
+                  onChange={(e) => setHistoryRoutineFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl bg-[#0b0d12] border border-white/10 text-xs font-bold text-white outline-none"
+                >
+                  <option value="all">Todas las rutinas</option>
+                  {routines.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={historyWeekFilter}
+                  onChange={(e) => setHistoryWeekFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl bg-[#0b0d12] border border-white/10 text-xs font-bold text-white outline-none"
+                >
+                  <option value="all">Todas las semanas</option>
+                  {Array.from(
+                    {
+                      length: Math.max(
+                        ...routines.map((r) => r.weekCount),
+                        4,
+                      ),
+                    },
+                    (_, i) => i + 1,
+                  ).map((w) => (
+                    <option key={w} value={w}>
+                      Semana {w}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Sessions List */}
+            <div className="space-y-3">
+              {groupedSessions.map((session) => (
+                <div
+                  key={session.dateStr}
+                  className="rounded-[24px] bg-[#12141a] border border-white/[0.06] p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">
+                        {formatSessionDate(session.dateStr)}
+                      </h4>
+                      <p className="text-xs text-cyan-400 font-semibold mt-0.5">
+                        {session.routineName}
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 text-emerald-400 text-[10px] font-black uppercase">
+                      {session.logs.length} ej.
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {session.logs.map((log) => {
+                      const ex = findExerciseById(log.exerciseId);
+                      return (
+                        <div
+                          key={log.id}
+                          className="p-3 rounded-2xl bg-[#0b0d12] border border-white/[0.05] space-y-1.5"
+                        >
+                          <p className="text-xs font-bold text-white">
+                            {ex?.name || "Ejercicio"}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {log.setsData && log.setsData.length > 0 ? (
+                              log.setsData
+                                .filter(
+                                  (s) =>
+                                    s.completed || (s.reps && s.reps > 0),
+                                )
+                                .map((set, sIdx) => (
+                                  <span
+                                    key={sIdx}
+                                    className="px-2 py-0.5 rounded-lg bg-white/[0.05] border border-white/10 text-[10px] font-bold text-neutral-200 tabular-nums"
+                                  >
+                                    S{sIdx + 1}:{" "}
+                                    {set.weight && set.weight > 0
+                                      ? `${set.weight}kg`
+                                      : "Corp"}{" "}
+                                    ×{" "}
+                                    <strong className="text-cyan-300">
+                                      {set.reps ?? 0}
+                                    </strong>
+                                  </span>
+                                ))
+                            ) : (
+                              <span className="text-[11px] text-neutral-400">
+                                {log.repsDone || "Completado"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
 
               {groupedSessions.length === 0 && (
-                <div className="text-center py-14 bg-[#0c0e17] rounded-3xl border border-white/10 p-6">
-                  <span className="text-5xl">📊</span>
-                  <h3 className="mt-3 text-base font-black text-white">
-                    No hay registros que coincidan
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
-                    Prueba cambiando los filtros de búsqueda o completa tu primer entrenamiento hoy.
+                <div className="rounded-[24px] bg-[#12141a] border border-white/[0.06] p-8 text-center">
+                  <p className="text-sm font-bold text-white">
+                    Sin sesiones registradas aún
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Completa tu entrenamiento de hoy para ver tu evolución aquí.
                   </p>
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
+      </div>
 
-        {/* Modal de Previsualización Técnica del Ejercicio */}
+      {/* 3D / GIF Exercise Technical Preview Modal */}
       <ExercisePreviewModal
         isOpen={!!previewExercise}
         exercise={previewExercise}
@@ -2279,7 +2034,7 @@ export function RoutineListView({
           selectedRoutine?.days.find((d) =>
             d.exercises.some((e) => e.id === previewExercise?.id),
           ) ||
-          selectedRoutine?.days.find((d) => d.dayNumber === activeDayNumber) ||
+          activeDay ||
           null
         }
         onClose={() => setPreviewExercise(null)}
@@ -2287,121 +2042,65 @@ export function RoutineListView({
         weightUnit={weightUnit}
       />
 
-      {/* PRs Modal */}
-        {showPrsModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowPrsModal(false)} />
-            <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900 flex flex-col max-h-[80vh]">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-white/5">
-                <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white flex items-center gap-2">
-                  🏆 Récords Personales (PR)
+      {/* Personal Records (PRs) Modal */}
+      {showPrsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+            onClick={() => setShowPrsModal(false)}
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-[28px] border border-white/12 bg-[#12141a] p-5 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-display font-black uppercase text-white">
+                  Récords Personales (PR)
                 </h3>
-                <button
-                  onClick={() => setShowPrsModal(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowPrsModal(false)}
+                className="w-8 h-8 rounded-full bg-white/[0.06] text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {personalRecords.length === 0 ? (
-                  <p className="text-sm text-center text-slate-500 py-6">
-                    Aún no tienes récords registrados. ¡Completa ejercicios con peso para verlos aquí!
-                  </p>
-                ) : (
-                  personalRecords.map((pr) => (
-                    <div
-                      key={pr.exerciseId}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-white/5 hover:border-amber-500/20 transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                          {pr.name}
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {MUSCLE_LABELS[pr.muscleGroup] || "General"} · {formatPrDate(pr.date)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-amber-500">
-                          {pr.maxWeight} kg
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {pr.reps} reps
-                        </p>
-                      </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {personalRecords.length === 0 ? (
+                <p className="text-xs text-center text-neutral-400 py-8">
+                  Aún no tienes récords con carga externa registrados.
+                </p>
+              ) : (
+                personalRecords.map((pr) => (
+                  <div
+                    key={pr.exerciseId}
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0b0d12] border border-white/[0.06]"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-white">{pr.name}</p>
+                      <p className="text-[10px] text-neutral-400 mt-0.5">
+                        {MUSCLE_LABELS[pr.muscleGroup] || "General"} ·{" "}
+                        {formatPrDate(pr.date)}
+                      </p>
                     </div>
-                  ))
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                <Button variant="secondary" onClick={() => setShowPrsModal(false)}>
-                  Cerrar
-                </Button>
-              </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-amber-400 tabular-nums">
+                        {weightUnit === "lbs"
+                          ? `${Math.round(pr.maxWeight * 2.20462 * 2) / 2} lbs`
+                          : `${pr.maxWeight} kg`}
+                      </p>
+                      <p className="text-[11px] text-neutral-400 tabular-nums">
+                        {pr.reps} reps
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        )}
-      </>
-    );
-  }
-
-  /* ── List view (when multiple routines) ── */
-  return (
-    <>
-      <div className="mb-4">
-        <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-950 dark:text-white">
-          Mis Rutinas
-        </h1>
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400/80 mt-0.5">
-          {routines.length} rutinas asignadas
-        </p>
-      </div>
-      <div className="space-y-3">
-        {routines.map((routine) => (
-          <button
-            key={routine.id}
-            onClick={() => { onSelectRoutine(routine); setView("detail"); }}
-            className="w-full text-left"
-          >
-            <Card hover padding="sm">
-              <div className="flex items-center justify-between px-2 py-1">
-                <div>
-                  <p className="text-base font-semibold text-neutral-900 dark:text-white">
-                    {routine.name}
-                  </p>
-                  <p className="text-xs text-neutral-400 mt-0.5">
-                    {routine.days.filter((d) => !d.isRestDay).length} días ·{" "}
-                    {routine.weekCount} semanas
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {routine.isFavorable !== undefined &&
-                    routine.isFavorable !== null && (
-                      <span
-                        title={
-                          routine.isFavorable
-                            ? "Rutina Favorable"
-                            : "Rutina Desfavorable"
-                        }
-                      >
-                        {routine.isFavorable ? "👍" : "👎"}
-                      </span>
-                    )}
-                  {routine.isActive ? (
-                    <Badge variant="success">Activa</Badge>
-                  ) : (
-                    <Badge variant="default">Inactiva</Badge>
-                  )}
-                  <span className="text-neutral-400">→</span>
-                </div>
-              </div>
-            </Card>
-          </button>
-        ))}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 }

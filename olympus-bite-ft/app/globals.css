@@ -29,18 +29,18 @@
   --background: #f8fafc;
   --foreground: #0f172a;
 
-  /* Default Theme: Precision Titanium Cyan (Athletic Focus & Anti-Stress) */
-  --color-p50: #f0f9ff;
-  --color-p100: #e0f2fe;
-  --color-p200: #bae6fd;
-  --color-p300: #7dd3fc;
-  --color-p400: #38bdf8;
-  --color-p500: #0ea5e9;
+  /* Vital Fit Labs Official Gym Palette: Electric Cyan (#00F0FF) on Matte Obsidian */
+  --color-p50: #ecfeff;
+  --color-p100: #cffafe;
+  --color-p200: #a5f3fc;
+  --color-p300: #67e8f9;
+  --color-p400: #00f0ff;
+  --color-p500: #00d4ff;
   --color-p600: #0284c7;
   --color-p700: #0369a1;
   --color-p800: #075985;
   --color-p900: #0c4a6e;
-  --color-p950: #082f49;
+  --color-p950: #041f33;
 }
 
 .dark {
@@ -119,4 +119,16 @@ main {
 /* Safe area for mobile bottom nav (iPhone notch) */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+
+/* Ensure Next.js dev tools floating badge doesn't overlap mobile bottom nav */
+nextjs-portal,
+[data-nextjs-dev-tools-button],
+[data-nextjs-toast] {
+  top: 12px !important;
+  left: 12px !important;
+  bottom: auto !important;
+  right: auto !important;
+  z-index: 9999 !important;
 }

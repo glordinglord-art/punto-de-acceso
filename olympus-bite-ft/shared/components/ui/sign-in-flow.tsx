@@ -346,6 +346,22 @@ export const SignInFlow = ({ className }: SignInPageProps) => {
   const { login } = useAuth();
   const router = useRouter();
 
+  // Instant redirect if session exists
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("ob_token");
+      const user = localStorage.getItem("ob_user");
+      if (token && user) {
+        const parsed = JSON.parse(user);
+        const mode = localStorage.getItem("ob_mode");
+        const isTrainer = mode === "trainer" || mode === "superadmin" || parsed?.role === "trainer" || parsed?.role === "superadmin";
+        router.replace(isTrainer ? "/clients" : "/dashboard");
+      }
+    } catch {
+      // ignore
+    }
+  }, [router]);
+
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
